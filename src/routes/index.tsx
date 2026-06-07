@@ -752,53 +752,191 @@ function TemplateCanvas({
     `}} />
   );
 
-  const bgStyle =
-    template === "enterprise" && stylePreset !== "minimal" && stylePreset !== "dark"
-      ? "linear-gradient(135deg, #001A80 0%, #000B40 100%)"
-      : template === "showcase" && stylePreset !== "minimal" && stylePreset !== "dark"
-      ? "#F3EFE9"
-      : template === "executive" && stylePreset !== "minimal" && stylePreset !== "dark"
-      ? "#FAF8F5"
-      : template === "growth" && stylePreset !== "minimal" && stylePreset !== "dark"
-      ? "linear-gradient(135deg, #0A2F1D 0%, #02140A 100%)"
-      : stylePreset === "minimal"
-      ? "#FFFFFF"
-      : stylePreset === "dark"
-      ? "#0D0E12"
-      : stylePreset === "gradient"
-      ? `linear-gradient(135deg, ${colors.bg}, ${colors.accent})`
-      : colors.bg;
-
-  const textColor =
-    (template === "enterprise" || template === "growth") && stylePreset !== "minimal" && stylePreset !== "dark"
-      ? "#FFFFFF"
-      : stylePreset === "minimal"
-      ? "#111111"
-      : stylePreset === "dark"
-      ? "#FFFFFF"
-      : stylePreset === "gradient"
-      ? "#111111"
-      : colors.primary;
-
-  const isDark = stylePreset === "dark" || ((template === "enterprise" || template === "growth") && stylePreset !== "minimal");
-
-  const parseHeadline = (text: string, accentBg = "#FFE66D", accentFg = "#121212") => {
-    if (!text) return "";
-    const parts = text.split(/\*\*([^*]+)\*\*/);
-    if (parts.length > 1) {
-      return parts.map((part, i) => {
-        if (i % 2 === 1) {
-          return (
-            <span key={i} className="px-5 py-2 rounded-2xl inline-block mx-1.5 shadow-sm font-black rotate-[-1deg] border border-black/5"
-                  style={{ backgroundColor: accentBg, color: accentFg }}>
-              {part}
-            </span>
-          );
-        }
-        return part;
-      });
+  const getLuminance = (hex: string): number => {
+    if (!hex || typeof hex !== "string") return 255;
+    const cleanHex = hex.replace("#", "").trim();
+    if (cleanHex.length !== 3 && cleanHex.length !== 6) return 255;
+    
+    let r = 255, g = 255, b = 255;
+    if (cleanHex.length === 3) {
+      r = parseInt(cleanHex[0] + cleanHex[0], 16);
+      g = parseInt(cleanHex[1] + cleanHex[1], 16);
+      b = parseInt(cleanHex[2] + cleanHex[2], 16);
+    } else {
+      r = parseInt(cleanHex.substring(0, 2), 16);
+      g = parseInt(cleanHex.substring(2, 4), 16);
+      b = parseInt(cleanHex.substring(4, 6), 16);
     }
     
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return 255;
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+
+  const resolveBgAndText = () => {
+    let finalBg = colors.bg;
+    let finalTextColor = colors.primary;
+    let isBgDark = false;
+
+    if (stylePreset === "minimal") {
+      finalBg = "#FFFFFF";
+      finalTextColor = "#0F172A"; // slate-900
+      isBgDark = false;
+    } else if (stylePreset === "dark") {
+      finalBg = "#0A0B0E";
+      finalTextColor = "#F8FAFC"; // slate-50
+      isBgDark = true;
+    } else if (stylePreset === "gradient") {
+      finalBg = `linear-gradient(135deg, ${colors.bg}, ${colors.accent})`;
+      const lumBg = getLuminance(colors.bg);
+      const lumAccent = getLuminance(colors.accent);
+      const avgLum = (lumBg + lumAccent) / 2;
+      isBgDark = avgLum < 140;
+      finalTextColor = isBgDark ? "#F8FAFC" : "#0F172A";
+    } else {
+      // Modern preset
+      if (template === "enterprise") {
+        finalBg = "linear-gradient(135deg, #060B26 0%, #020412 100%)"; // Premium deep slate/navy grid
+        finalTextColor = "#FFFFFF";
+        isBgDark = true;
+      } else if (template === "growth") {
+        finalBg = "linear-gradient(135deg, #022315 0%, #010F09 100%)"; // Premium deep green/emerald
+        finalTextColor = "#FFFFFF";
+        isBgDark = true;
+      } else if (template === "showcase") {
+        finalBg = "#FAF9F5"; // Beautiful soft warm luxury off-white
+        finalTextColor = "#1C1917"; // Warm stone-900
+        isBgDark = false;
+      } else if (template === "executive") {
+        finalBg = "#FAF8F5"; // Warm clean off-white
+        finalTextColor = "#0F172A"; // Slate-900
+        isBgDark = false;
+      } else {
+        finalBg = colors.bg;
+        const lum = getLuminance(colors.bg);
+        isBgDark = lum < 140;
+        finalTextColor = isBgDark ? "#FFFFFF" : colors.primary || "#0F172A";
+      }
+    }
+
+    return { bg: finalBg, text: finalTextColor, isDark: isBgDark };
+  };
+
+  const { bg: bgStyle, text: textColor, isDark } = resolveBgAndText();
+
+  // Helper to parse double asterisks and format them specifically for each layout type
+  const renderHeadline = (text: string, templateId: string) => {
+    if (!text) return "";
+    const parts = text.split(/\*\*([^*]+)\*\*/);
+    
+    // Find text inside bold markers
+    const hasBold = parts.length > 1;
+    
+    const formatSegment = (segment: string, isHighlighted: boolean) => {
+      if (!isHighlighted) return segment;
+      
+      switch (templateId) {
+        case "executive":
+          // Professional gradient badge
+          return (
+            <span key={segment} className="px-4 py-1.5 rounded-full inline-block mx-1.5 border font-extrabold text-[0.95em]"
+                  style={{ 
+                    backgroundColor: isDark ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.08)", 
+                    borderColor: "rgba(16, 185, 129, 0.25)",
+                    color: "#10B981"
+                  }}>
+              {segment}
+            </span>
+          );
+        case "conversion":
+          // High conversion italic gradient highlight
+          return (
+            <span key={segment} className="relative inline-block mx-1 font-extrabold animate-pulse"
+                  style={{
+                    backgroundImage: `linear-gradient(120deg, ${colors.accent} 0%, ${colors.accent} 100%)`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: "100% 0.25em",
+                    backgroundPosition: "0 88%"
+                  }}>
+              {segment}
+            </span>
+          );
+        case "showcase":
+          // Elegant serif gold/amber highlight
+          return (
+            <span key={segment} className="italic font-serif-elegant font-normal text-amber-600 dark:text-amber-500 mx-1">
+              {segment}
+            </span>
+          );
+        case "enterprise":
+          // Corporate bold solid badge
+          return (
+            <span key={segment} className="px-4.5 py-1.5 rounded-lg inline-block mx-1 border font-extrabold"
+                  style={{
+                    backgroundColor: isDark ? "rgba(59, 130, 246, 0.15)" : `${colors.accent}20`,
+                    borderColor: isDark ? "rgba(59, 130, 246, 0.3)" : `${colors.accent}40`,
+                    color: isDark ? "#60A5FA" : colors.accent
+                  }}>
+              {segment}
+            </span>
+          );
+        case "growth":
+          // Dynamic vibrant Shopify pill
+          return (
+            <span key={segment} className="px-4.5 py-1.5 rounded-2xl inline-block mx-1 text-white font-extrabold shadow-sm rotate-[-0.5deg]"
+                  style={{
+                    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)"
+                  }}>
+              {segment}
+            </span>
+          );
+        case "hero":
+          // Center gradient text
+          return (
+            <span key={segment} className="bg-clip-text text-transparent font-black mx-1"
+                  style={{
+                    backgroundImage: `linear-gradient(to right, ${colors.accent}, ${isDark ? "#FFFFFF" : colors.primary})`
+                  }}>
+              {segment}
+            </span>
+          );
+        case "sidebyside":
+          // Marker highlight
+          return (
+            <span key={segment} className="px-2 py-0.5 rounded-md mx-1 text-gray-900 font-extrabold"
+                  style={{ backgroundColor: colors.accent }}>
+              {segment}
+            </span>
+          );
+        case "spotlight":
+          // Clean modern border outline
+          return (
+            <span key={segment} className="px-4 py-1 rounded-xl inline-block mx-1.5 border-2 border-dashed font-extrabold"
+                  style={{ borderColor: colors.accent, color: colors.accent }}>
+              {segment}
+            </span>
+          );
+        case "modernsaas":
+          // Neon glow text style
+          return (
+            <span key={segment} className="font-extrabold mx-1 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+                  style={{ color: colors.accent }}>
+              {segment}
+            </span>
+          );
+        default:
+          return (
+            <span key={segment} className="underline decoration-wavy mx-1" style={{ decorationColor: colors.accent }}>
+              {segment}
+            </span>
+          );
+      }
+    };
+
+    if (hasBold) {
+      return parts.map((part, i) => formatSegment(part, i % 2 === 1));
+    }
+    
+    // Fallback: If no bold tags exist, highlight the last two words
     const words = text.trim().split(" ");
     if (words.length > 2) {
       const lastTwo = words.slice(-2).join(" ");
@@ -806,10 +944,7 @@ function TemplateCanvas({
       return (
         <>
           {firstPart}{" "}
-          <span className="px-5 py-2 rounded-2xl inline-block mx-1.5 shadow-sm font-black rotate-[-1deg] border border-black/5"
-                style={{ backgroundColor: accentBg, color: accentFg }}>
-            {lastTwo}
-          </span>
+          {formatSegment(lastTwo, true)}
         </>
       );
     }
@@ -916,49 +1051,54 @@ function TemplateCanvas({
 
       {/* 1. EXECUTIVE SAAS LAYOUT (WATI WIDGET INSPIRED) */}
       {template === "executive" && (
-        <div className="h-full flex flex-col justify-between px-20 py-10 font-sans-jakarta relative">
+        <div className="h-full flex flex-col justify-between px-20 py-12 font-sans-jakarta relative">
           {/* Radial blur blobs */}
           <div className="absolute top-[-100px] left-[-100px] w-[350px] h-[350px] rounded-full bg-[#10b981]/10 blur-3xl pointer-events-none" />
           <div className="absolute bottom-[-100px] right-[-100px] w-[450px] h-[450px] rounded-full bg-[#3b82f6]/15 blur-3xl pointer-events-none" />
+          <div className="absolute top-[20%] right-[10%] w-[300px] h-[300px] rounded-full bg-indigo-500/5 blur-3xl pointer-events-none" />
 
           {/* Logo & Category Header */}
           <div className="flex justify-between items-center z-10">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <ChatBubbleIcon size={28} />
-              <span className="font-mono text-[13px] tracking-widest text-[#008060] bg-[#008060]/10 px-3.5 py-1.5 rounded-full font-bold uppercase"
-                    style={{ color: isDark ? colors.accent : "#008060", backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#00806015" }}>
+              <span className="font-mono text-[12px] tracking-wider bg-emerald-500/10 px-4 py-1.5 rounded-full font-bold uppercase"
+                    style={{ color: "#10B981" }}>
                 {appName || "WATI"} widget
               </span>
             </div>
-            <div className="text-lg font-black tracking-wide uppercase font-sans-jakarta" style={{ color: textColor }}>
-              {appName || "wati"}
+            <div className="text-sm font-mono tracking-widest uppercase font-bold opacity-60" style={{ color: textColor }}>
+              {appName || "wati"} . saas
             </div>
           </div>
 
           {/* Headline & Subheadline */}
-          <div className="max-w-5xl mt-1 z-10">
-            <h1 className="text-[78px] font-black leading-[1.05] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
-              {parseHeadline(headline, colors.accent, "#121212")}
+          <div className="max-w-5xl mt-2 z-10">
+            <h1 className="text-[72px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
+              {renderHeadline(headline, "executive")}
             </h1>
-            <p className="text-[26px] opacity-90 mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "#E2E8F0" : "#4A5568" }}>
+            <p className="text-[23px] mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
+               style={{ color: isDark ? "rgba(248, 250, 252, 0.75)" : "rgba(15, 23, 42, 0.75)" }}>
               {subheadline}
             </p>
           </div>
 
           {/* Floating visual elements around center mockup */}
-          <div className="relative w-[680px] mx-auto my-2 flex items-center justify-center z-10">
+          <div className="relative w-[700px] mx-auto my-3 flex items-center justify-center z-10">
             {/* Floating widget left */}
-            <div className="absolute -left-28 bottom-12 w-48 p-3.5 bg-white border border-black/5 rounded-2xl shadow-xl flex flex-col gap-2 rotate-[-4deg] animate-bounce duration-[4s] select-none">
-              <div className="flex items-center gap-1.5 border-b pb-1.5 border-black/5">
+            <div className={`absolute -left-24 bottom-12 w-48 p-4 border rounded-2xl shadow-xl flex flex-col gap-2.5 rotate-[-4deg] select-none backdrop-blur-md ${
+              isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-black/5 text-gray-800"
+            }`}>
+              <div className="flex items-center gap-1.5 border-b pb-1.5 border-current/10">
                 <div className="size-5 rounded-full bg-green-500 flex items-center justify-center">
                   <svg className="size-3 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
                   </svg>
                 </div>
-                <div className="text-[10px] font-bold text-gray-800">WhatsApp live</div>
+                <div className="text-[10px] font-extrabold">WhatsApp live</div>
               </div>
-              <div className="h-6 w-full rounded bg-gray-50 border border-gray-100 flex items-center px-2 text-[8px] text-gray-500 font-medium">
+              <div className={`h-6.5 w-full rounded flex items-center px-2 text.5 text-[9px] font-semibold ${
+                isDark ? "bg-white/5 border border-white/5 text-gray-300" : "bg-gray-50 border border-gray-100 text-gray-500"
+              }`}>
                 Hello! How can we help you?
               </div>
               <div className="h-6 w-1/2 rounded-lg bg-green-500 self-end flex items-center justify-center text-[8px] text-white font-bold cursor-default">
@@ -967,27 +1107,29 @@ function TemplateCanvas({
             </div>
 
             {/* Main Mockup */}
-            <div className="w-full">
+            <div className="w-full scale-[0.98] transition-transform duration-500 hover:scale-[1.00]">
               <ScreenshotMockup maxHeight="340px" />
             </div>
 
             {/* Floating widget right */}
-            <div className="absolute -right-28 bottom-20 w-44 p-3 bg-white border border-black/5 rounded-2xl shadow-xl flex flex-col gap-2.5 rotate-[3deg] animate-bounce duration-[6s] select-none">
-              <div className="flex items-center gap-2">
+            <div className={`absolute -right-24 bottom-20 w-44 p-3.5 border rounded-2xl shadow-xl flex flex-col gap-2.5 rotate-[3deg] select-none backdrop-blur-md ${
+              isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-black/5 text-gray-800"
+            }`}>
+              <div className="flex items-center gap-2.5">
                 <div className="size-8 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-bold">
                   <svg className="size-4 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                   </svg>
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold text-gray-800">Active User</div>
-                  <div className="text-[8px] text-green-500 font-semibold">Online now</div>
+                  <div className="text-[10px] font-extrabold">Active User</div>
+                  <div className="text-[8px] text-green-500 font-bold">Online now</div>
                 </div>
               </div>
-              <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+              <div className={`h-1.5 w-full rounded-full overflow-hidden ${isDark ? "bg-white/10" : "bg-gray-100"}`}>
                 <div className="h-full bg-green-500 w-[85%]" />
               </div>
-              <div className="text-[9px] text-gray-500 leading-tight italic font-medium">
+              <div className={`text-[9px] leading-tight italic font-medium ${isDark ? "text-gray-300" : "text-gray-500"}`}>
                 "Customized widget active on checkout in 1 minute!"
               </div>
             </div>
@@ -1004,39 +1146,46 @@ function TemplateCanvas({
 
       {/* 2. CONVERSION FOCUSED LAYOUT */}
       {template === "conversion" && (
-        <div className="h-full grid grid-cols-12 gap-8 items-center px-20 py-16 font-sans-jakarta">
-          <div className="col-span-5 flex flex-col justify-center h-full pr-4">
-            <div className="inline-flex w-fit items-center gap-2 px-3.5 py-1.5 rounded-lg text-[12px] font-mono font-bold uppercase tracking-wider mb-4"
-              style={{ background: colors.accent, color: "#111111" }}>
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative">
+          <div className="absolute top-1/4 left-1/3 w-[300px] h-[300px] rounded-full bg-pink-500/5 blur-3xl pointer-events-none" />
+          
+          <div className="col-span-5 flex flex-col justify-center h-full pr-2 z-10">
+            <div className="inline-flex w-fit items-center gap-2.5 px-4 py-2 rounded-xl text-[11px] font-mono font-bold uppercase tracking-wider mb-5 shadow-sm"
+              style={{ background: isDark ? "rgba(255,255,255,0.06)" : `${colors.accent}15`, color: isDark ? colors.accent : "#DB2777", border: isDark ? "1px solid rgba(255,255,255,0.08)" : `1px solid ${colors.accent}25` }}>
               <TargetIcon size={18} />
               <span>Conversion Booster</span>
             </div>
-            <h1 className="text-[78px] font-black leading-[1.05] mb-5 font-sans-jakarta" style={{ color: textColor }}>
-              {parseHeadline(headline, colors.accent, "#121212")}
+            
+            <h1 className="text-[64px] font-black leading-[1.08] mb-4 font-sans-jakarta" style={{ color: textColor }}>
+              {renderHeadline(headline, "conversion")}
             </h1>
-            <p className="text-[26px] opacity-90 mb-7 leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "#E2E8F0" : "#4A5568" }}>
+            
+            <p className="text-[22px] mb-6 leading-relaxed font-bold font-sans-jakarta"
+               style={{ color: isDark ? "rgba(248, 250, 252, 0.75)" : "rgba(75, 85, 99, 0.9)" }}>
               {subheadline}
             </p>
-
-            <div className="p-5 rounded-2xl border border-current/10 bg-current/5 mb-8 flex items-center gap-4">
-              <div className="size-14 rounded-xl flex items-center justify-center shrink-0" style={{ background: colors.accent }}>
-                <RocketIcon size={28} />
+ 
+            <div className={`p-4.5 rounded-2xl border mb-6 flex items-center gap-4.5 shadow-md ${
+              isDark ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100"
+            }`}>
+              <div className="size-13 rounded-xl flex items-center justify-center shrink-0 shadow-inner" style={{ background: "linear-gradient(135deg, #EC4899 0%, #F43F5E 100%)" }}>
+                <RocketIcon size={24} />
               </div>
               <div>
-                <h4 className="font-extrabold text-[17px]" style={{ color: textColor }}>Automated Growth Engine</h4>
-                <p className="text-[13px] opacity-70 mt-0.5" style={{ color: textColor }}>Optimize your Shopify storefront instantly</p>
+                <h4 className="font-extrabold text-[16px]" style={{ color: textColor }}>Automated Growth Engine</h4>
+                <p className="text-[12px] opacity-70 mt-0.5" style={{ color: textColor }}>Optimize storefront conversion rates instantly</p>
               </div>
             </div>
-
+ 
             <div className="flex flex-col gap-3">
               {features.filter(Boolean).slice(0, 3).map((feat, i) => (
                 renderCreativeFeature(feat, i, "outline")
               ))}
             </div>
           </div>
-
-          <div className="col-span-7 flex items-center justify-center h-full relative" style={{ transform: "rotate(-1.5deg) scale(1.02)" }}>
+ 
+          <div className="col-span-7 flex items-center justify-center h-full relative z-10" style={{ transform: "rotate(-1.5deg) scale(0.98)" }}>
+            <div className="absolute inset-0 bg-gradient-to-tr from-pink-500/10 to-transparent blur-3xl opacity-30 pointer-events-none" />
             <ScreenshotMockup maxHeight="520px" />
           </div>
         </div>
@@ -1044,36 +1193,39 @@ function TemplateCanvas({
 
       {/* 3. PRODUCT SHOWCASE LAYOUT (FAIRE DISCOVERY INSPIRED) */}
       {template === "showcase" && (
-        <div className="h-full grid grid-cols-12 gap-8 px-20 py-16 font-serif-elegant relative items-center">
+        <div className="h-full grid grid-cols-12 gap-10 px-20 py-16 font-serif-elegant relative items-center">
+          {/* Subtle soft noise/grid effect or elegant border for editorial feel */}
+          <div className="absolute inset-8 border border-stone-200/40 pointer-events-none z-0" />
+          
           {/* Left Side: Serif Copy & Brand */}
-          <div className="col-span-6 flex flex-col justify-between h-full py-6 pr-10">
+          <div className="col-span-6 flex flex-col justify-between h-full py-8 pr-8 z-10">
             {/* Top Logo */}
-            <div className="flex items-center gap-2.5 text-lg font-black tracking-[0.25em] uppercase font-serif-elegant" style={{ color: textColor }}>
+            <div className="flex items-center gap-3 text-[15px] font-black tracking-[0.3em] uppercase font-serif-elegant" style={{ color: textColor }}>
               <FMonogramIcon size={28} />
-              {appName || "FAIRE"}
+              <span>{appName || "FAIRE"}</span>
             </div>
-
+ 
             {/* Mid Headline */}
-            <div className="my-auto">
-              <h1 className="text-[76px] font-black leading-[1.08] font-serif-elegant mb-2" style={{ color: textColor }}>
-                {parseHeadline(headline, colors.accent, "#121212")}
+            <div className="my-auto py-4">
+              <h1 className="text-[60px] font-black leading-[1.15] font-serif-elegant mb-5" style={{ color: textColor }}>
+                {renderHeadline(headline, "showcase")}
               </h1>
-              <p className="text-[26px] mt-5 leading-relaxed font-sans font-bold"
-                 style={{ color: isDark ? "#E2E8F0" : "#5E5B58" }}>
+              <p className="text-[20px] mt-6 leading-relaxed font-sans font-medium"
+                 style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#5A5450" }}>
                 {subheadline}
               </p>
             </div>
-
+ 
             {/* Bottom Features */}
-            <div className="flex flex-col gap-4 mt-6">
+            <div className="flex flex-col gap-4.5">
               {features.filter(Boolean).slice(0, 3).map((feat, i) => (
                 renderCreativeFeature(feat, i, "serif")
               ))}
             </div>
           </div>
-
+ 
           {/* Right Side: Desktop Mockup Frame (Tablet scale/rotation) */}
-          <div className="col-span-6 flex items-center justify-center h-full" style={{ transform: "rotate(1.5deg) scale(0.98)" }}>
+          <div className="col-span-6 flex items-center justify-center h-full z-10" style={{ transform: "rotate(1.5deg) scale(0.96)" }}>
             <ScreenshotMockup maxHeight="520px" />
           </div>
         </div>
@@ -1081,67 +1233,71 @@ function TemplateCanvas({
 
       {/* 4. ENTERPRISE LAYOUT (SHIPWAY INSPIRED) */}
       {template === "enterprise" && (
-        <div className="h-full grid grid-cols-12 gap-8 px-20 py-16 font-sans-outfit relative items-center"
+        <div className="h-full grid grid-cols-12 gap-10 px-20 py-12 font-sans-outfit relative items-center"
              style={{
-               backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px)',
+               backgroundImage: isDark 
+                 ? 'linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px)' 
+                 : 'linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px)',
                backgroundSize: '30px 30px'
              }}>
           {/* Radial glow */}
           <div className="absolute right-0 top-1/4 w-[500px] h-[500px] rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-
+ 
           {/* Left Side: Brand, Copy, Features */}
-          <div className="col-span-5 flex flex-col justify-between h-full py-4 pr-4 z-10">
+          <div className="col-span-5 flex flex-col justify-between h-full py-6 pr-4 z-10">
             <div>
               {/* Brand Logo representation */}
-              <div className="flex items-center gap-2.5 font-black text-xl mb-8 tracking-wide font-sans-outfit" style={{ color: textColor }}>
+              <div className="flex items-center gap-2.5 font-black text-lg mb-6 tracking-wide font-sans-outfit" style={{ color: textColor }}>
                 <IsometricBoxIcon size={32} />
-                {appName || "Shipway"}
+                <span className="uppercase tracking-widest text-sm">{appName || "Shipway"}</span>
               </div>
-
+ 
               {/* Headline */}
-              <h1 className="text-[76px] font-black leading-[1.05] tracking-tight font-sans-outfit" style={{ color: textColor }}>
-                {parseHeadline(headline, colors.accent, "#121212")}
+              <h1 className="text-[62px] font-black leading-[1.1] tracking-tight font-sans-outfit" style={{ color: textColor }}>
+                {renderHeadline(headline, "enterprise")}
               </h1>
-              <p className="text-[24px] mt-4 leading-relaxed font-sans-outfit font-bold"
-                 style={{ color: isDark ? "#DBEAFE" : "#1E3A8A" }}>
+              <p className="text-[20px] mt-4 leading-relaxed font-sans-outfit font-medium"
+                 style={{ color: isDark ? "rgba(248, 250, 252, 0.75)" : "#2563EB" }}>
                 {subheadline}
               </p>
             </div>
-
+ 
             {/* Creative Features list */}
-            <div className="flex flex-col gap-5 mt-8">
+            <div className="flex flex-col gap-4.5 mt-6">
               {features.filter(Boolean).slice(0, 3).map((feat, idx) => (
                 <div key={idx} className="flex items-center gap-4">
-                  <div className="size-10 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/10 shadow-md"
-                       style={{ backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)", borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)" }}>
-                    <span style={{ color: colors.accent }} className="flex items-center justify-center">
-                      {idx === 0 ? <LightningIcon size={20} /> : idx === 1 ? <BellIcon size={20} /> : <ShieldIcon size={20} />}
+                  <div className="size-10 rounded-xl flex items-center justify-center shrink-0 border shadow-sm"
+                       style={{ backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)", borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)" }}>
+                    <span className="flex items-center justify-center">
+                      {idx === 0 ? <LightningIcon size={18} /> : idx === 1 ? <BellIcon size={18} /> : <ShieldIcon size={18} />}
                     </span>
                   </div>
                   <div className="font-sans-outfit">
-                    <span className="text-[20px] font-black block" style={{ color: textColor }}>{feat}</span>
-                    <span className="text-[13px] opacity-70" style={{ color: isDark ? "#93C5FD" : "#2563EB" }}>Auto-configured in realtime</span>
+                    <span className="text-[17px] font-extrabold block" style={{ color: textColor }}>{feat}</span>
+                    <span className="text-[12px] opacity-65" style={{ color: textColor }}>Auto-configured in realtime</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
+ 
           {/* Right Side: Carrier Badges + Browser Frame */}
-          <div className="col-span-7 flex flex-col justify-center h-full z-10 pl-4">
+          <div className="col-span-7 flex flex-col justify-center h-full z-10 pl-2">
             {/* Integration Carrier Grid */}
-            <div className="p-5 bg-white/5 border border-white/10 backdrop-blur rounded-2xl flex flex-col gap-3 shadow-2xl mb-4 w-full select-none"
-                 style={{ backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.8)", borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)" }}>
-              <div className="text-[10px] font-mono tracking-widest font-bold uppercase" style={{ color: isDark ? "#93C5FD" : "#2563EB" }}>INTEGRATED WAREHOUSE PARTNERS</div>
-              <div className="grid grid-cols-4 gap-2.5">
+            <div className="p-4 border rounded-2xl flex flex-col gap-2.5 shadow-2xl mb-4 w-full select-none"
+                 style={{ backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.85)", borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }}>
+              <div className="text-[9px] font-mono tracking-widest font-extrabold uppercase opacity-60" style={{ color: textColor }}>INTEGRATED WAREHOUSE PARTNERS</div>
+              <div className="grid grid-cols-4 gap-2">
                 {["DHL Express", "FedEx Hub", "UPS Ship", "USPS Postal", "Aramex Logistics", "BlueDart Hub", "DPD Group", "RoyalMail"].map((c, idx) => (
-                  <div key={idx} className="bg-white/95 px-2.5 py-2 rounded-xl text-[10px] font-black text-gray-800 flex items-center justify-center shadow-md border border-white/10 leading-none font-sans-outfit">
+                  <div key={idx} className={`px-2 py-2.5 rounded-xl text-[10px] font-extrabold flex items-center justify-center shadow-sm border leading-none font-sans-outfit ${
+                    isDark ? "bg-white/10 border-white/5 text-white" : "bg-white border-gray-100 text-gray-800"
+                  }`}>
                     {c}
                   </div>
                 ))}
               </div>
             </div>
-
+ 
             {/* Screenshot in Frame */}
             <div className="w-full scale-95 origin-right">
               <ScreenshotMockup maxHeight="520px" />
@@ -1152,48 +1308,50 @@ function TemplateCanvas({
 
       {/* 5. SHOPIFY GROWTH LAYOUT */}
       {template === "growth" && (
-        <div className="h-full flex flex-col justify-between px-20 py-10 font-sans-jakarta relative"
+        <div className="h-full flex flex-col justify-between px-20 py-12 font-sans-jakarta relative"
              style={{
-               backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px)',
+               backgroundImage: isDark 
+                 ? 'linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px)' 
+                 : 'linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px)',
                backgroundSize: '35px 35px'
              }}>
-          <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: isDark ? "#0A2F1D" : "transparent", opacity: isDark ? 0.8 : 0 }} />
+          <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: isDark ? "#021A11" : "transparent", opacity: isDark ? 0.75 : 0 }} />
           <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] rounded-full bg-green-500/10 blur-3xl pointer-events-none" />
-
+ 
           <div className="flex items-center justify-between mt-0 z-10">
             <div className="max-w-3xl">
-              <h1 className="text-[78px] font-black leading-[1.05] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
-                {parseHeadline(headline, colors.accent, "#121212")}
+              <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
+                {renderHeadline(headline, "growth")}
               </h1>
-              <p className="text-[26px] opacity-90 mt-4 max-w-2xl font-bold leading-relaxed font-sans-jakarta"
-                 style={{ color: isDark ? "#E6F4EA" : "#2E7D32" }}>
+              <p className="text-[22px] opacity-90 mt-4 max-w-2xl font-bold leading-relaxed font-sans-jakarta"
+                 style={{ color: isDark ? "#A7F3D0" : "#065F46" }}>
                 {subheadline}
               </p>
             </div>
             
-            <div className="flex items-center gap-3.5 px-6 py-3 rounded-2xl border shrink-0 shadow-lg select-none"
-                 style={{ borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,80,96,0.15)", backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,80,96,0.05)" }}>
+            <div className="flex items-center gap-3.5 px-5 py-3 rounded-2xl border shrink-0 shadow-lg select-none"
+                 style={{ borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(6,95,70,0.15)", backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(6,95,70,0.04)" }}>
               <GrowthChartIcon size={44} />
               <div>
-                <div className="text-[11px] font-mono font-bold uppercase tracking-widest" style={{ color: colors.accent }}>Merchant Growth</div>
-                <div className="text-[15px] font-black" style={{ color: textColor }}>Shopify Plus Ready</div>
+                <div className="text-[10px] font-mono font-bold uppercase tracking-widest" style={{ color: "#10B981" }}>Merchant Growth</div>
+                <div className="text-[14px] font-black" style={{ color: textColor }}>Shopify Plus Ready</div>
               </div>
             </div>
           </div>
-
-          <div className="w-[680px] mx-auto my-2 relative shadow-2xl z-10">
-            <div className="absolute inset-0 rounded-2xl filter blur-3xl opacity-20" style={{ background: colors.accent }} />
+ 
+          <div className="w-[700px] mx-auto my-3 relative shadow-2xl z-10 scale-[0.98]">
+            <div className="absolute inset-0 rounded-2xl filter blur-3xl opacity-15" style={{ background: colors.accent }} />
             <div className="relative">
               <ScreenshotMockup maxHeight="340px" />
             </div>
           </div>
-
-          <div className="grid grid-cols-3 gap-4 mb-0 z-10">
+ 
+          <div className="grid grid-cols-3 gap-5 mb-0 z-10">
             {features.filter(Boolean).slice(0, 3).map((feat, i) => (
-              <div key={i} className="flex gap-3.5 items-center px-5 py-3.5 rounded-2xl border shadow-md font-bold text-sm"
-                   style={{ backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.8)", borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)" }}>
+              <div key={i} className="flex gap-3.5 items-center px-6 py-4 rounded-2xl border shadow-md font-bold text-sm"
+                   style={{ backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.85)", borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}>
                 <CheckCircleIcon size={22} />
-                <span className="text-[18px] font-black" style={{ color: textColor }}>{feat}</span>
+                <span className="text-[17px] font-black" style={{ color: textColor }}>{feat}</span>
               </div>
             ))}
           </div>
@@ -1202,77 +1360,81 @@ function TemplateCanvas({
 
       {/* FALLBACK V1 TEMPLATES */}
       {template === "hero" && (
-        <div className="h-full flex flex-col justify-between items-center text-center px-20 py-10 font-sans-jakarta">
-          <div className="max-w-5xl mt-1">
-            <h1 className="text-[80px] font-black leading-[1.05] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
-              {parseHeadline(headline, colors.accent, "#121212")}
+        <div className="h-full flex flex-col justify-between items-center text-center px-20 py-12 font-sans-jakarta relative">
+          <div className="absolute top-[10%] w-[400px] h-[400px] rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
+          
+          <div className="max-w-5xl mt-1 z-10">
+            <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
+              {renderHeadline(headline, "hero")}
             </h1>
-            <p className="text-[26px] opacity-90 mt-5 max-w-3xl mx-auto leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "#E2E8F0" : "#4A5568" }}>
+            <p className="text-[22px] mt-4 max-w-2xl mx-auto leading-relaxed font-bold font-sans-jakarta"
+               style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#4B5563" }}>
               {subheadline}
             </p>
           </div>
-
-          <div className="w-[720px] my-3 shadow-2xl">
+ 
+          <div className="w-[720px] my-3 shadow-2xl z-10 transition-transform duration-500 hover:scale-[1.01]">
             <ScreenshotMockup maxHeight="380px" />
           </div>
-
-          <div className="flex justify-center gap-4 mb-2">
+ 
+          <div className="flex justify-center gap-4 mb-2 z-10">
             {features.filter(Boolean).map((feat, i) => (
               <div
                 key={i}
-                className={`px-8 py-3.5 rounded-full text-[18px] font-black tracking-wide border shadow-sm flex items-center gap-3`}
+                className="px-6 py-3 rounded-xl text-[16px] font-black tracking-wide border shadow-sm flex items-center gap-2.5"
                 style={{
-                  borderColor: isDark ? "rgba(255,255,255,0.15)" : `${colors.accent}44`,
-                  background: isDark ? "rgba(255,255,255,0.05)" : "#ffffff",
+                  borderColor: isDark ? "rgba(255,255,255,0.12)" : `${colors.accent}40`,
+                  background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
                   color: textColor
                 }}
               >
-                <div className="size-3 rounded-full animate-pulse" style={{ backgroundColor: colors.accent }} />
+                <div className="size-2.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: colors.accent }} />
                 <span>{feat}</span>
               </div>
             ))}
           </div>
         </div>
       )}
-
+ 
       {template === "sidebyside" && (
-        <div className="h-full flex flex-col justify-between px-20 py-10 font-sans-jakarta">
-          <div className="max-w-5xl mt-4">
-            <h1 className="text-[78px] font-black leading-[1.05] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
-              {parseHeadline(headline, colors.accent, "#121212")}
+        <div className="h-full flex flex-col justify-between px-20 py-12 font-sans-jakarta relative">
+          <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] rounded-full bg-indigo-500/5 blur-3xl pointer-events-none" />
+          
+          <div className="max-w-5xl mt-2 z-10">
+            <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
+              {renderHeadline(headline, "sidebyside")}
             </h1>
-            <p className="text-[26px] opacity-90 mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "#E2E8F0" : "#4A5568" }}>
+            <p className="text-[22px] mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
+               style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#4B5563" }}>
               {subheadline}
             </p>
           </div>
-
-          <div className="grid grid-cols-12 gap-12 items-center flex-1 my-4">
-            <div className="col-span-7">
-              <ScreenshotMockup maxHeight="500px" />
+ 
+          <div className="grid grid-cols-12 gap-10 items-center flex-1 my-4 z-10">
+            <div className="col-span-7 scale-[0.98] origin-left">
+              <ScreenshotMockup maxHeight="460px" />
             </div>
-
-            <div className="col-span-5 flex flex-col gap-6">
+ 
+            <div className="col-span-5 flex flex-col gap-4.5">
               {features.filter(Boolean).map((feat, i) => (
                 <div
                   key={i}
-                  className={`p-6 rounded-3xl border flex items-start gap-5 shadow-lg`}
+                  className="p-5 rounded-2xl border flex items-start gap-4.5 shadow-md"
                   style={{
-                    borderLeft: `5px solid ${colors.accent}`,
-                    background: isDark ? "rgba(255,255,255,0.05)" : "#ffffff",
-                    borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                    borderLeft: `4px solid ${colors.accent}`,
+                    background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
+                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
                   }}
                 >
                   <div
-                    className="size-12 rounded-full font-mono text-lg font-black flex items-center justify-center shrink-0 shadow-md"
-                    style={{ background: colors.accent, color: "#111111" }}
+                    className="size-11 rounded-full font-mono text-[16px] font-black flex items-center justify-center shrink-0 shadow-sm"
+                    style={{ background: colors.accent, color: isDark ? "#0F172A" : "#FFFFFF" }}
                   >
                     {i+1}
                   </div>
                   <div>
-                    <h3 className="font-black text-[22px] mb-1.5" style={{ color: textColor }}>{feat}</h3>
-                    <p className="text-[15px] opacity-80 leading-relaxed" style={{ color: textColor }}>Designed for maximum storefront conversion.</p>
+                    <h3 className="font-extrabold text-[19px] mb-1" style={{ color: textColor }}>{feat}</h3>
+                    <p className="text-[13px] opacity-70 leading-relaxed" style={{ color: textColor }}>Designed for maximum storefront conversion.</p>
                   </div>
                 </div>
               ))}
@@ -1280,94 +1442,98 @@ function TemplateCanvas({
           </div>
         </div>
       )}
-
+ 
       {template === "spotlight" && (
-        <div className="h-full flex flex-col justify-between items-center text-center px-20 py-10 font-sans-jakarta">
-          <div className="max-w-5xl mt-1">
-            <h1 className="text-[80px] font-black leading-[1.05] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
-              {parseHeadline(headline, colors.accent, "#121212")}
+        <div className="h-full flex flex-col justify-between items-center text-center px-20 py-12 font-sans-jakarta relative">
+          <div className="absolute top-[20%] left-[10%] w-[350px] h-[350px] rounded-full bg-pink-500/5 blur-3xl pointer-events-none" />
+          
+          <div className="max-w-5xl mt-1 z-10">
+            <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
+              {renderHeadline(headline, "spotlight")}
             </h1>
-            <p className="text-[26px] opacity-90 mt-4 max-w-2xl mx-auto leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "#E2E8F0" : "#4A5568" }}>
+            <p className="text-[22px] mt-4 max-w-2xl mx-auto leading-relaxed font-bold font-sans-jakarta"
+               style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#4B5563" }}>
               {subheadline}
             </p>
           </div>
-
-          <div className="grid grid-cols-3 gap-4 w-full my-3">
+ 
+          <div className="grid grid-cols-3 gap-5 w-full my-4 z-10">
             {features.filter(Boolean).map((feat, i) => (
               <div
                 key={i}
-                className={`p-6 rounded-3xl border text-center flex flex-col justify-center items-center shadow-lg`}
+                className="p-5.5 rounded-2xl border text-center flex flex-col justify-center items-center shadow-md"
                 style={{
-                  background: isDark ? "rgba(255,255,255,0.05)" : "#ffffff",
-                  borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                  background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
+                  borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
                 }}
               >
-                <div className="mb-3 size-12 rounded-full flex items-center justify-center font-mono font-black text-lg"
-                     style={{ background: `${colors.accent}22`, color: colors.accent }}>
+                <div className="mb-2.5 size-11 rounded-full flex items-center justify-center font-mono font-black text-[16px] shadow-sm"
+                     style={{ background: isDark ? "rgba(255,255,255,0.06)" : `${colors.accent}15`, color: colors.accent }}>
                   0{i+1}
                 </div>
-                <h3 className="font-black text-[22px]" style={{ color: textColor }}>{feat}</h3>
+                <h3 className="font-extrabold text-[19px]" style={{ color: textColor }}>{feat}</h3>
               </div>
             ))}
           </div>
-
-          <div className="w-[700px] overflow-hidden rounded-t-2xl border-t border-x border-white/10 mt-auto">
+ 
+          <div className="w-[700px] overflow-hidden rounded-t-2xl border-t border-x border-white/10 mt-auto z-10 scale-[0.98]">
             <ScreenshotMockup maxHeight="320px" />
           </div>
         </div>
       )}
-
+ 
       {template === "modernsaas" && (
         <div className="h-full flex flex-col justify-between relative px-20 py-16 font-sans-jakarta">
-          <div className="max-w-5xl mt-4">
-            <h1 className="text-[80px] font-black leading-[1.05] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
-              {parseHeadline(headline, colors.accent, "#121212")}
+          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-emerald-500/5 blur-3xl pointer-events-none" />
+          
+          <div className="max-w-5xl mt-2 z-10">
+            <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
+              {renderHeadline(headline, "modernsaas")}
             </h1>
-            <p className="text-[26px] opacity-90 mt-4 max-w-2xl leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "#E2E8F0" : "#4A5568" }}>
+            <p className="text-[22px] mt-4 max-w-2xl leading-relaxed font-bold font-sans-jakarta"
+               style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#4B5563" }}>
               {subheadline}
             </p>
           </div>
-
-          <div className="w-[840px] mx-auto mt-6 relative z-10">
+ 
+          <div className="w-[820px] mx-auto mt-6 relative z-10 scale-[0.98]">
             <ScreenshotMockup maxHeight="380px" />
-
+ 
             <div
-              className={`absolute -left-12 bottom-12 p-4.5 rounded-2xl border shadow-2xl flex items-center gap-4.5 z-20`}
+              className="absolute -left-12 bottom-12 p-4 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 backdrop-blur-md"
               style={{
                 minWidth: 240,
-                background: isDark ? "#181922" : "#ffffff",
-                borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                background: isDark ? "rgba(24, 25, 34, 0.85)" : "rgba(255, 255, 255, 0.85)",
+                borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)"
               }}
             >
-              <div className="size-12 rounded-full flex items-center justify-center font-bold" style={{ background: `${colors.accent}22` }}>
-                <svg className="size-6" style={{ color: colors.accent }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <div className="size-11 rounded-full flex items-center justify-center font-bold" style={{ background: isDark ? "rgba(255,255,255,0.06)" : `${colors.accent}20` }}>
+                <svg className="size-5" style={{ color: colors.accent }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
                 </svg>
               </div>
               <div>
-                <p className="text-[13px] opacity-60 uppercase font-mono tracking-widest" style={{ color: textColor }}>{features[0] || "Feature"}</p>
-                <h4 className="text-[18px] font-black" style={{ color: textColor }}>Conversion Stats</h4>
+                <p className="text-[11px] opacity-60 uppercase font-mono tracking-widest" style={{ color: textColor }}>{features[0] || "Feature"}</p>
+                <h4 className="text-[17px] font-black" style={{ color: textColor }}>Conversion Stats</h4>
               </div>
             </div>
-
+ 
             <div
-              className={`absolute -right-12 bottom-20 p-4.5 rounded-2xl border shadow-2xl flex items-center gap-4.5 z-20`}
+              className="absolute -right-12 bottom-20 p-4 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 backdrop-blur-md"
               style={{
                 minWidth: 240,
-                background: isDark ? "#181922" : "#ffffff",
-                borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                background: isDark ? "rgba(24, 25, 34, 0.85)" : "rgba(255, 255, 255, 0.85)",
+                borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)"
               }}
             >
-              <div className="size-12 rounded-full flex items-center justify-center font-bold" style={{ background: `${colors.accent}22` }}>
-                <svg className="size-6" style={{ color: colors.accent }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <div className="size-11 rounded-full flex items-center justify-center font-bold" style={{ background: isDark ? "rgba(255,255,255,0.06)" : `${colors.accent}20` }}>
+                <svg className="size-5" style={{ color: colors.accent }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499c-.107-.196-.272-.348-.48-.432A1.493 1.493 0 0010.5 3a1.5 1.5 0 00-1.5 1.5c0 .328.106.63.287.876" />
                 </svg>
               </div>
               <div>
-                <p className="text-[13px] opacity-60 uppercase font-mono tracking-widest" style={{ color: textColor }}>{features[1] || "Active"}</p>
-                <h4 className="text-[18px] font-black" style={{ color: textColor }}>Verified Design</h4>
+                <p className="text-[11px] opacity-60 uppercase font-mono tracking-widest" style={{ color: textColor }}>{features[1] || "Active"}</p>
+                <h4 className="text-[17px] font-black" style={{ color: textColor }}>Verified Design</h4>
               </div>
             </div>
           </div>
