@@ -164,18 +164,108 @@ async function compressImage(dataUrl: string, maxDim = 2560): Promise<string> {
 function Index() {
   const generate = useServerFn(generatePromos);
   const { theme } = useTheme();
-  const [preview, setPreview] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "preview" | "loading" | "done">("idle");
-  const [result, setResult] = useState<Result | null>(null);
-  const [form, setForm] = useState<FormData>({ email: "", appName: "", targetAudience: "", objective: "" });
-  const [paid, setPaid] = useState(true);
+
+  const [preview, setPreview] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("screenmint_preview");
+    }
+    return null;
+  });
+  const [status, setStatus] = useState<"idle" | "preview" | "loading" | "done">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("screenmint_status") as any) || "idle";
+    }
+    return "idle";
+  });
+  const [result, setResult] = useState<Result | null>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screenmint_result");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return null;
+  });
+  const [form, setForm] = useState<FormData>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screenmint_form");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return { email: "", appName: "", targetAudience: "", objective: "" };
+  });
+  const [paid, setPaid] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screenmint_paid");
+      return saved !== "false"; // default to true
+    }
+    return true;
+  });
+
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [extractedColors, setExtractedColors] = useState<{ bg: string; primary: string; accent: string }>({
-    bg: "#F5F1E8",
-    primary: "#121212",
-    accent: "#C8E84A",
+  const [extractedColors, setExtractedColors] = useState<{ bg: string; primary: string; accent: string }>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screenmint_extractedColors");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return {
+      bg: "#F5F1E8",
+      primary: "#121212",
+      accent: "#C8E84A",
+    };
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        if (preview) {
+          localStorage.setItem("screenmint_preview", preview);
+        } else {
+          localStorage.removeItem("screenmint_preview");
+        }
+      } catch (e) {
+        console.warn("localStorage quota exceeded for preview screenshot", e);
+      }
+    }
+  }, [preview]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_status", status);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (result) {
+        localStorage.setItem("screenmint_result", JSON.stringify(result));
+      } else {
+        localStorage.removeItem("screenmint_result");
+      }
+    }
+  }, [result]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_form", JSON.stringify(form));
+    }
+  }, [form]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_extractedColors", JSON.stringify(extractedColors));
+    }
+  }, [extractedColors]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_paid", String(paid));
+    }
+  }, [paid]);
 
   const handleUpload = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -245,6 +335,12 @@ function Index() {
           backgroundStyle,
         },
       });
+      
+      // Set new session flag before updating state to trigger the mount sync
+      if (typeof window !== "undefined") {
+        localStorage.setItem("screenmint_is_new_session", "true");
+      }
+
       setResult(res);
       setPaid(false);
       setStatus("done");
@@ -260,6 +356,23 @@ function Index() {
     setResult(null);
     setPaid(false);
     setStatus("idle");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("screenmint_preview");
+      localStorage.removeItem("screenmint_status");
+      localStorage.removeItem("screenmint_result");
+      localStorage.removeItem("screenmint_form");
+      localStorage.removeItem("screenmint_extractedColors");
+      localStorage.removeItem("screenmint_paid");
+      localStorage.removeItem("screenmint_is_new_session");
+      
+      localStorage.removeItem("screenmint_template");
+      localStorage.removeItem("screenmint_stylePreset");
+      localStorage.removeItem("screenmint_variant");
+      localStorage.removeItem("screenmint_headline");
+      localStorage.removeItem("screenmint_subheadline");
+      localStorage.removeItem("screenmint_features");
+      localStorage.removeItem("screenmint_colors");
+    }
   }, []);
 
   return (
@@ -1736,15 +1849,56 @@ function Results({
   email: string;
   extractedColors: { bg: string; primary: string; accent: string };
 }) {
-  const [template, setTemplate] = useState<string>("showcase");
-  const [stylePreset, setStylePreset] = useState<"modern" | "minimal" | "gradient" | "dark">("modern");
-  const [variant, setVariant] = useState<"feature" | "benefit" | "outcome">("feature");
+  const [template, setTemplate] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("screenmint_template") || "showcase";
+    }
+    return "showcase";
+  });
+  const [stylePreset, setStylePreset] = useState<"modern" | "minimal" | "gradient" | "dark">((() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("screenmint_stylePreset") as any) || "modern";
+    }
+    return "modern";
+  })());
+  const [variant, setVariant] = useState<"feature" | "benefit" | "outcome">((() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("screenmint_variant") as any) || "feature";
+    }
+    return "feature";
+  })());
   const [previewMode, setPreviewMode] = useState<"editor" | "shopify_desktop" | "shopify_mobile">("editor");
 
-  const [headline, setHeadline] = useState("");
-  const [subheadline, setSubheadline] = useState("");
-  const [features, setFeatures] = useState<string[]>(["", "", ""]);
-  const [colors, setColors] = useState({ bg: "#F5F1E8", primary: "#121212", accent: "#C8E84A" });
+  const [headline, setHeadline] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("screenmint_headline") || "";
+    }
+    return "";
+  });
+  const [subheadline, setSubheadline] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("screenmint_subheadline") || "";
+    }
+    return "";
+  });
+  const [features, setFeatures] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screenmint_features");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return ["", "", ""];
+  });
+  const [colors, setColors] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screenmint_colors");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return extractedColors;
+  });
   const [downloading, setDownloading] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
 
@@ -1753,6 +1907,50 @@ function Results({
     width: typeof window !== "undefined" ? window.innerWidth : 1600,
     height: typeof window !== "undefined" ? window.innerHeight : 900,
   });
+
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_template", template);
+    }
+  }, [template]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_stylePreset", stylePreset);
+    }
+  }, [stylePreset]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_variant", variant);
+    }
+  }, [variant]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_headline", headline);
+    }
+  }, [headline]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_subheadline", subheadline);
+    }
+  }, [subheadline]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_features", JSON.stringify(features));
+    }
+  }, [features]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_colors", JSON.stringify(colors));
+    }
+  }, [colors]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -1778,24 +1976,46 @@ function Results({
   const availableHeight = windowSize.height - 120; // Accounts for floating footer and padding
   const fullscreenScale = Math.max(0.1, Math.min(0.98, availableWidth / 1600, availableHeight / 900));
 
-  // Auto-set the suggested template from AI analysis, and extract colors
+  // Auto-set the suggested template from AI analysis, and extract colors (only on new session or if empty)
   useEffect(() => {
     if (result) {
-      if (result.suggestedTemplate) {
-        setTemplate(result.suggestedTemplate);
+      const isNewSession = typeof window !== "undefined" && localStorage.getItem("screenmint_is_new_session") === "true";
+      const hasSavedTemplate = typeof window !== "undefined" && localStorage.getItem("screenmint_template");
+
+      if (isNewSession || !hasSavedTemplate) {
+        if (result.suggestedTemplate) {
+          setTemplate(result.suggestedTemplate);
+        }
+        setColors(extractedColors);
       }
-      setColors(extractedColors);
     }
   }, [result, extractedColors]);
 
   // Sync with AI copy variants when user toggles Feature/Benefit/Outcome tabs
+  // But skip it if we are just loading from a page refresh (not a new session)
   useEffect(() => {
     if (result && result.variants) {
+      const isNewSession = typeof window !== "undefined" && localStorage.getItem("screenmint_is_new_session") === "true";
+
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+        if (!isNewSession) {
+          // Skip initial sync on page refresh, to preserve custom edits from localStorage
+          return;
+        }
+      }
+
+      // Otherwise (new session or tab clicked), sync with AI variants
       const activeCopy = result.variants[variant];
       if (activeCopy) {
         setHeadline(activeCopy.headline || "");
         setSubheadline(activeCopy.subheadline || "");
         setFeatures(activeCopy.features || ["", "", ""]);
+      }
+
+      // Once synchronized for new session, clear the is_new_session flag
+      if (isNewSession) {
+        localStorage.removeItem("screenmint_is_new_session");
       }
     }
   }, [result, variant]);
