@@ -1160,14 +1160,10 @@ function TemplateCanvas({
           );
         case "conversion":
           return (
-            <span key={segment} className="relative inline-block mx-1 font-extrabold animate-pulse"
-                  style={{
-                    backgroundImage: `linear-gradient(120deg, ${accentColor} 0%, ${accentColor} 100%)`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundSize: "100% 0.25em",
-                    backgroundPosition: "0 88%"
-                  }}>
+            <span key={segment} className="relative inline-block mx-1.5 font-extrabold pb-1">
               {segment}
+              <span className="absolute bottom-0 left-0 w-full h-[6px] rounded-full"
+                    style={{ backgroundColor: accentColor }} />
             </span>
           );
         case "showcase":
@@ -1248,7 +1244,12 @@ function TemplateCanvas({
           );
         case "reports_growth":
           return (
-            <span key={segment} className="font-black mx-1" style={{ color: accentColor }}>
+            <span key={segment} className="px-3 py-0.5 rounded-lg inline-block mx-1 font-extrabold text-[0.92em]"
+                  style={{
+                    backgroundColor: `${accentColor}1A`,
+                    color: accentColor,
+                    border: `1px solid ${accentColor}33`
+                  }}>
               {segment}
             </span>
           );
@@ -1457,11 +1458,11 @@ function TemplateCanvas({
               )}
               <span className="font-mono text-[12px] tracking-wider px-4 py-1.5 rounded-full font-bold uppercase"
                     style={{ color: accentColor, backgroundColor: `${accentColor}20` }}>
-                {appName || "WATI"} widget
+                {appName || "WATI"}
               </span>
             </div>
             <div className="text-sm font-mono tracking-widest uppercase font-bold opacity-60" style={{ color: bodyTextColor }}>
-              {appName || "wati"} . saas
+              {appName || "wati"}
             </div>
           </div>
 
@@ -1479,24 +1480,35 @@ function TemplateCanvas({
           {/* Floating visual elements around center mockup */}
           <div className="relative w-[700px] mx-auto my-3 flex items-center justify-center z-10">
             {/* Floating widget left */}
-            <div className={`absolute -left-24 bottom-12 w-48 p-4 border rounded-2xl shadow-xl flex flex-col gap-2.5 rotate-[-4deg] select-none backdrop-blur-md ${
-              isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-black/5 text-gray-800"
+            <div className={`absolute -left-28 bottom-12 w-52 p-4 border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col gap-3.5 rotate-[-4deg] select-none backdrop-blur-xl transition-all duration-300 hover:rotate-0 hover:scale-[1.03] z-20 ${
+              isDark ? "bg-slate-950/75 border-white/10 text-white" : "bg-white/85 border-slate-200/50 text-slate-800"
             }`}>
-              <div className="flex items-center gap-1.5 border-b pb-1.5 border-current/10">
-                <div className="size-5 rounded-full bg-green-500 flex items-center justify-center">
-                  <svg className="size-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-                  </svg>
+              <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <div className="size-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center font-bold text-xs text-emerald-500">
+                    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.625.625 0 1 1-1.25 0 .625.625 0 0 1 1.25 0zm4.875 0a.625.625 0 1 1-1.25 0 .625.625 0 0 1 1.25 0zm4.875 0a.625.625 0 1 1-1.25 0 .625.625 0 0 1 1.25 0zM2.25 12c0 4.757 3.424 8.717 8 9.584V22.5a.75.75 0 0 0 1.28.53l2.87-2.87a9.75 9.75 0 1 0-12.15-8.16z" />
+                    </svg>
+                  </div>
+                  <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-950 animate-pulse" />
                 </div>
-                <div className="text-[10px] font-extrabold">WhatsApp live</div>
+                <div>
+                  <div className="text-[11px] font-black tracking-tight leading-none">WhatsApp Support</div>
+                  <div className="text-[8px] opacity-60 mt-0.5">Response time: Instant</div>
+                </div>
               </div>
-              <div className={`h-6.5 w-full rounded flex items-center px-2 text.5 text-[9px] font-semibold ${
-                isDark ? "bg-white/5 border border-white/5 text-gray-300" : "bg-gray-50 border border-gray-100 text-gray-500"
+              
+              <div className={`p-2.5 rounded-xl text-[9px] font-bold leading-normal shadow-inner ${
+                isDark ? "bg-white/5 text-slate-200 border border-white/5" : "bg-slate-50 text-slate-700 border border-slate-100"
               }`}>
-                Hello! How can we help you?
+                Hi! Need help setting up your store checkout? 💬
               </div>
-              <div className="h-6 w-1/2 rounded-lg bg-green-500 self-end flex items-center justify-center text-[8px] text-white font-bold cursor-default">
-                Send chat
+              
+              <div className="h-7 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md flex items-center justify-center gap-1.5 text-[9px] text-white font-extrabold cursor-pointer transition-all">
+                <svg className="size-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.458L0 24zm6.59-4.846c1.6.95 3.18 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.03-5.114-2.905-6.989-1.874-1.873-4.36-2.903-6.992-2.904-5.442 0-9.87 4.42-9.874 9.865-.001 1.748.46 3.453 1.335 4.968l-.98 3.57 3.662-.96z" />
+                </svg>
+                <span>Start Live Chat</span>
               </div>
             </div>
 
@@ -1506,25 +1518,51 @@ function TemplateCanvas({
             </div>
 
             {/* Floating widget right */}
-            <div className={`absolute -right-24 bottom-20 w-44 p-3.5 border rounded-2xl shadow-xl flex flex-col gap-2.5 rotate-[3deg] select-none backdrop-blur-md ${
-              isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-black/5 text-gray-800"
+            <div className={`absolute -right-28 bottom-20 w-52 p-4 border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col gap-3 rotate-[3deg] select-none backdrop-blur-xl transition-all duration-300 hover:rotate-0 hover:scale-[1.03] z-20 ${
+              isDark ? "bg-slate-950/75 border-white/10 text-white" : "bg-white/85 border-slate-200/50 text-slate-800"
             }`}>
-              <div className="flex items-center gap-2.5">
-                <div className="size-8 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-bold">
-                  <svg className="size-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-[10px] font-extrabold">Active User</div>
-                  <div className="text-[8px] text-green-500 font-bold">Online now</div>
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="font-mono text-[8px] font-black uppercase tracking-widest opacity-60">Real-time Analytics</span>
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black bg-emerald-500/10 text-emerald-500">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-ping" />
+                  LIVE
+                </span>
               </div>
-              <div className={`h-1.5 w-full rounded-full overflow-hidden ${isDark ? "bg-white/10" : "bg-gray-100"}`}>
-                <div className="h-full bg-green-500 w-[85%]" />
+              
+              <div>
+                <div className="text-[20px] font-black tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 dark:from-blue-400 dark:to-indigo-400">
+                  +38.5%
+                </div>
+                <div className="text-[9px] font-bold opacity-60 mt-0.5">Conversion Growth Rate</div>
               </div>
-              <div className={`text-[9px] leading-tight italic font-medium ${isDark ? "text-gray-300" : "text-gray-500"}`}>
-                "Customized widget active on checkout in 1 minute!"
+              
+              {/* Sparkline chart */}
+              <div className="h-8 w-full mt-1.5">
+                <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="sparkline-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M 0 25 C 10 23, 20 28, 30 18 C 40 8, 50 15, 60 12 C 70 9, 80 4, 90 6 C 95 7, 100 2, 100 2 L 100 30 L 0 30 Z"
+                    fill="url(#sparkline-grad)"
+                  />
+                  <path
+                    d="M 0 25 C 10 23, 20 28, 30 18 C 40 8, 50 15, 60 12 C 70 9, 80 4, 90 6 C 95 7, 100 2, 100 2"
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="100" cy="2" r="3" fill="#3b82f6" className="animate-pulse" />
+                </svg>
+              </div>
+
+              <div className="flex items-center justify-between border-t pt-2.5 border-current/5 text-[8px] font-bold opacity-60">
+                <span>Active Checkouts:</span>
+                <span className="font-extrabold text-blue-500">1,420</span>
               </div>
             </div>
           </div>
@@ -1543,10 +1581,15 @@ function TemplateCanvas({
           <div className="absolute top-1/4 left-1/3 w-[300px] h-[300px] rounded-full bg-pink-500/5 blur-3xl pointer-events-none" />
           
           <div className="col-span-5 flex flex-col justify-center h-full pr-2 z-10">
-            <div className="inline-flex w-fit items-center gap-2.5 px-4 py-2 rounded-xl text-[11px] font-mono font-bold uppercase tracking-wider mb-5 shadow-sm"
-              style={{ background: isDark ? "rgba(255,255,255,0.06)" : `${colors.accent}15`, color: isDark ? colors.accent : "#DB2777", border: isDark ? "1px solid rgba(255,255,255,0.08)" : `1px solid ${colors.accent}25` }}>
-              <TargetIcon size={18} />
-              <span>Conversion Booster</span>
+            <div className="flex items-center gap-3 mb-6 z-10">
+              {logo ? (
+                <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain" />
+              ) : (
+                <div className="size-8 rounded-lg flex items-center justify-center font-bold text-md text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)` }}>
+                  {appName ? appName[0].toUpperCase() : "S"}
+                </div>
+              )}
+              <span className="font-extrabold text-[18px] tracking-tight uppercase" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
             </div>
             
             <h1 className="text-[64px] font-black leading-[1.08] mb-4 font-sans-jakarta" style={{ color: textColor }}>
@@ -1558,15 +1601,27 @@ function TemplateCanvas({
               {subheadline}
             </p>
  
-            <div className={`p-4.5 rounded-2xl border mb-6 flex items-center gap-4.5 shadow-md ${
-              isDark ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100"
+            {/* Redesigned feature highlight card */}
+            <div className={`p-5.5 rounded-3xl border mb-8 flex items-center justify-between gap-6 shadow-[0_15px_30px_rgba(0,0,0,0.08)] backdrop-blur-md transition-all duration-300 hover:scale-[1.01] ${
+              isDark ? "bg-slate-950/40 border-white/10" : "bg-white/90 border-slate-200/60"
             }`}>
-              <div className="size-13 rounded-xl flex items-center justify-center shrink-0 shadow-inner" style={{ background: "linear-gradient(135deg, #EC4899 0%, #F43F5E 100%)" }}>
-                <RocketIcon size={24} />
+              <div className="flex items-center gap-4.5">
+                <div className="size-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg bg-gradient-to-tr from-rose-500 to-orange-500 text-white">
+                  <svg className="size-7" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-black text-[18px] tracking-tight leading-tight" style={{ color: bodyTextColor }}>Automated Growth Engine</h4>
+                  <p className="text-[13.5px] opacity-75 mt-1 font-medium" style={{ color: bodyTextColor }}>Optimize storefront conversion rates instantly</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-extrabold text-[16px]" style={{ color: bodyTextColor }}>Automated Growth Engine</h4>
-                <p className="text-[12px] opacity-70 mt-0.5" style={{ color: bodyTextColor }}>Optimize storefront conversion rates instantly</p>
+              
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 font-extrabold text-xs tracking-tight select-none">
+                <svg className="size-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75" />
+                </svg>
+                <span>AOV +24%</span>
               </div>
             </div>
  
@@ -1725,7 +1780,7 @@ function TemplateCanvas({
           <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] rounded-full bg-green-500/10 blur-3xl pointer-events-none" />
  
           <div className="flex items-center justify-between mt-0 z-10">
-            <div className="max-w-3xl">
+            <div className="max-w-5xl">
               <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
                 {renderHeadline(headline, "growth")}
               </h1>
@@ -1733,15 +1788,6 @@ function TemplateCanvas({
                  style={{ color: secondaryColor }}>
                 {subheadline}
               </p>
-            </div>
-            
-            <div className="flex items-center gap-3.5 px-5 py-3 rounded-2xl border shrink-0 shadow-lg select-none"
-                 style={{ borderColor: isDark ? "rgba(255,255,255,0.12)" : `${accentColor}25`, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : `${accentColor}08` }}>
-              <GrowthChartIcon size={44} />
-              <div>
-                <div className="text-[10px] font-mono font-bold uppercase tracking-widest" style={{ color: accentColor }}>Merchant Growth</div>
-                <div className="text-[14px] font-black" style={{ color: bodyTextColor }}>Shopify Plus Ready</div>
-              </div>
             </div>
           </div>
  
@@ -1920,54 +1966,62 @@ function TemplateCanvas({
             </p>
           </div>
  
-          <div className="w-[820px] mx-auto mt-6 relative z-10 scale-[0.98]">
-            <ScreenshotMockup maxHeight="380px" />
+          <div className="w-[860px] mx-auto mt-6 relative z-10 transition-transform duration-300 hover:scale-[1.01]">
+            <ScreenshotMockup maxHeight="450px" />
  
+            {/* Left float badge */}
             <div
-              className="absolute -left-12 bottom-12 p-4 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 backdrop-blur-md"
+              className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 backdrop-blur-md w-72 transition-all duration-300 hover:scale-[1.03]"
               style={{
-                minWidth: 240,
-                background: isDark ? "rgba(24, 25, 34, 0.85)" : "rgba(255, 255, 255, 0.85)",
-                borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)"
+                left: "-260px",
+                top: "80px",
+                background: isDark ? "rgba(20, 21, 30, 0.9)" : "rgba(255, 255, 255, 0.95)",
+                borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"
               }}
             >
-              <div className="rounded-full flex items-center justify-center font-bold" 
+              <div className="rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm" 
                    style={{ 
-                     width: `${44 * featureIconSize}px`, 
-                     height: `${44 * featureIconSize}px`, 
+                     width: `${48 * featureIconSize}px`, 
+                     height: `${48 * featureIconSize}px`, 
                      background: isDark ? "rgba(255,255,255,0.06)" : `${accentColor}20` 
                    }}>
-                <svg style={{ width: `${20 * featureIconSize}px`, height: `${20 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <svg style={{ width: `${22 * featureIconSize}px`, height: `${22 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
                 </svg>
               </div>
               <div>
-                <p className="opacity-60 uppercase font-mono tracking-widest" style={{ color: bodyTextColor, fontSize: `${11 * featureTextSize}px` }}>{features[0] || "Feature"}</p>
-                <h4 className="font-black" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>Conversion Stats</h4>
+                <p className="opacity-60 uppercase font-mono tracking-widest text-[10px] font-black" style={{ color: bodyTextColor }}>Conversion Stats</p>
+                <h4 className="font-extrabold tracking-tight mt-0.5" style={{ color: bodyTextColor, fontSize: `${16 * featureTextSize}px` }}>
+                  {features[0] || "Multichannel Order Management"}
+                </h4>
               </div>
             </div>
  
+            {/* Right float badge */}
             <div
-              className="absolute -right-12 bottom-20 p-4 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 backdrop-blur-md"
+              className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 backdrop-blur-md w-72 transition-all duration-300 hover:scale-[1.03]"
               style={{
-                minWidth: 240,
-                background: isDark ? "rgba(24, 25, 34, 0.85)" : "rgba(255, 255, 255, 0.85)",
-                borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)"
+                right: "-260px",
+                bottom: "80px",
+                background: isDark ? "rgba(20, 21, 30, 0.9)" : "rgba(255, 255, 255, 0.95)",
+                borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"
               }}
             >
-              <div className="rounded-full flex items-center justify-center font-bold" 
+              <div className="rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm" 
                    style={{ 
-                     width: `${44 * featureIconSize}px`, 
-                     height: `${44 * featureIconSize}px`, 
+                     width: `${48 * featureIconSize}px`, 
+                     height: `${48 * featureIconSize}px`, 
                      background: isDark ? "rgba(255,255,255,0.06)" : `${accentColor}20` 
                    }}>
-                <svg style={{ width: `${20 * featureIconSize}px`, height: `${20 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499c-.107-.196-.272-.348-.48-.432A1.493 1.493 0 0010.5 3a1.5 1.5 0 00-1.5 1.5c0 .328.106.63.287.876" />
+                <svg style={{ width: `${22 * featureIconSize}px`, height: `${22 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.63 3.06" />
                 </svg>
               </div>
               <div>
-                <p className="opacity-60 uppercase font-mono tracking-widest" style={{ color: bodyTextColor, fontSize: `${11 * featureTextSize}px` }}>{features[1] || "Active"}</p>
-                <h4 className="font-black" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>Verified Design</h4>
+                <p className="opacity-60 uppercase font-mono tracking-widest text-[10px] font-black" style={{ color: bodyTextColor }}>Verified Design</p>
+                <h4 className="font-extrabold tracking-tight mt-0.5" style={{ color: bodyTextColor, fontSize: `${16 * featureTextSize}px` }}>
+                  {features[1] || "Automated Order Allocation"}
+                </h4>
               </div>
             </div>
           </div>
@@ -2190,70 +2244,148 @@ function TemplateCanvas({
         </div>
       )}
 
-      {/* Template 4 – Reports & Growth */}
+      {/* Template 4 – Reports & Growth (Three-Column Dashboard Redesign) */}
       {template === "reports_growth" && (
-        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
-          <div className="absolute top-[-20%] right-[-10%] w-[450px] h-[450px] rounded-full blur-[100px] pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
-
-          {/* Left Column */}
-          <div className="col-span-5 flex flex-col justify-center z-10 h-full">
-            {logo && (
-              <img src={logo} alt="Logo" className="h-8 max-w-[130px] object-contain rounded mb-8" />
+        <div className="h-full flex flex-col justify-between px-16 py-12 font-sans-jakarta relative overflow-hidden">
+          {/* Glowing dynamic background blur circles */}
+          <div className="absolute top-[10%] left-[5%] w-[400px] h-[400px] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: `${accentColor}08` }} />
+          <div className="absolute bottom-[10%] right-[5%] w-[500px] h-[500px] rounded-full blur-[140px] pointer-events-none" style={{ backgroundColor: `${accentColor}12` }} />
+          
+          {/* Top Header Section with Logo and Centered Text */}
+          <div className="w-full flex flex-col items-center text-center z-20 mt-1 select-none">
+            {logo ? (
+              <img src={logo} alt="Logo" className="h-8 max-w-[130px] object-contain rounded mb-4" />
+            ) : (
+              <div className="h-2" />
             )}
-
-            <h1 className="text-[50px] font-black leading-[1.15] tracking-tight mb-5" style={{ color: textColor }}>
+            <h1 className="text-[48px] font-black leading-[1.15] tracking-tight max-w-4xl mx-auto" style={{ color: textColor }}>
               {renderHeadline(headline || "Beautiful Reports. Smarter Decisions. **Bigger Growth.**", "reports_growth")}
             </h1>
-
-            <p className="text-[18px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+            <p className="text-[18px] opacity-80 mt-3 max-w-2xl mx-auto font-bold leading-relaxed" style={{ color: secondaryColor }}>
               {subheadline || "Get actionable insights and make data-driven decisions."}
             </p>
-
-            <div className="flex flex-col" style={{ gap: featureSpacing }}>
-              {features.filter(Boolean).map((feat, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="rounded-lg flex items-center justify-center border shrink-0"
-                       style={{ 
-                         width: `${28 * featureIconSize}px`, 
-                         height: `${28 * featureIconSize}px`,
-                         backgroundColor: `${accentColor}15`,
-                         color: accentColor,
-                         borderColor: `${accentColor}25`
-                       }}>
-                    <svg style={{ width: `${16 * featureIconSize}px`, height: `${16 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                  </div>
-                  <span className="font-bold" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Right Column */}
-          <div className="col-span-7 flex justify-end z-10">
-            <div className="w-[840px] rounded-xl shadow-xl overflow-hidden border"
-                 style={{
-                   backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#FFFFFF",
-                   borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"
-                 }}>
-              <div className="flex items-center justify-between px-4 py-2.5 border-b"
+          {/* Three-Column Grid Section - Utilizing remaining horizontal space */}
+          <div className="grid grid-cols-12 gap-8 items-center z-10 w-full mb-2">
+            
+            {/* Left Column (col-span-3) - Stats & Insights 1 */}
+            <div className="col-span-3 flex flex-col gap-6 h-full justify-center">
+              {/* Metric Card 1 */}
+              <div className="p-6 rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
                    style={{
-                     backgroundColor: isDark ? "rgba(255, 255, 255, 0.02)" : "rgba(234, 88, 12, 0.03)",
-                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(234, 88, 12, 0.08)"
+                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.75)" : "rgba(255, 255, 255, 0.85)",
+                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
                    }}>
-                <div className="flex gap-1.5">
-                  <div className="size-2 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(234, 88, 12, 0.2)" }} />
-                  <div className="size-2 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(234, 88, 12, 0.2)" }} />
-                  <div className="size-2 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(234, 88, 12, 0.2)" }} />
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-60" style={{ color: bodyTextColor }}>Conversion Rate</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold flex items-center gap-0.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    <svg className="size-3" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                    </svg>
+                    <span>+12.4%</span>
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono" style={{ color: secondaryColor }}>reports.analytics.dashboard</span>
-                <div className="w-8" />
+                <div>
+                  <h3 className="text-3xl font-black tracking-tight" style={{ color: textColor }}>4.82%</h3>
+                  <p className="text-xs opacity-75 font-medium mt-1" style={{ color: secondaryColor }}>Industry leading benchmark</p>
+                </div>
               </div>
-              <div className="relative overflow-hidden">
-                <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[440px]" />
+
+              {/* Feature Card 2 */}
+              <div className="p-6 rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
+                   style={{
+                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.75)" : "rgba(255, 255, 255, 0.85)",
+                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
+                   }}>
+                <div className="rounded-xl flex items-center justify-center shrink-0 size-9 shadow-sm"
+                     style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+                  <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-extrabold tracking-tight" style={{ color: bodyTextColor, fontSize: `${15 * featureTextSize}px` }}>
+                    {features[0] || "Advanced Analytics"}
+                  </h4>
+                  <p className="text-xs opacity-75 font-medium mt-1 leading-normal" style={{ color: secondaryColor }}>
+                    Interactive reports & filters
+                  </p>
+                </div>
               </div>
             </div>
+
+            {/* Center Column (col-span-6) - Mockup Viewport */}
+            <div className="col-span-6 flex justify-center items-center">
+              <div className="w-full rounded-2xl border shadow-2xl overflow-hidden p-2.5 backdrop-blur-sm"
+                   style={{
+                     backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.8)",
+                     borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.06)"
+                   }}>
+                {/* Browser bar */}
+                <div className="flex items-center justify-between px-3.5 pb-2.5 pt-1 border-b mb-2.5"
+                     style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)" }}>
+                  <div className="flex gap-1.5">
+                    <div className="size-2 rounded-full bg-red-400" />
+                    <div className="size-2 rounded-full bg-yellow-400" />
+                    <div className="size-2 rounded-full bg-green-400" />
+                  </div>
+                  <span className="text-[9px] font-mono opacity-40 font-bold" style={{ color: secondaryColor }}>reports.analytics.dashboard</span>
+                  <div className="w-8" />
+                </div>
+                {/* Image */}
+                <div className="relative overflow-hidden rounded-xl">
+                  <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[380px]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column (col-span-3) - Stats & Insights 2 */}
+            <div className="col-span-3 flex flex-col gap-6 h-full justify-center">
+              {/* Metric Card 3 */}
+              <div className="p-6 rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
+                   style={{
+                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.75)" : "rgba(255, 255, 255, 0.85)",
+                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
+                   }}>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-60" style={{ color: bodyTextColor }}>AOV Growth</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold flex items-center gap-0.5 bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                    <svg className="size-3" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                    </svg>
+                    <span>+24.8%</span>
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-3xl font-black tracking-tight" style={{ color: textColor }}>$84.50</h3>
+                  <p className="text-xs opacity-75 font-medium mt-1" style={{ color: secondaryColor }}>Average Order Value boost</p>
+                </div>
+              </div>
+
+              {/* Feature Card 4 */}
+              <div className="p-6 rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
+                   style={{
+                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.75)" : "rgba(255, 255, 255, 0.85)",
+                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
+                   }}>
+                <div className="rounded-xl flex items-center justify-center shrink-0 size-9 shadow-sm"
+                     style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+                  <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-11.61 3.415 5.25 5.25 0 0110.28 2.051zm8.96 2L20 18m0 0l-1.04-1M20 18l1.04-1M20 18l-1.04 1" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-extrabold tracking-tight" style={{ color: bodyTextColor, fontSize: `${15 * featureTextSize}px` }}>
+                    {features[1] || "Automated Delivery"}
+                  </h4>
+                  <p className="text-xs opacity-75 font-medium mt-1 leading-normal" style={{ color: secondaryColor }}>
+                    Synchronized growth engine
+                  </p>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
