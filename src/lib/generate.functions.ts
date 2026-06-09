@@ -13,7 +13,13 @@ function parseDataUrl(dataUrl: string) {
   };
 }
 
+let discoveredModelsCache: string[] | null = null;
+
 async function getSupportedMultimodalModels(key: string): Promise<string[]> {
+  if (discoveredModelsCache && discoveredModelsCache.length > 0) {
+    console.log("[Gemini API] Using cached compatible models:", discoveredModelsCache);
+    return discoveredModelsCache;
+  }
   try {
     console.log("[Gemini API] Querying ListModels for dynamic model discovery...");
     const res = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${key}`);
@@ -37,6 +43,7 @@ async function getSupportedMultimodalModels(key: string): Promise<string[]> {
       .map((m: any) => m.name.replace(/^models\//, ""));
 
     console.log("[Gemini API] Discovered compatible models:", models);
+    discoveredModelsCache = models;
     return models;
   } catch (err) {
     console.warn("[Gemini API] Error during model discovery, falling back to static list:", err);

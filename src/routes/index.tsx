@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useRef, useState, useEffect, cloneElement } from "react";
+import { createPortal } from "react-dom";
 import { toast, Toaster } from "sonner";
 import { generatePromos } from "@/lib/generate.functions";
 import { useTheme } from "@/hooks/use-theme";
@@ -143,12 +144,12 @@ async function compressImage(dataUrl: string, maxDim = 2560): Promise<string> {
 
         ctx.drawImage(img, 0, 0, w, h);
 
-        // Convert to PNG for lossless rendering (perfect for text/UI)
-        let resultDataUrl = canvas.toDataURL("image/png");
+        // Convert to WebP for modern compression at high quality (0.90)
+        let resultDataUrl = canvas.toDataURL("image/webp", 0.90);
 
-        // Fallback to high-quality JPEG if PNG is too large (over 8MB)
-        if (resultDataUrl.length > 8 * 1024 * 1024) {
-          resultDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+        // If webp is not supported (reverts to PNG) or if output is still large, fallback to high-quality JPEG (0.90)
+        if (resultDataUrl.startsWith("data:image/png") || resultDataUrl.length > 1.5 * 1024 * 1024) {
+          resultDataUrl = canvas.toDataURL("image/jpeg", 0.90);
         }
 
         resolve(resultDataUrl);
@@ -203,18 +204,34 @@ function Index() {
     return true;
   });
 
+  const [logo, setLogo] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("screenmint_logo");
+    }
+    return null;
+  });
+
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [extractedColors, setExtractedColors] = useState<{ bg: string; primary: string; accent: string }>(() => {
+  const [extractedColors, setExtractedColors] = useState<{ bg: string; primary: string; secondary: string; accent: string }>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("screenmint_extractedColors");
       if (saved) {
-        try { return JSON.parse(saved); } catch {}
+        try {
+          const parsed = JSON.parse(saved);
+          return {
+            bg: parsed.bg || "#F5F1E8",
+            primary: parsed.primary || "#121212",
+            secondary: parsed.secondary || "#6B7280",
+            accent: parsed.accent || "#C8E84A",
+          };
+        } catch {}
       }
     }
     return {
       bg: "#F5F1E8",
       primary: "#121212",
+      secondary: "#6B7280",
       accent: "#C8E84A",
     };
   });
@@ -266,6 +283,20 @@ function Index() {
       localStorage.setItem("screenmint_paid", String(paid));
     }
   }, [paid]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        if (logo) {
+          localStorage.setItem("screenmint_logo", logo);
+        } else {
+          localStorage.removeItem("screenmint_logo");
+        }
+      } catch (e) {
+        console.warn("localStorage quota exceeded for logo icon", e);
+      }
+    }
+  }, [logo]);
 
   const handleUpload = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -321,8 +352,9 @@ function Index() {
       const { palette, backgroundStyle } = await extractFromDataUrl(preview, 5);
       const bg = palette[1] ?? "#F5F1E8";
       const primary = palette[0] ?? "#121212";
+      const secondary = palette[3] ?? palette[1] ?? "#6B7280";
       const accent = palette[2] ?? "#C8E84A";
-      setExtractedColors({ bg, primary, accent });
+      setExtractedColors({ bg, primary, secondary, accent });
 
       const res = await generate({
         data: {
@@ -355,7 +387,11 @@ function Index() {
     setPreview(null);
     setResult(null);
     setPaid(false);
+    setLogo(null);
     setStatus("idle");
+    setFeatureTextSize(1.0);
+    setFeatureSpacing(18);
+    setFeatureIconSize(1.0);
     if (typeof window !== "undefined") {
       localStorage.removeItem("screenmint_preview");
       localStorage.removeItem("screenmint_status");
@@ -363,6 +399,7 @@ function Index() {
       localStorage.removeItem("screenmint_form");
       localStorage.removeItem("screenmint_extractedColors");
       localStorage.removeItem("screenmint_paid");
+      localStorage.removeItem("screenmint_logo");
       localStorage.removeItem("screenmint_is_new_session");
       
       localStorage.removeItem("screenmint_template");
@@ -372,6 +409,9 @@ function Index() {
       localStorage.removeItem("screenmint_subheadline");
       localStorage.removeItem("screenmint_features");
       localStorage.removeItem("screenmint_colors");
+      localStorage.removeItem("screenmint_featureTextSize");
+      localStorage.removeItem("screenmint_featureSpacing");
+      localStorage.removeItem("screenmint_featureIconSize");
     }
   }, []);
 
@@ -393,13 +433,22 @@ function Index() {
       <section className="mx-auto max-w-6xl px-6 pt-16 pb-24">
         {status === "idle" && !preview && <Hero onPick={() => fileRef.current?.click()} onDrop={handleUpload} />}
         {status === "preview" && preview && (
-          <Preview image={preview} form={form} setForm={setForm} onGenerate={handleGenerate} onReset={onReset} />
+          <Preview
+            image={preview}
+            form={form}
+            setForm={setForm}
+            logo={logo}
+            setLogo={setLogo}
+            onGenerate={handleGenerate}
+            onReset={onReset}
+          />
         )}
         {status === "loading" && <Loading preview={preview} />}
         {status === "done" && result && (
           <Results
             result={result}
             preview={preview}
+            logo={logo}
             paid={paid}
             onPaid={() => setPaid(true)}
             onReset={onReset}
@@ -535,15 +584,21 @@ function Preview({
   image,
   form,
   setForm,
+  logo,
+  setLogo,
   onGenerate,
   onReset,
 }: {
   image: string;
   form: FormData;
   setForm: React.Dispatch<React.SetStateAction<FormData>>;
+  logo: string | null;
+  setLogo: React.Dispatch<React.SetStateAction<string | null>>;
   onGenerate: () => void;
   onReset: () => void;
 }) {
+  const logoRef = useRef<HTMLInputElement>(null);
+  
   const update = (k: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -588,6 +643,65 @@ function Preview({
               maxLength={100}
               className={inputCls}
             />
+          </div>
+          <div>
+            <label className={labelCls}>App logo (Optional)</label>
+            <div className="flex items-center gap-4 mt-1">
+              {logo ? (
+                <div className="relative size-14 rounded-xl border border-border bg-card overflow-hidden shrink-0 flex items-center justify-center">
+                  <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+                  <button
+                    onClick={() => setLogo(null)}
+                    type="button"
+                    className="absolute -top-1 -right-1 size-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-[10px] shadow-md transition"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => logoRef.current?.click()}
+                  className="size-14 rounded-xl border border-dashed border-border hover:border-lime/60 bg-card/50 hover:bg-card flex flex-col items-center justify-center cursor-pointer shrink-0 text-muted-foreground hover:text-lime transition"
+                >
+                  <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                </div>
+              )}
+              <div className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => logoRef.current?.click()}
+                  className="px-4 py-2 border border-border rounded-lg text-xs font-semibold hover:bg-card transition"
+                >
+                  {logo ? "Change logo" : "Upload logo"}
+                </button>
+                <p className="text-[11px] text-muted-foreground mt-1.5">PNG, JPG or SVG. Transparent background recommended.</p>
+              </div>
+              <input
+                ref={logoRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    if (f.size > 2 * 1024 * 1024) {
+                      toast.error("Logo too large. Keep it under 2MB.");
+                      return;
+                    }
+                    try {
+                      const dataUrl = await readAsDataURL(f);
+                      setLogo(dataUrl);
+                      toast.success("Logo uploaded successfully!");
+                    } catch {
+                      toast.error("Failed to read logo file.");
+                    }
+                  }
+                  e.target.value = "";
+                }}
+              />
+            </div>
           </div>
           <div>
             <label className={labelCls}>Target audience *</label>
@@ -839,16 +953,24 @@ function TemplateCanvas({
   screenshot,
   watermark,
   appName,
+  logo,
+  featureTextSize = 1.0,
+  featureSpacing = 18,
+  featureIconSize = 1.0,
 }: {
   template: string;
   stylePreset: string;
   headline: string;
   subheadline: string;
   features: string[];
-  colors: { bg: string; primary: string; accent: string };
+  colors: { bg: string; primary: string; secondary: string; accent: string };
   screenshot: string;
   watermark: boolean;
   appName: string;
+  logo: string | null;
+  featureTextSize?: number;
+  featureSpacing?: number;
+  featureIconSize?: number;
 }) {
   const FontStyles = () => (
     <style dangerouslySetInnerHTML={{ __html: `
@@ -865,7 +987,7 @@ function TemplateCanvas({
     `}} />
   );
 
-  const getLuminance = (hex: string): number => {
+  const getSimpleLuminance = (hex: string): number => {
     if (!hex || typeof hex !== "string") return 255;
     const cleanHex = hex.replace("#", "").trim();
     if (cleanHex.length !== 3 && cleanHex.length !== 6) return 255;
@@ -885,56 +1007,133 @@ function TemplateCanvas({
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   };
 
-  const resolveBgAndText = () => {
-    let finalBg = colors.bg;
-    let finalTextColor = colors.primary;
-    let isBgDark = false;
-
-    if (stylePreset === "minimal") {
-      finalBg = "#FFFFFF";
-      finalTextColor = "#0F172A"; // slate-900
-      isBgDark = false;
-    } else if (stylePreset === "dark") {
-      finalBg = "#0A0B0E";
-      finalTextColor = "#F8FAFC"; // slate-50
-      isBgDark = true;
-    } else if (stylePreset === "gradient") {
-      finalBg = `linear-gradient(135deg, ${colors.bg}, ${colors.accent})`;
-      const lumBg = getLuminance(colors.bg);
-      const lumAccent = getLuminance(colors.accent);
-      const avgLum = (lumBg + lumAccent) / 2;
-      isBgDark = avgLum < 140;
-      finalTextColor = isBgDark ? "#F8FAFC" : "#0F172A";
+  const getRelativeLuminance = (hex: string): number => {
+    if (!hex || typeof hex !== "string") return 1;
+    const cleanHex = hex.replace("#", "").trim();
+    if (cleanHex.length !== 3 && cleanHex.length !== 6) return 1;
+    
+    let r = 255, g = 255, b = 255;
+    if (cleanHex.length === 3) {
+      r = parseInt(cleanHex[0] + cleanHex[0], 16);
+      g = parseInt(cleanHex[1] + cleanHex[1], 16);
+      b = parseInt(cleanHex[2] + cleanHex[2], 16);
     } else {
-      // Modern preset
-      if (template === "enterprise") {
-        finalBg = "linear-gradient(135deg, #060B26 0%, #020412 100%)"; // Premium deep slate/navy grid
-        finalTextColor = "#FFFFFF";
-        isBgDark = true;
-      } else if (template === "growth") {
-        finalBg = "linear-gradient(135deg, #022315 0%, #010F09 100%)"; // Premium deep green/emerald
-        finalTextColor = "#FFFFFF";
-        isBgDark = true;
-      } else if (template === "showcase") {
-        finalBg = "#FAF9F5"; // Beautiful soft warm luxury off-white
-        finalTextColor = "#1C1917"; // Warm stone-900
-        isBgDark = false;
-      } else if (template === "executive") {
-        finalBg = "#FAF8F5"; // Warm clean off-white
-        finalTextColor = "#0F172A"; // Slate-900
-        isBgDark = false;
-      } else {
-        finalBg = colors.bg;
-        const lum = getLuminance(colors.bg);
-        isBgDark = lum < 140;
-        finalTextColor = isBgDark ? "#FFFFFF" : colors.primary || "#0F172A";
-      }
+      r = parseInt(cleanHex.substring(0, 2), 16);
+      g = parseInt(cleanHex.substring(2, 4), 16);
+      b = parseInt(cleanHex.substring(4, 6), 16);
     }
-
-    return { bg: finalBg, text: finalTextColor, isDark: isBgDark };
+    
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return 1;
+    
+    const rS = r / 255;
+    const gS = g / 255;
+    const bS = b / 255;
+    
+    const rR = rS <= 0.04045 ? rS / 12.92 : Math.pow((rS + 0.055) / 1.055, 2.4);
+    const gR = gS <= 0.04045 ? gS / 12.92 : Math.pow((gS + 0.055) / 1.055, 2.4);
+    const bR = bS <= 0.04045 ? bS / 12.92 : Math.pow((bS + 0.055) / 1.055, 2.4);
+    
+    return 0.2126 * rR + 0.7152 * gR + 0.0722 * bR;
   };
 
-  const { bg: bgStyle, text: textColor, isDark } = resolveBgAndText();
+  const getContrastRatio = (color1: string, color2: string): number => {
+    const l1 = getRelativeLuminance(color1);
+    const l2 = getRelativeLuminance(color2);
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  };
+
+  const getBgLuminance = (bgString: string): number => {
+    if (!bgString) return 255;
+    const hexRegex = /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/g;
+    const matches = bgString.match(hexRegex);
+    if (matches && matches.length > 0) {
+      let totalLuminance = 0;
+      for (const hex of matches) {
+        totalLuminance += getSimpleLuminance(hex);
+      }
+      return totalLuminance / matches.length;
+    }
+    if (bgString.startsWith("#")) {
+      return getSimpleLuminance(bgString);
+    }
+    return 255;
+  };
+
+  const getRepresentativeBgColor = (bgString: string): string => {
+    if (!bgString) return "#FFFFFF";
+    const hexRegex = /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/g;
+    const matches = bgString.match(hexRegex);
+    if (matches && matches.length > 0) {
+      return matches[0];
+    }
+    if (bgString.startsWith("#")) {
+      return bgString;
+    }
+    return "#FFFFFF";
+  };
+
+  const getReadableColor = (bgColor: string, desiredColor: string, isSecondary: boolean, minRatio: number): string => {
+    const repBg = getRepresentativeBgColor(bgColor);
+    const ratio = getContrastRatio(repBg, desiredColor);
+    if (ratio >= minRatio) {
+      return desiredColor;
+    }
+    const bgLum = getBgLuminance(repBg);
+    const isDarkBg = bgLum < 140;
+    if (isSecondary) {
+      return isDarkBg ? "#D1D5DB" : "#4B5563";
+    } else {
+      return isDarkBg ? "#FFFFFF" : "#0F172A";
+    }
+  };
+
+  const getReadableAccentColor = (bgColor: string, desiredAccent: string, minRatio: number): string => {
+    const repBg = getRepresentativeBgColor(bgColor);
+    const ratio = getContrastRatio(repBg, desiredAccent);
+    if (ratio >= minRatio) {
+      return desiredAccent;
+    }
+    const bgLum = getBgLuminance(repBg);
+    const isDarkBg = bgLum < 140;
+    return isDarkBg ? "#C8E84A" : "#4F46E5";
+  };
+
+  const resolveBgAndText = () => {
+    let finalBg = colors.bg;
+    let isBgDark = false;
+
+    if (stylePreset === "gradient") {
+      finalBg = `linear-gradient(135deg, ${colors.bg}, ${colors.accent})`;
+      const lumBg = getSimpleLuminance(colors.bg);
+      const lumAccent = getSimpleLuminance(colors.accent);
+      const avgLum = (lumBg + lumAccent) / 2;
+      isBgDark = avgLum < 140;
+    } else {
+      finalBg = colors.bg;
+      const bgLum = getBgLuminance(finalBg);
+      isBgDark = bgLum < 140;
+    }
+
+    const repBg = getRepresentativeBgColor(stylePreset === "gradient" ? colors.bg : finalBg);
+
+    const finalTextColor = getReadableColor(repBg, colors.primary, false, 3.0);
+    const finalBodyColor = getReadableColor(repBg, colors.primary, false, 4.5);
+    const finalSecondaryColor = getReadableColor(repBg, colors.secondary, true, 4.5);
+    const finalAccentColor = getReadableAccentColor(repBg, colors.accent, 3.0);
+
+    return { 
+      bg: finalBg, 
+      text: finalTextColor, 
+      bodyText: finalBodyColor,
+      secondary: finalSecondaryColor, 
+      accent: finalAccentColor, 
+      isDark: isBgDark 
+    };
+  };
+
+  const { bg: bgStyle, text: textColor, bodyText: bodyTextColor, secondary: secondaryColor, accent: accentColor, isDark } = resolveBgAndText();
 
   // Helper to parse double asterisks and format them specifically for each layout type
   const renderHeadline = (text: string, templateId: string) => {
@@ -949,23 +1148,21 @@ function TemplateCanvas({
       
       switch (templateId) {
         case "executive":
-          // Professional gradient badge
           return (
             <span key={segment} className="px-4 py-1.5 rounded-full inline-block mx-1.5 border font-extrabold text-[0.95em]"
                   style={{ 
-                    backgroundColor: isDark ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.08)", 
-                    borderColor: "rgba(16, 185, 129, 0.25)",
-                    color: "#10B981"
+                    backgroundColor: accentColor + (isDark ? "1A" : "14"), 
+                    borderColor: accentColor + "40",
+                    color: accentColor
                   }}>
               {segment}
             </span>
           );
         case "conversion":
-          // High conversion italic gradient highlight
           return (
             <span key={segment} className="relative inline-block mx-1 font-extrabold animate-pulse"
                   style={{
-                    backgroundImage: `linear-gradient(120deg, ${colors.accent} 0%, ${colors.accent} 100%)`,
+                    backgroundImage: `linear-gradient(120deg, ${accentColor} 0%, ${accentColor} 100%)`,
                     backgroundRepeat: "no-repeat",
                     backgroundSize: "100% 0.25em",
                     backgroundPosition: "0 88%"
@@ -974,71 +1171,121 @@ function TemplateCanvas({
             </span>
           );
         case "showcase":
-          // Elegant serif gold/amber highlight
           return (
-            <span key={segment} className="italic font-serif-elegant font-normal text-amber-600 dark:text-amber-500 mx-1">
+            <span key={segment} className="italic font-serif-elegant font-normal mx-1"
+                  style={{ color: accentColor }}>
               {segment}
             </span>
           );
         case "enterprise":
-          // Corporate bold solid badge
           return (
             <span key={segment} className="px-4.5 py-1.5 rounded-lg inline-block mx-1 border font-extrabold"
                   style={{
-                    backgroundColor: isDark ? "rgba(59, 130, 246, 0.15)" : `${colors.accent}20`,
-                    borderColor: isDark ? "rgba(59, 130, 246, 0.3)" : `${colors.accent}40`,
-                    color: isDark ? "#60A5FA" : colors.accent
+                    backgroundColor: accentColor + (isDark ? "26" : "1A"),
+                    borderColor: accentColor + (isDark ? "4D" : "33"),
+                    color: accentColor
                   }}>
               {segment}
             </span>
           );
         case "growth":
-          // Dynamic vibrant Shopify pill
           return (
             <span key={segment} className="px-4.5 py-1.5 rounded-2xl inline-block mx-1 text-white font-extrabold shadow-sm rotate-[-0.5deg]"
                   style={{
-                    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)"
+                    background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)`
                   }}>
               {segment}
             </span>
           );
         case "hero":
-          // Center gradient text
           return (
             <span key={segment} className="bg-clip-text text-transparent font-black mx-1"
                   style={{
-                    backgroundImage: `linear-gradient(to right, ${colors.accent}, ${isDark ? "#FFFFFF" : colors.primary})`
+                    backgroundImage: `linear-gradient(to right, ${accentColor}, ${isDark ? "#FFFFFF" : textColor})`
                   }}>
               {segment}
             </span>
           );
         case "sidebyside":
-          // Marker highlight
           return (
             <span key={segment} className="px-2 py-0.5 rounded-md mx-1 text-gray-900 font-extrabold"
-                  style={{ backgroundColor: colors.accent }}>
+                  style={{ backgroundColor: accentColor }}>
               {segment}
             </span>
           );
         case "spotlight":
-          // Clean modern border outline
           return (
             <span key={segment} className="px-4 py-1 rounded-xl inline-block mx-1.5 border-2 border-dashed font-extrabold"
-                  style={{ borderColor: colors.accent, color: colors.accent }}>
+                  style={{ borderColor: accentColor, color: accentColor }}>
               {segment}
             </span>
           );
         case "modernsaas":
-          // Neon glow text style
           return (
-            <span key={segment} className="font-extrabold mx-1 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                  style={{ color: colors.accent }}>
+            <span key={segment} className="font-extrabold mx-1"
+                  style={{ color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}4D)` }}>
+              {segment}
+            </span>
+          );
+        case "boost_sales":
+          return (
+            <span key={segment} className="bg-clip-text text-transparent font-black mx-1"
+                  style={{ backgroundImage: `linear-gradient(135deg, ${accentColor} 0%, #8B5CF6 100%)` }}>
+              {segment}
+            </span>
+          );
+        case "all_in_one":
+          return (
+            <span key={segment} className="font-extrabold mx-1" style={{ color: accentColor }}>
+              {segment}
+            </span>
+          );
+        case "save_time":
+          return (
+            <span key={segment} className="font-black mx-1" style={{ color: accentColor }}>
+              {segment}
+            </span>
+          );
+        case "reports_growth":
+          return (
+            <span key={segment} className="font-black mx-1" style={{ color: accentColor }}>
+              {segment}
+            </span>
+          );
+        case "manage_everything":
+          return (
+            <span key={segment} className="font-black mx-1" style={{ color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}4D)` }}>
+              {segment}
+            </span>
+          );
+        case "powerful_features":
+          return (
+            <span key={segment} className="font-black mx-1" style={{ color: accentColor }}>
+              {segment}
+            </span>
+          );
+        case "smart_recommendations":
+          return (
+            <span key={segment} className="font-black mx-1" style={{ color: accentColor }}>
+              {segment}
+            </span>
+          );
+        case "realtime_analytics":
+          return (
+            <span key={segment} className="font-black mx-1" style={{ color: accentColor, filter: `drop-shadow(0 0 8px ${accentColor}4D)` }}>
+              {segment}
+            </span>
+          );
+        case "tools_success":
+          return (
+            <span key={segment} className="relative inline-block px-2 py-0.5 mx-1 font-black rounded-lg rotate-[-1.5deg] shadow-sm bg-white/40"
+                  style={{ color: accentColor, borderColor: accentColor, borderWidth: "2px", borderStyle: "solid" }}>
               {segment}
             </span>
           );
         default:
           return (
-            <span key={segment} className="underline decoration-wavy mx-1" style={{ decorationColor: colors.accent }}>
+            <span key={segment} className="underline decoration-wavy mx-1" style={{ decorationColor: accentColor }}>
               {segment}
             </span>
           );
@@ -1079,35 +1326,67 @@ function TemplateCanvas({
       </svg>
     ];
     
-    const icon = icons[index % icons.length];
+    const rawIcon = icons[index % icons.length];
+    const icon = cloneElement(rawIcon, {
+      style: {
+        width: `${20 * featureIconSize}px`,
+        height: `${20 * featureIconSize}px`,
+      },
+      className: "shrink-0",
+    });
     
     if (styleType === "glass") {
+      const glassBg = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(15, 23, 42, 0.08)";
+      const glassBorder = isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(15, 23, 42, 0.15)";
+      const glassText = isDark ? "#FFFFFF" : "#0F172A";
       return (
-        <div key={index} className="flex items-center gap-3.5 px-6 py-3 rounded-2xl bg-white/10 border border-white/20 shadow-lg font-sans-outfit text-[18px] font-black text-white backdrop-blur-md transition hover:scale-[1.01]">
-          <span style={{ color: colors.accent }}>{icon}</span>
+        <div key={index} className="flex items-center gap-3.5 px-6 py-3 rounded-2xl shadow-lg font-sans-outfit font-black backdrop-blur-md transition hover:scale-[1.01]"
+             style={{ 
+               backgroundColor: glassBg, 
+               borderColor: glassBorder, 
+               color: glassText,
+               fontSize: `${18 * featureTextSize}px`
+             }}>
+          <span style={{ color: accentColor }}>{icon}</span>
           <span>{feat}</span>
         </div>
       );
     } else if (styleType === "solid") {
       return (
-        <div key={index} className="flex items-center gap-3.5 px-6 py-3.5 rounded-2xl border shadow-lg font-sans-jakarta text-[18px] font-black transition-all hover:scale-[1.01]"
-             style={{ backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : `${colors.accent}12`, borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : `${colors.accent}30`, color: textColor }}>
-          <span style={{ color: colors.accent }}>{icon}</span>
+        <div key={index} className="flex items-center gap-3.5 px-6 py-3.5 rounded-2xl border shadow-lg font-sans-jakarta font-black transition-all hover:scale-[1.01]"
+             style={{ 
+               backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : `${accentColor}12`, 
+               borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : `${accentColor}30`, 
+               color: bodyTextColor,
+               fontSize: `${18 * featureTextSize}px`
+             }}>
+          <span style={{ color: accentColor }}>{icon}</span>
           <span>{feat}</span>
         </div>
       );
     } else if (styleType === "serif") {
       return (
-        <div key={index} className="flex items-center gap-3.5 text-[20px] font-serif-elegant font-black" style={{ color: textColor }}>
-          <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: colors.accent || textColor, boxShadow: `0 0 10px ${colors.accent}` }} />
+        <div key={index} className="flex items-center gap-3.5 font-serif-elegant font-black" style={{ color: bodyTextColor, fontSize: `${20 * featureTextSize}px` }}>
+          <div className="rounded-full shrink-0" 
+               style={{ 
+                 width: `${10 * featureIconSize}px`, 
+                 height: `${10 * featureIconSize}px`, 
+                 backgroundColor: accentColor || bodyTextColor, 
+                 boxShadow: `0 0 10px ${accentColor}` 
+               }} />
           <span>{feat}</span>
         </div>
       );
     } else {
       return (
-        <div key={index} className="flex items-center gap-3.5 px-6 py-3 rounded-2xl border shadow-lg text-[18px] font-black"
-             style={{ color: textColor, borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)", background: isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.7)" }}>
-          <span style={{ color: colors.accent }}>{icon}</span>
+        <div key={index} className="flex items-center gap-3.5 px-6 py-3 rounded-2xl border shadow-lg font-black"
+             style={{ 
+               color: bodyTextColor, 
+               borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)", 
+               background: isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.7)",
+               fontSize: `${18 * featureTextSize}px`
+             }}>
+          <span style={{ color: accentColor }}>{icon}</span>
           <span>{feat}</span>
         </div>
       );
@@ -1137,9 +1416,7 @@ function TemplateCanvas({
       <div 
         className="relative overflow-hidden" 
         style={maxHeight ? { 
-          maxHeight: maxHeight, 
-          WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 82%, rgba(0,0,0,0) 100%)",
-          maskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 82%, rgba(0,0,0,0) 100%)"
+          maxHeight: maxHeight
         } : {}}
       >
         <img src={screenshot} alt="Screenshot" className="w-full object-contain block" />
@@ -1173,13 +1450,17 @@ function TemplateCanvas({
           {/* Logo & Category Header */}
           <div className="flex justify-between items-center z-10">
             <div className="flex items-center gap-2.5">
-              <ChatBubbleIcon size={28} />
-              <span className="font-mono text-[12px] tracking-wider bg-emerald-500/10 px-4 py-1.5 rounded-full font-bold uppercase"
-                    style={{ color: "#10B981" }}>
+              {logo ? (
+                <img src={logo} alt="Logo" className="h-7 max-w-[120px] object-contain" />
+              ) : (
+                <ChatBubbleIcon size={28} />
+              )}
+              <span className="font-mono text-[12px] tracking-wider px-4 py-1.5 rounded-full font-bold uppercase"
+                    style={{ color: accentColor, backgroundColor: `${accentColor}20` }}>
                 {appName || "WATI"} widget
               </span>
             </div>
-            <div className="text-sm font-mono tracking-widest uppercase font-bold opacity-60" style={{ color: textColor }}>
+            <div className="text-sm font-mono tracking-widest uppercase font-bold opacity-60" style={{ color: bodyTextColor }}>
               {appName || "wati"} . saas
             </div>
           </div>
@@ -1190,7 +1471,7 @@ function TemplateCanvas({
               {renderHeadline(headline, "executive")}
             </h1>
             <p className="text-[23px] mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "rgba(248, 250, 252, 0.75)" : "rgba(15, 23, 42, 0.75)" }}>
+               style={{ color: secondaryColor }}>
               {subheadline}
             </p>
           </div>
@@ -1247,9 +1528,8 @@ function TemplateCanvas({
               </div>
             </div>
           </div>
-
-          {/* Features Row */}
-          <div className="flex gap-6 justify-center z-10">
+                 {/* Features Row */}
+          <div className="flex justify-center z-10" style={{ gap: featureSpacing }}>
             {features.filter(Boolean).slice(0, 3).map((feat, i) => (
               renderCreativeFeature(feat, i, "solid")
             ))}
@@ -1274,7 +1554,7 @@ function TemplateCanvas({
             </h1>
             
             <p className="text-[22px] mb-6 leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "rgba(248, 250, 252, 0.75)" : "rgba(75, 85, 99, 0.9)" }}>
+               style={{ color: secondaryColor }}>
               {subheadline}
             </p>
  
@@ -1285,12 +1565,12 @@ function TemplateCanvas({
                 <RocketIcon size={24} />
               </div>
               <div>
-                <h4 className="font-extrabold text-[16px]" style={{ color: textColor }}>Automated Growth Engine</h4>
-                <p className="text-[12px] opacity-70 mt-0.5" style={{ color: textColor }}>Optimize storefront conversion rates instantly</p>
+                <h4 className="font-extrabold text-[16px]" style={{ color: bodyTextColor }}>Automated Growth Engine</h4>
+                <p className="text-[12px] opacity-70 mt-0.5" style={{ color: bodyTextColor }}>Optimize storefront conversion rates instantly</p>
               </div>
             </div>
  
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col" style={{ gap: featureSpacing }}>
               {features.filter(Boolean).slice(0, 3).map((feat, i) => (
                 renderCreativeFeature(feat, i, "outline")
               ))}
@@ -1313,8 +1593,12 @@ function TemplateCanvas({
           {/* Left Side: Serif Copy & Brand */}
           <div className="col-span-6 flex flex-col justify-between h-full py-8 pr-8 z-10">
             {/* Top Logo */}
-            <div className="flex items-center gap-3 text-[15px] font-black tracking-[0.3em] uppercase font-serif-elegant" style={{ color: textColor }}>
-              <FMonogramIcon size={28} />
+            <div className="flex items-center gap-3 text-[15px] font-black tracking-[0.3em] uppercase font-serif-elegant" style={{ color: bodyTextColor }}>
+              {logo ? (
+                <img src={logo} alt="Logo" className="h-7 max-w-[120px] object-contain" />
+              ) : (
+                <FMonogramIcon size={28} />
+              )}
               <span>{appName || "FAIRE"}</span>
             </div>
  
@@ -1324,13 +1608,13 @@ function TemplateCanvas({
                 {renderHeadline(headline, "showcase")}
               </h1>
               <p className="text-[20px] mt-6 leading-relaxed font-sans font-medium"
-                 style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#5A5450" }}>
+                 style={{ color: secondaryColor }}>
                 {subheadline}
               </p>
             </div>
  
             {/* Bottom Features */}
-            <div className="flex flex-col gap-4.5">
+            <div className="flex flex-col" style={{ gap: featureSpacing }}>
               {features.filter(Boolean).slice(0, 3).map((feat, i) => (
                 renderCreativeFeature(feat, i, "serif")
               ))}
@@ -1360,8 +1644,12 @@ function TemplateCanvas({
           <div className="col-span-5 flex flex-col justify-between h-full py-6 pr-4 z-10">
             <div>
               {/* Brand Logo representation */}
-              <div className="flex items-center gap-2.5 font-black text-lg mb-6 tracking-wide font-sans-outfit" style={{ color: textColor }}>
-                <IsometricBoxIcon size={32} />
+              <div className="flex items-center gap-2.5 font-black text-lg mb-6 tracking-wide font-sans-outfit" style={{ color: bodyTextColor }}>
+                {logo ? (
+                  <img src={logo} alt="Logo" className="h-7 max-w-[120px] object-contain" />
+                ) : (
+                  <IsometricBoxIcon size={32} />
+                )}
                 <span className="uppercase tracking-widest text-sm">{appName || "Shipway"}</span>
               </div>
  
@@ -1370,24 +1658,29 @@ function TemplateCanvas({
                 {renderHeadline(headline, "enterprise")}
               </h1>
               <p className="text-[20px] mt-4 leading-relaxed font-sans-outfit font-medium"
-                 style={{ color: isDark ? "rgba(248, 250, 252, 0.75)" : "#2563EB" }}>
+                 style={{ color: secondaryColor }}>
                 {subheadline}
               </p>
             </div>
  
             {/* Creative Features list */}
-            <div className="flex flex-col gap-4.5 mt-6">
+            <div className="flex flex-col mt-6" style={{ gap: featureSpacing }}>
               {features.filter(Boolean).slice(0, 3).map((feat, idx) => (
                 <div key={idx} className="flex items-center gap-4">
-                  <div className="size-10 rounded-xl flex items-center justify-center shrink-0 border shadow-sm"
-                       style={{ backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)", borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)" }}>
+                  <div className="rounded-xl flex items-center justify-center shrink-0 border shadow-sm"
+                       style={{ 
+                         width: `${40 * featureIconSize}px`, 
+                         height: `${40 * featureIconSize}px`,
+                         backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)", 
+                         borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)" 
+                       }}>
                     <span className="flex items-center justify-center">
-                      {idx === 0 ? <LightningIcon size={18} /> : idx === 1 ? <BellIcon size={18} /> : <ShieldIcon size={18} />}
+                      {idx === 0 ? <LightningIcon size={Math.round(18 * featureIconSize)} /> : idx === 1 ? <BellIcon size={Math.round(18 * featureIconSize)} /> : <ShieldIcon size={Math.round(18 * featureIconSize)} />}
                     </span>
                   </div>
                   <div className="font-sans-outfit">
-                    <span className="text-[17px] font-extrabold block" style={{ color: textColor }}>{feat}</span>
-                    <span className="text-[12px] opacity-65" style={{ color: textColor }}>Auto-configured in realtime</span>
+                    <span className="font-extrabold block" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
+                    <span className="opacity-65" style={{ color: bodyTextColor, fontSize: `${12 * featureTextSize}px` }}>Auto-configured in realtime</span>
                   </div>
                 </div>
               ))}
@@ -1399,7 +1692,7 @@ function TemplateCanvas({
             {/* Integration Carrier Grid */}
             <div className="p-4 border rounded-2xl flex flex-col gap-2.5 shadow-2xl mb-4 w-full select-none"
                  style={{ backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.85)", borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }}>
-              <div className="text-[9px] font-mono tracking-widest font-extrabold uppercase opacity-60" style={{ color: textColor }}>INTEGRATED WAREHOUSE PARTNERS</div>
+              <div className="text-[9px] font-mono tracking-widest font-extrabold uppercase opacity-60" style={{ color: bodyTextColor }}>INTEGRATED WAREHOUSE PARTNERS</div>
               <div className="grid grid-cols-4 gap-2">
                 {["DHL Express", "FedEx Hub", "UPS Ship", "USPS Postal", "Aramex Logistics", "BlueDart Hub", "DPD Group", "RoyalMail"].map((c, idx) => (
                   <div key={idx} className={`px-2 py-2.5 rounded-xl text-[10px] font-extrabold flex items-center justify-center shadow-sm border leading-none font-sans-outfit ${
@@ -1437,17 +1730,17 @@ function TemplateCanvas({
                 {renderHeadline(headline, "growth")}
               </h1>
               <p className="text-[22px] opacity-90 mt-4 max-w-2xl font-bold leading-relaxed font-sans-jakarta"
-                 style={{ color: isDark ? "#A7F3D0" : "#065F46" }}>
+                 style={{ color: secondaryColor }}>
                 {subheadline}
               </p>
             </div>
             
             <div className="flex items-center gap-3.5 px-5 py-3 rounded-2xl border shrink-0 shadow-lg select-none"
-                 style={{ borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(6,95,70,0.15)", backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(6,95,70,0.04)" }}>
+                 style={{ borderColor: isDark ? "rgba(255,255,255,0.12)" : `${accentColor}25`, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : `${accentColor}08` }}>
               <GrowthChartIcon size={44} />
               <div>
-                <div className="text-[10px] font-mono font-bold uppercase tracking-widest" style={{ color: "#10B981" }}>Merchant Growth</div>
-                <div className="text-[14px] font-black" style={{ color: textColor }}>Shopify Plus Ready</div>
+                <div className="text-[10px] font-mono font-bold uppercase tracking-widest" style={{ color: accentColor }}>Merchant Growth</div>
+                <div className="text-[14px] font-black" style={{ color: bodyTextColor }}>Shopify Plus Ready</div>
               </div>
             </div>
           </div>
@@ -1459,12 +1752,12 @@ function TemplateCanvas({
             </div>
           </div>
  
-          <div className="grid grid-cols-3 gap-5 mb-0 z-10">
+          <div className="grid grid-cols-3 mb-0 z-10" style={{ gap: featureSpacing }}>
             {features.filter(Boolean).slice(0, 3).map((feat, i) => (
               <div key={i} className="flex gap-3.5 items-center px-6 py-4 rounded-2xl border shadow-md font-bold text-sm"
-                   style={{ backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.85)", borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}>
-                <CheckCircleIcon size={22} />
-                <span className="text-[17px] font-black" style={{ color: textColor }}>{feat}</span>
+                   style={{ backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.85)", borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)" }}>
+                <CheckCircleIcon size={Math.round(22 * featureIconSize)} />
+                <span className="font-black" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
               </div>
             ))}
           </div>
@@ -1481,7 +1774,7 @@ function TemplateCanvas({
               {renderHeadline(headline, "hero")}
             </h1>
             <p className="text-[22px] mt-4 max-w-2xl mx-auto leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#4B5563" }}>
+               style={{ color: secondaryColor }}>
               {subheadline}
             </p>
           </div>
@@ -1490,18 +1783,24 @@ function TemplateCanvas({
             <ScreenshotMockup maxHeight="380px" />
           </div>
  
-          <div className="flex justify-center gap-4 mb-2 z-10">
+          <div className="flex justify-center mb-2 z-10" style={{ gap: featureSpacing }}>
             {features.filter(Boolean).map((feat, i) => (
               <div
                 key={i}
-                className="px-6 py-3 rounded-xl text-[16px] font-black tracking-wide border shadow-sm flex items-center gap-2.5"
+                className="px-6 py-3 rounded-xl font-black tracking-wide border shadow-sm flex items-center gap-2.5"
                 style={{
-                  borderColor: isDark ? "rgba(255,255,255,0.12)" : `${colors.accent}40`,
+                  borderColor: isDark ? "rgba(255,255,255,0.12)" : `${accentColor}40`,
                   background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
-                  color: textColor
+                  color: textColor,
+                  fontSize: `${16 * featureTextSize}px`
                 }}
               >
-                <div className="size-2.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: colors.accent }} />
+                <div className="rounded-full animate-pulse shadow-sm" 
+                     style={{ 
+                       width: `${10 * featureIconSize}px`, 
+                       height: `${10 * featureIconSize}px`, 
+                       backgroundColor: accentColor 
+                     }} />
                 <span>{feat}</span>
               </div>
             ))}
@@ -1518,7 +1817,7 @@ function TemplateCanvas({
               {renderHeadline(headline, "sidebyside")}
             </h1>
             <p className="text-[22px] mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#4B5563" }}>
+               style={{ color: secondaryColor }}>
               {subheadline}
             </p>
           </div>
@@ -1528,26 +1827,32 @@ function TemplateCanvas({
               <ScreenshotMockup maxHeight="460px" />
             </div>
  
-            <div className="col-span-5 flex flex-col gap-4.5">
+            <div className="col-span-5 flex flex-col" style={{ gap: featureSpacing }}>
               {features.filter(Boolean).map((feat, i) => (
                 <div
                   key={i}
                   className="p-5 rounded-2xl border flex items-start gap-4.5 shadow-md"
                   style={{
-                    borderLeft: `4px solid ${colors.accent}`,
+                    borderLeft: `4px solid ${accentColor}`,
                     background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
                     borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
                   }}
                 >
                   <div
-                    className="size-11 rounded-full font-mono text-[16px] font-black flex items-center justify-center shrink-0 shadow-sm"
-                    style={{ background: colors.accent, color: isDark ? "#0F172A" : "#FFFFFF" }}
+                    className="rounded-full font-mono font-black flex items-center justify-center shrink-0 shadow-sm"
+                    style={{ 
+                      width: `${44 * featureIconSize}px`, 
+                      height: `${44 * featureIconSize}px`, 
+                      fontSize: `${16 * featureIconSize}px`, 
+                      background: accentColor, 
+                      color: isDark ? "#0F172A" : "#FFFFFF" 
+                    }}
                   >
                     {i+1}
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-[19px] mb-1" style={{ color: textColor }}>{feat}</h3>
-                    <p className="text-[13px] opacity-70 leading-relaxed" style={{ color: textColor }}>Designed for maximum storefront conversion.</p>
+                    <h3 className="font-extrabold mb-1" style={{ color: bodyTextColor, fontSize: `${19 * featureTextSize}px` }}>{feat}</h3>
+                    <p className="opacity-70 leading-relaxed" style={{ color: bodyTextColor, fontSize: `${13 * featureTextSize}px` }}>Designed for maximum storefront conversion.</p>
                   </div>
                 </div>
               ))}
@@ -1565,12 +1870,12 @@ function TemplateCanvas({
               {renderHeadline(headline, "spotlight")}
             </h1>
             <p className="text-[22px] mt-4 max-w-2xl mx-auto leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#4B5563" }}>
+               style={{ color: secondaryColor }}>
               {subheadline}
             </p>
           </div>
  
-          <div className="grid grid-cols-3 gap-5 w-full my-4 z-10">
+          <div className="grid grid-cols-3 w-full my-4 z-10" style={{ gap: featureSpacing }}>
             {features.filter(Boolean).map((feat, i) => (
               <div
                 key={i}
@@ -1580,11 +1885,17 @@ function TemplateCanvas({
                   borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
                 }}
               >
-                <div className="mb-2.5 size-11 rounded-full flex items-center justify-center font-mono font-black text-[16px] shadow-sm"
-                     style={{ background: isDark ? "rgba(255,255,255,0.06)" : `${colors.accent}15`, color: colors.accent }}>
+                <div className="mb-2.5 rounded-full flex items-center justify-center font-mono font-black shadow-sm"
+                     style={{ 
+                       width: `${44 * featureIconSize}px`, 
+                       height: `${44 * featureIconSize}px`, 
+                       fontSize: `${16 * featureIconSize}px`, 
+                       background: isDark ? "rgba(255,255,255,0.06)" : `${accentColor}15`, 
+                       color: accentColor 
+                     }}>
                   0{i+1}
                 </div>
-                <h3 className="font-extrabold text-[19px]" style={{ color: textColor }}>{feat}</h3>
+                <h3 className="font-extrabold" style={{ color: bodyTextColor, fontSize: `${19 * featureTextSize}px` }}>{feat}</h3>
               </div>
             ))}
           </div>
@@ -1604,7 +1915,7 @@ function TemplateCanvas({
               {renderHeadline(headline, "modernsaas")}
             </h1>
             <p className="text-[22px] mt-4 max-w-2xl leading-relaxed font-bold font-sans-jakarta"
-               style={{ color: isDark ? "rgba(248, 250, 252, 0.7)" : "#4B5563" }}>
+               style={{ color: secondaryColor }}>
               {subheadline}
             </p>
           </div>
@@ -1620,14 +1931,19 @@ function TemplateCanvas({
                 borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)"
               }}
             >
-              <div className="size-11 rounded-full flex items-center justify-center font-bold" style={{ background: isDark ? "rgba(255,255,255,0.06)" : `${colors.accent}20` }}>
-                <svg className="size-5" style={{ color: colors.accent }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <div className="rounded-full flex items-center justify-center font-bold" 
+                   style={{ 
+                     width: `${44 * featureIconSize}px`, 
+                     height: `${44 * featureIconSize}px`, 
+                     background: isDark ? "rgba(255,255,255,0.06)" : `${accentColor}20` 
+                   }}>
+                <svg style={{ width: `${20 * featureIconSize}px`, height: `${20 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
                 </svg>
               </div>
               <div>
-                <p className="text-[11px] opacity-60 uppercase font-mono tracking-widest" style={{ color: textColor }}>{features[0] || "Feature"}</p>
-                <h4 className="text-[17px] font-black" style={{ color: textColor }}>Conversion Stats</h4>
+                <p className="opacity-60 uppercase font-mono tracking-widest" style={{ color: bodyTextColor, fontSize: `${11 * featureTextSize}px` }}>{features[0] || "Feature"}</p>
+                <h4 className="font-black" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>Conversion Stats</h4>
               </div>
             </div>
  
@@ -1639,14 +1955,699 @@ function TemplateCanvas({
                 borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)"
               }}
             >
-              <div className="size-11 rounded-full flex items-center justify-center font-bold" style={{ background: isDark ? "rgba(255,255,255,0.06)" : `${colors.accent}20` }}>
-                <svg className="size-5" style={{ color: colors.accent }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <div className="rounded-full flex items-center justify-center font-bold" 
+                   style={{ 
+                     width: `${44 * featureIconSize}px`, 
+                     height: `${44 * featureIconSize}px`, 
+                     background: isDark ? "rgba(255,255,255,0.06)" : `${accentColor}20` 
+                   }}>
+                <svg style={{ width: `${20 * featureIconSize}px`, height: `${20 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499c-.107-.196-.272-.348-.48-.432A1.493 1.493 0 0010.5 3a1.5 1.5 0 00-1.5 1.5c0 .328.106.63.287.876" />
                 </svg>
               </div>
               <div>
-                <p className="text-[11px] opacity-60 uppercase font-mono tracking-widest" style={{ color: textColor }}>{features[1] || "Active"}</p>
-                <h4 className="text-[17px] font-black" style={{ color: textColor }}>Verified Design</h4>
+                <p className="opacity-60 uppercase font-mono tracking-widest" style={{ color: bodyTextColor, fontSize: `${11 * featureTextSize}px` }}>{features[1] || "Active"}</p>
+                <h4 className="font-black" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>Verified Design</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template 1 – Boost Sales */}
+      {template === "boost_sales" && (
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+          {/* Glowing blobs */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[130px] pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
+          <div className="absolute -top-[10%] -left-[10%] w-[350px] h-[350px] rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
+
+          {/* Left Column */}
+          <div className="col-span-5 flex flex-col justify-center z-10 h-full">
+            <div className="flex items-center gap-3.5 mb-8">
+              {logo ? (
+                <img src={logo} alt="Logo" className="h-9 max-w-[130px] object-contain rounded-lg" />
+              ) : (
+                <div className="size-9 rounded-lg flex items-center justify-center font-bold text-lg" style={{ background: colors.accent, color: getContrastRatio(colors.accent, "#FFFFFF") >= 4.5 ? "#FFFFFF" : "#0F172A" }}>
+                  {appName ? appName[0].toUpperCase() : "S"}
+                </div>
+              )}
+              <span className="font-extrabold text-[20px] tracking-wide uppercase opacity-90" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+            </div>
+
+            <h1 className="text-[52px] font-black leading-[1.15] tracking-tight mb-6" style={{ color: textColor }}>
+              {renderHeadline(headline || "Boost Sales With **Smart Upsells**", "boost_sales")}
+            </h1>
+
+            <p className="text-[19px] leading-relaxed mb-10" style={{ color: secondaryColor }}>
+              {subheadline || "AI-powered upsell & cross-sell offers that increase AOV and maximize revenue."}
+            </p>
+
+            <div className="flex flex-col" style={{ gap: featureSpacing }}>
+              {features.filter(Boolean).map((feat, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="rounded-full flex items-center justify-center border shrink-0"
+                       style={{ 
+                         width: `${28 * featureIconSize}px`, 
+                         height: `${28 * featureIconSize}px`,
+                         backgroundColor: `${accentColor}20`,
+                         color: accentColor,
+                         borderColor: `${accentColor}30`
+                       }}>
+                    <svg style={{ width: `${16 * featureIconSize}px`, height: `${16 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </div>
+                  <span className="font-semibold" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-7 flex justify-end items-center z-10">
+            <div 
+              style={{
+                transform: "perspective(1200px) rotateY(-18deg) rotateX(8deg) rotateZ(-2deg)",
+                transformStyle: "preserve-3d",
+                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.6)"
+              }}
+              className="w-[840px] transition-transform duration-500"
+            >
+              <ScreenshotMockup maxHeight="450px" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template 2 – All-in-One Solution */}
+      {template === "all_in_one" && (
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+          {/* Dotted pattern overlay */}
+          <div className="absolute inset-0 pointer-events-none opacity-[0.06]" style={{
+            backgroundImage: `radial-gradient(${textColor} 1.5px, transparent 1.5px)`,
+            backgroundSize: "24px 24px"
+          }} />
+
+          {/* Left Column */}
+          <div className="col-span-5 flex flex-col justify-between z-10 h-full py-4">
+            <div>
+              <div className="mb-6 flex items-center gap-3">
+                {logo ? (
+                  <img src={logo} alt="Logo" className="h-7 max-w-[120px] object-contain" />
+                ) : (
+                  <span className="px-3.5 py-1.5 rounded-full text-[13px] font-bold tracking-wider uppercase border"
+                        style={{ backgroundColor: `${accentColor}15`, color: accentColor, borderColor: `${accentColor}25` }}>
+                    {appName || "Shopify App"}
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-[52px] font-black leading-[1.15] tracking-tight mb-5" style={{ color: textColor }}>
+                {renderHeadline(headline || "All-in-One **Solution for Your Store**", "all_in_one")}
+              </h1>
+
+              <p className="text-[19px] opacity-75 leading-relaxed" style={{ color: secondaryColor }}>
+                {subheadline || "Everything you need to grow, manage & scale your business."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 mt-8" style={{ gap: featureSpacing }}>
+              {features.filter(Boolean).slice(0, 4).map((feat, i) => (
+                <div key={i} className="flex items-center gap-3.5 p-4 rounded-xl border shadow-sm"
+                     style={{
+                       backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.85)",
+                       borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : `${accentColor}25`
+                     }}>
+                  <div className="rounded-full flex items-center justify-center shrink-0 font-extrabold"
+                       style={{ 
+                         width: `${28 * featureIconSize}px`, 
+                         height: `${28 * featureIconSize}px`, 
+                         fontSize: `${14 * featureIconSize}px`,
+                         backgroundColor: `${accentColor}15`,
+                         color: accentColor
+                       }}>
+                    ✓
+                  </div>
+                  <span className="font-extrabold leading-tight" style={{ color: bodyTextColor, fontSize: `${15 * featureTextSize}px` }}>{feat}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-7 flex justify-end z-10">
+            <div className="w-[830px] rounded-2xl border p-2.5 shadow-2xl"
+                 style={{
+                   backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#FFFFFF",
+                   borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"
+                 }}>
+              <div className="flex items-center gap-1.5 px-3 pb-2.5 border-b mb-2"
+                   style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)" }}>
+                <div className="size-2.5 rounded-full bg-[#FF5F56]" />
+                <div className="size-2.5 rounded-full bg-[#FFBD2E]" />
+                <div className="size-2.5 rounded-full bg-[#27C93F]" />
+                <div className="text-[11px] font-mono px-6 py-0.5 rounded-md mx-auto truncate max-w-[240px] border"
+                     style={{
+                       backgroundColor: isDark ? "rgba(0, 0, 0, 0.2)" : "rgba(0, 0, 0, 0.03)",
+                       color: secondaryColor,
+                       borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
+                     }}>
+                  {appName?.toLowerCase() || "app"}.shopify.com
+                </div>
+              </div>
+              <div className="relative overflow-hidden rounded-b-xl border"
+                   style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)" }}>
+                <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[440px]" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template 3 – Save Time */}
+      {template === "save_time" && (
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+          {/* Background grid overlay */}
+          <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)`,
+            backgroundSize: "40px 40px"
+          }} />
+          <div className="absolute -top-[20%] -right-[10%] w-[550px] h-[550px] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
+
+          {/* Left Column */}
+          <div className="col-span-5 flex flex-col justify-center z-10 h-full">
+            {logo && (
+              <img src={logo} alt="Logo" className="h-8 max-w-[130px] object-contain rounded mb-8" />
+            )}
+
+            <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
+              {renderHeadline(headline || "Save Time. Automate More. **Grow Faster.**", "save_time")}
+            </h1>
+
+            <p className="text-[19px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+              {subheadline || "Automate repetitive tasks and focus on what matters most."}
+            </p>
+
+            <div className="flex flex-col" style={{ gap: featureSpacing }}>
+              {features.filter(Boolean).map((feat, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="rounded-full flex items-center justify-center border shrink-0"
+                       style={{ 
+                         width: `${28 * featureIconSize}px`, 
+                         height: `${28 * featureIconSize}px`,
+                         backgroundColor: `${accentColor}20`,
+                         color: accentColor,
+                         borderColor: `${accentColor}30`
+                       }}>
+                    <svg style={{ width: `${18 * featureIconSize}px`, height: `${18 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </div>
+                  <span className="font-bold" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-7 flex justify-end z-10">
+            <div className="w-[840px] rounded-2xl border shadow-2xl p-2"
+                 style={{
+                   backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#FFFFFF",
+                   borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"
+                 }}>
+              <div className="flex items-center gap-1.5 px-3 pb-2 border-b mb-2"
+                   style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)" }}>
+                <div className="size-2.5 rounded-full bg-slate-300" />
+                <div className="size-2.5 rounded-full bg-slate-300" />
+                <div className="size-2.5 rounded-full bg-slate-300" />
+              </div>
+              <div className="relative overflow-hidden rounded-xl">
+                <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[440px]" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template 4 – Reports & Growth */}
+      {template === "reports_growth" && (
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+          <div className="absolute top-[-20%] right-[-10%] w-[450px] h-[450px] rounded-full blur-[100px] pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
+
+          {/* Left Column */}
+          <div className="col-span-5 flex flex-col justify-center z-10 h-full">
+            {logo && (
+              <img src={logo} alt="Logo" className="h-8 max-w-[130px] object-contain rounded mb-8" />
+            )}
+
+            <h1 className="text-[50px] font-black leading-[1.15] tracking-tight mb-5" style={{ color: textColor }}>
+              {renderHeadline(headline || "Beautiful Reports. Smarter Decisions. **Bigger Growth.**", "reports_growth")}
+            </h1>
+
+            <p className="text-[18px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+              {subheadline || "Get actionable insights and make data-driven decisions."}
+            </p>
+
+            <div className="flex flex-col" style={{ gap: featureSpacing }}>
+              {features.filter(Boolean).map((feat, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="rounded-lg flex items-center justify-center border shrink-0"
+                       style={{ 
+                         width: `${28 * featureIconSize}px`, 
+                         height: `${28 * featureIconSize}px`,
+                         backgroundColor: `${accentColor}15`,
+                         color: accentColor,
+                         borderColor: `${accentColor}25`
+                       }}>
+                    <svg style={{ width: `${16 * featureIconSize}px`, height: `${16 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </div>
+                  <span className="font-bold" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-7 flex justify-end z-10">
+            <div className="w-[840px] rounded-xl shadow-xl overflow-hidden border"
+                 style={{
+                   backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#FFFFFF",
+                   borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"
+                 }}>
+              <div className="flex items-center justify-between px-4 py-2.5 border-b"
+                   style={{
+                     backgroundColor: isDark ? "rgba(255, 255, 255, 0.02)" : "rgba(234, 88, 12, 0.03)",
+                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(234, 88, 12, 0.08)"
+                   }}>
+                <div className="flex gap-1.5">
+                  <div className="size-2 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(234, 88, 12, 0.2)" }} />
+                  <div className="size-2 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(234, 88, 12, 0.2)" }} />
+                  <div className="size-2 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(234, 88, 12, 0.2)" }} />
+                </div>
+                <span className="text-[10px] font-mono" style={{ color: secondaryColor }}>reports.analytics.dashboard</span>
+                <div className="w-8" />
+              </div>
+              <div className="relative overflow-hidden">
+                <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[440px]" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template 5 – Manage Everything */}
+      {template === "manage_everything" && (
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+          {/* Glowing violet overlay */}
+          <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full blur-[100px] pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
+
+          {/* Left Column */}
+          <div className="col-span-5 flex flex-col justify-between z-10 h-full py-4">
+            <div>
+              <div className="flex items-center gap-3.5 mb-6">
+                {logo ? (
+                  <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded" />
+                ) : (
+                  <div className="px-3 py-1.5 rounded-lg border text-xs font-mono font-bold tracking-wider"
+                       style={{ backgroundColor: `${accentColor}15`, borderColor: `${accentColor}25`, color: accentColor }}>
+                    ADMIN PANEL
+                  </div>
+                )}
+              </div>
+
+              <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
+                {renderHeadline(headline || "Manage Everything **From One Place**", "manage_everything")}
+              </h1>
+
+              <p className="text-[19px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+                {subheadline || "A unified dashboard for all your store operations."}
+              </p>
+            </div>
+
+            <div className="flex flex-col mt-auto" style={{ gap: featureSpacing }}>
+              <div className="flex flex-wrap" style={{ gap: featureSpacing }}>
+                {features.filter(Boolean).map((feat, i) => (
+                  <div key={i} className="inline-flex items-center gap-3.5 px-4.5 py-3.5 rounded-xl border shadow-sm"
+                       style={{
+                         backgroundColor: `${accentColor}15`,
+                         borderColor: `${accentColor}25`,
+                         color: bodyTextColor
+                       }}>
+                    <svg style={{ width: `${20 * featureIconSize}px`, height: `${20 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.63 3.06" />
+                    </svg>
+                    <span className="font-bold" style={{ fontSize: `${16 * featureTextSize}px` }}>{feat}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4">
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border"
+                     style={{
+                       backgroundColor: isDark ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.05)",
+                       borderColor: "rgba(16, 185, 129, 0.2)"
+                     }}>
+                  <svg className="size-4.5 text-emerald-400" viewBox="0 0 24 24" fill="currentColor" style={{ color: isDark ? "#34D399" : "#059669" }}>
+                    <path d="M19.782 9.273L16.27 4.195a.75.75 0 00-.616-.32h-7.31a.75.75 0 00-.615.32L4.218 9.273a2.25 2.25 0 00-.34 1.848l1.455 6.545A3.75 3.75 0 008.973 20.5h6.054a3.75 3.75 0 003.64-2.834l1.455-6.545a2.25 2.25 0 00-.34-1.848zM12 2.25a2.25 2.25 0 00-2.25 2.25v.75h4.5v-.75A2.25 2.25 0 0012 2.25z" />
+                  </svg>
+                  <span className="text-[12px] font-bold tracking-wider uppercase font-mono" style={{ color: isDark ? "#34D399" : "#059669" }}>Built for Shopify</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-7 flex justify-end z-10">
+            <div 
+              style={{
+                transform: "perspective(1200px) rotateY(-12deg) rotateX(5deg) rotateZ(-1deg)",
+                transformStyle: "preserve-3d",
+                boxShadow: "0 25px 60px -15px rgba(0,0,0,0.7)"
+              }}
+              className="w-[840px] transition-transform duration-500"
+            >
+              <ScreenshotMockup maxHeight="450px" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template 6 – Powerful Features */}
+      {template === "powerful_features" && (
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+          {/* Wave backgrounds at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 pointer-events-none z-0">
+            <svg viewBox="0 0 1440 200" fill="none" className="w-full h-auto">
+              <path d="M0,96 C288,160 576,32 864,96 C1152,160 1440,96 1440,96 L1440,200 L0,200 Z" style={{ fill: isDark ? "rgba(255, 255, 255, 0.03)" : "rgba(255, 255, 255, 0.4)" }} />
+              <path d="M0,128 C360,192 720,64 1080,128 C1440,192 1440,200 1440,200 L0,200 Z" style={{ fill: isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(255, 255, 255, 0.6)" }} />
+            </svg>
+          </div>
+
+          {/* Left Column (Screenshots overlapping) */}
+          <div className="col-span-7 flex justify-start items-center z-10 h-full relative">
+            <div className="relative w-[680px]">
+              <div className="rounded-xl border shadow-2xl p-2"
+                   style={{
+                     backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#FFFFFF",
+                     borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"
+                   }}>
+                <div className="flex gap-1.5 mb-2 px-1">
+                  <div className="size-2 rounded-full bg-slate-300" />
+                  <div className="size-2 rounded-full bg-slate-300" />
+                  <div className="size-2 rounded-full bg-slate-300" />
+                </div>
+                <div className="relative overflow-hidden rounded-lg">
+                  <img src={screenshot} alt="Desktop Screenshot" className="w-full object-contain block max-h-[360px]" />
+                </div>
+              </div>
+              
+              {/* Mobile Mockup */}
+              <div className="absolute -right-6 -bottom-10 w-[210px] rounded-[36px] bg-slate-900 border-[6px] border-slate-900 shadow-2xl overflow-hidden aspect-[9/18]">
+                <div className="absolute top-0 inset-x-0 h-4 bg-slate-900 flex justify-center items-center z-20">
+                  <div className="w-12 h-1 bg-slate-800 rounded-full" />
+                </div>
+                <div className="w-full h-full bg-white relative overflow-hidden rounded-[30px]">
+                  <img src={screenshot} alt="Mobile Screenshot" className="w-full h-full object-cover block" />
+                  <div className="absolute bottom-1.5 inset-x-0 flex justify-center z-20">
+                    <div className="w-16 h-1 bg-slate-400 rounded-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-5 flex flex-col justify-center z-10 h-full pl-6">
+            {logo && (
+              <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded mb-6" />
+            )}
+
+            <h1 className="text-[48px] font-black leading-[1.15] tracking-tight mb-5" style={{ color: textColor }}>
+              {renderHeadline(headline || "Powerful Features. Simple to Use. **Loved by Stores.**", "powerful_features")}
+            </h1>
+
+            <p className="text-[17px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+              {subheadline || "Packed with powerful features designed for Shopify stores."}
+            </p>
+
+            <div className="flex flex-col mb-8" style={{ gap: featureSpacing }}>
+              {features.filter(Boolean).map((feat, i) => (
+                <div key={i} className="flex items-center gap-3.5">
+                  <div className="rounded-md flex items-center justify-center shrink-0 shadow-sm"
+                       style={{ 
+                         width: `${26 * featureIconSize}px`, 
+                         height: `${26 * featureIconSize}px`,
+                         backgroundColor: accentColor,
+                         color: getContrastRatio(accentColor, "#FFFFFF") >= 4.5 ? "#FFFFFF" : "#0F172A"
+                       }}>
+                    <svg style={{ width: `${16 * featureIconSize}px`, height: `${16 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </div>
+                  <span className="font-bold" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border"
+                   style={{ backgroundColor: `${accentColor}15`, borderColor: `${accentColor}25`, color: accentColor }}>
+                <svg className="size-4.5 text-[#008060]" viewBox="0 0 24 24" fill="currentColor" style={{ color: accentColor }}>
+                  <path d="M19.782 9.273L16.27 4.195a.75.75 0 00-.616-.32h-7.31a.75.75 0 00-.615.32L4.218 9.273a2.25 2.25 0 00-.34 1.848l1.455 6.545A3.75 3.75 0 008.973 20.5h6.054a3.75 3.75 0 003.64-2.834l1.455-6.545a2.25 2.25 0 00-.34-1.848zM12 2.25a2.25 2.25 0 00-2.25 2.25v.75h4.5v-.75A2.25 2.25 0 0012 2.25z" />
+                </svg>
+                <span className="text-[11px] font-bold tracking-wider uppercase font-mono">Built for Shopify</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template 7 – Smart Recommendations */}
+      {template === "smart_recommendations" && (
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+          {/* Floating pink blobs */}
+          <div className="absolute top-10 right-20 w-32 h-32 rounded-full blur-xl pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
+          <div className="absolute bottom-10 left-10 w-44 h-44 rounded-full blur-2xl pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
+
+          {/* Left Column */}
+          <div className="col-span-5 flex flex-col justify-center z-10 h-full">
+            <div className="flex items-center gap-3 mb-6">
+              {logo ? (
+                <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded" />
+              ) : (
+                <span className="px-3.5 py-1.5 rounded-full text-[12px] font-bold tracking-wider uppercase border"
+                      style={{ backgroundColor: `${accentColor}15`, color: accentColor, borderColor: `${accentColor}25` }}>
+                  SMART UPSELL
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
+              {renderHeadline(headline || "Increase AOV With **Smart Recommendations**", "smart_recommendations")}
+            </h1>
+
+            <p className="text-[18px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+              {subheadline || "AI-powered product recommendations that drive more sales."}
+            </p>
+
+            <div className="flex flex-col" style={{ gap: featureSpacing }}>
+              {features.filter(Boolean).map((feat, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                       style={{ 
+                         width: `${28 * featureIconSize}px`, 
+                         height: `${28 * featureIconSize}px`,
+                         backgroundColor: accentColor,
+                         color: getContrastRatio(accentColor, "#FFFFFF") >= 4.5 ? "#FFFFFF" : "#0F172A"
+                       }}>
+                    <svg style={{ width: `${16 * featureIconSize}px`, height: `${16 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </div>
+                  <span className="font-bold" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-7 flex justify-end z-10">
+            <div className="w-[830px] rounded-3xl border shadow-2xl p-4"
+                 style={{
+                   backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#FFFFFF",
+                   borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"
+                 }}>
+              <div className="relative overflow-hidden rounded-2xl border"
+                   style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)" }}>
+                <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[440px]" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template 8 – Real-Time Analytics */}
+      {template === "realtime_analytics" && (
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+          {/* Radial teal glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
+
+          {/* Left Column */}
+          <div className="col-span-5 flex flex-col justify-center z-10 h-full">
+            <div className="flex items-center gap-3 mb-6">
+              {logo ? (
+                <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded" />
+              ) : (
+                <span className="px-3.5 py-1.5 rounded-full text-[12px] font-bold tracking-wider uppercase border font-mono"
+                      style={{ backgroundColor: `${accentColor}15`, color: accentColor, borderColor: `${accentColor}25` }}>
+                  LIVE STATUS
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
+              {renderHeadline(headline || "Real-time Analytics For **Real Growth**", "realtime_analytics")}
+            </h1>
+
+            <p className="text-[19px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+              {subheadline || "Track performance in real-time and stay ahead of the competition."}
+            </p>
+
+            <div className="flex flex-col" style={{ gap: featureSpacing }}>
+              {features.filter(Boolean).map((feat, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="rounded-full flex items-center justify-center border shrink-0"
+                       style={{ 
+                         width: `${28 * featureIconSize}px`, 
+                         height: `${28 * featureIconSize}px`,
+                         backgroundColor: `${accentColor}20`,
+                         color: accentColor,
+                         borderColor: `${accentColor}30`
+                       }}>
+                    <svg style={{ width: `${16 * featureIconSize}px`, height: `${16 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </div>
+                  <span className="font-bold" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-7 flex justify-end z-10">
+            <div className="w-[840px] rounded-2xl border shadow-2xl p-2.5"
+                 style={{
+                   backgroundColor: isDark ? "#090D10" : "#FFFFFF",
+                   borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.08)"
+                 }}>
+              <div className="flex items-center gap-1.5 px-3 pb-2.5 border-b mb-2"
+                   style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)" }}>
+                <div className="size-2.5 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
+                <div className="size-2.5 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
+                <div className="size-2.5 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
+                <div className="text-[10px] font-mono border px-6 py-0.5 rounded-md mx-auto truncate max-w-[240px]"
+                     style={{
+                       backgroundColor: isDark ? "rgba(0, 0, 0, 0.2)" : "rgba(0, 0, 0, 0.03)",
+                       color: secondaryColor,
+                       borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
+                     }}>
+                  live.analytics.dashboard
+                </div>
+              </div>
+              <div className="relative overflow-hidden rounded-b-xl border"
+                   style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)" }}>
+                <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[440px]" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template 9 – Tools for Success */}
+      {template === "tools_success" && (
+        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+          {/* Dotted grid pattern */}
+          <div className="absolute inset-0 pointer-events-none opacity-[0.08]" style={{
+            backgroundImage: `radial-gradient(${textColor} 1.5px, transparent 1.5px)`,
+            backgroundSize: "24px 24px"
+          }} />
+
+          {/* Left Column */}
+          <div className="col-span-5 flex flex-col justify-between z-10 h-full py-4">
+            <div>
+              <div className="flex items-center gap-3.5 mb-6">
+                {logo ? (
+                  <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded" />
+                ) : (
+                  <span className="px-3.5 py-1.5 rounded-lg border-2 shadow-[2px_2px_0px_rgba(0,0,0,0.9)] text-xs font-mono font-bold tracking-wider"
+                        style={{ backgroundColor: `${accentColor}20`, borderColor: bodyTextColor, color: bodyTextColor }}>
+                    MERCHANT TOOLS
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-[52px] font-black leading-[1.1] tracking-tight mb-5" style={{ color: textColor }}>
+                {renderHeadline(headline || "All the Tools You Need to **Succeed!**", "tools_success")}
+              </h1>
+
+              <p className="text-[18px] leading-relaxed" style={{ color: secondaryColor }}>
+                {subheadline || "Everything you need to build, grow and scale your store."}
+              </p>
+            </div>
+
+            <div className="flex mt-auto flex-wrap" style={{ gap: featureSpacing }}>
+              {features.filter(Boolean).slice(0, 3).map((feat, i) => (
+                <span key={i} className="px-4 py-2 rounded-xl border-2 border-dashed font-extrabold"
+                      style={{ 
+                        backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : `${accentColor}10`, 
+                        borderColor: `${accentColor}40`, 
+                        color: isDark ? "#FFFFFF" : accentColor,
+                        fontSize: `${15 * featureTextSize}px` 
+                      }}>
+                  <span style={{ display: "inline-block", transform: `scale(${featureIconSize})`, transformOrigin: "center left" }} className="mr-1.5">✨</span>
+                  {feat}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="col-span-7 flex justify-end z-10 relative">
+            {/* Sketchy style SVG arrow pointing to screen */}
+            <svg className="absolute -left-14 top-1/2 -translate-y-1/2 size-20 opacity-90 pointer-events-none z-20" fill="none" viewBox="0 0 72 72" style={{ color: accentColor }}>
+              <path d="M10 36 C25 20, 45 20, 55 36 M45 42 L57 38 L50 26" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            
+            <div 
+              style={{ 
+                transform: "rotate(1.5deg)",
+                backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#FFFFFF",
+                borderColor: textColor,
+                borderWidth: "3px",
+                boxShadow: `6px 6px 0px ${textColor}`
+              }}
+              className="w-[830px] rounded-2xl border p-2"
+            >
+              <div className="flex items-center gap-1.5 px-3 pb-2.5 mb-2 border-b-3"
+                   style={{ borderColor: textColor }}>
+                <div className="size-3 rounded-full" style={{ backgroundColor: textColor }} />
+                <div className="size-3 rounded-full" style={{ backgroundColor: textColor }} />
+                <div className="size-3 rounded-full" style={{ backgroundColor: textColor }} />
+                <div className="text-[11px] font-mono font-extrabold px-6 py-0.5 rounded-md border-2 mx-auto max-w-[240px] truncate"
+                     style={{
+                       backgroundColor: isDark ? "rgba(0,0,0,0.2)" : "#F8FAFC",
+                       borderColor: textColor,
+                       color: textColor
+                     }}>
+                  super.app.dashboard
+                </div>
+              </div>
+              <div className="relative overflow-hidden rounded-xl border border-slate-900/30">
+                <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[440px]" />
               </div>
             </div>
           </div>
@@ -1662,12 +2663,14 @@ function ShopifyStoreListingPreview({
   colors,
   isMobile,
   renderCanvasContent,
+  logo,
 }: {
   appName: string;
   category: string;
-  colors: { bg: string; primary: string; accent: string };
+  colors: { bg: string; primary: string; secondary: string; accent: string };
   isMobile: boolean;
   renderCanvasContent: (scale: number) => React.ReactNode;
+  logo: string | null;
 }) {
   if (isMobile) {
     return (
@@ -1696,10 +2699,16 @@ function ShopifyStoreListingPreview({
         {/* App Hero Details */}
         <div className="p-5 bg-white flex flex-col gap-4">
           <div className="flex gap-4">
-            <div className="size-16 rounded-xl flex items-center justify-center font-bold text-2xl text-white shadow-md uppercase select-none shrink-0"
-              style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
-              {appName ? appName.slice(0, 2) : "SM"}
-            </div>
+            {logo ? (
+              <div className="size-16 rounded-xl border border-gray-200 bg-white overflow-hidden shrink-0 flex items-center justify-center shadow-md">
+                <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+              </div>
+            ) : (
+              <div className="size-16 rounded-xl flex items-center justify-center font-bold text-2xl text-white shadow-md uppercase select-none shrink-0"
+                style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
+                {appName ? appName.slice(0, 2) : "SM"}
+              </div>
+            )}
             <div>
               <h2 className="font-bold text-lg leading-tight text-gray-900">{appName || "Screenify App"}</h2>
               <p className="text-xs text-gray-500 mt-0.5">by Screenify Solutions</p>
@@ -1773,10 +2782,16 @@ function ShopifyStoreListingPreview({
       {/* Main Details Section */}
       <div className="mx-8 mt-8 bg-white rounded-xl border border-gray-200/60 p-6 shadow-sm">
         <div className="flex gap-6 items-start">
-          <div className="size-20 rounded-2xl flex items-center justify-center font-bold text-3xl text-white shadow-md uppercase select-none shrink-0"
-            style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
-            {appName ? appName.slice(0, 2) : "SM"}
-          </div>
+          {logo ? (
+            <div className="size-20 rounded-2xl border border-gray-200 bg-white overflow-hidden shrink-0 flex items-center justify-center shadow-md">
+              <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+          ) : (
+            <div className="size-20 rounded-2xl flex items-center justify-center font-bold text-3xl text-white shadow-md uppercase select-none shrink-0"
+              style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})` }}>
+              {appName ? appName.slice(0, 2) : "SM"}
+            </div>
+          )}
 
           <div className="flex-1">
             <div className="flex justify-between items-start">
@@ -1835,6 +2850,7 @@ function ShopifyStoreListingPreview({
 function Results({
   result,
   preview,
+  logo,
   paid,
   onPaid,
   onReset,
@@ -1843,11 +2859,12 @@ function Results({
 }: {
   result: Result;
   preview: string | null;
+  logo: string | null;
   paid: boolean;
   onPaid: () => void;
   onReset: () => void;
   email: string;
-  extractedColors: { bg: string; primary: string; accent: string };
+  extractedColors: { bg: string; primary: string; secondary: string; accent: string };
 }) {
   const [template, setTemplate] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -1890,23 +2907,51 @@ function Results({
     }
     return ["", "", ""];
   });
-  const [colors, setColors] = useState(() => {
+  const [colors, setColors] = useState<{ bg: string; primary: string; secondary: string; accent: string }>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("screenmint_colors");
       if (saved) {
-        try { return JSON.parse(saved); } catch {}
+        try {
+          const parsed = JSON.parse(saved);
+          return {
+            bg: parsed.bg || "#F5F1E8",
+            primary: parsed.primary || "#121212",
+            secondary: parsed.secondary || "#6B7280",
+            accent: parsed.accent || "#C8E84A",
+          };
+        } catch {}
       }
     }
     return extractedColors;
+  });
+
+  const [featureTextSize, setFeatureTextSize] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screenmint_featureTextSize");
+      return saved ? parseFloat(saved) : 1.0;
+    }
+    return 1.0;
+  });
+  const [featureSpacing, setFeatureSpacing] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screenmint_featureSpacing");
+      return saved ? parseInt(saved) : 18;
+    }
+    return 18;
+  });
+  const [featureIconSize, setFeatureIconSize] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("screenmint_featureIconSize");
+      return saved ? parseFloat(saved) : 1.0;
+    }
+    return 1.0;
   });
   const [downloading, setDownloading] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [windowSize, setWindowSize] = useState({
-    width: typeof window !== "undefined" ? window.innerWidth : 1600,
-    height: typeof window !== "undefined" ? window.innerHeight : 900,
-  });
+  const [windowSize, setWindowSize] = useState({ width: 1600, height: 900 });
+  const [isMounted, setIsMounted] = useState(false);
 
   const isInitialMount = useRef(true);
 
@@ -1952,7 +2997,32 @@ function Results({
     }
   }, [colors]);
 
+
+
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_featureTextSize", String(featureTextSize));
+    }
+  }, [featureTextSize]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_featureSpacing", String(featureSpacing));
+    }
+  }, [featureSpacing]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("screenmint_featureIconSize", String(featureIconSize));
+    }
+  }, [featureIconSize]);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setWindowSize({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
     const handleResize = () => {
       setWindowSize({
         width: window.innerWidth,
@@ -1969,12 +3039,21 @@ function Results({
       if (e.key === "Escape") setIsFullscreen(false);
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    
+    // Prevent background scrolling when fullscreen overlay is active
+    document.body.style.overflow = "hidden";
+    
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
   }, [isFullscreen]);
 
-  const availableWidth = windowSize.width - 48;
-  const availableHeight = windowSize.height - 120; // Accounts for floating footer and padding
-  const fullscreenScale = Math.max(0.1, Math.min(0.98, availableWidth / 1600, availableHeight / 900));
+  const w = windowSize.width || (typeof window !== "undefined" ? window.innerWidth : 1600) || 1600;
+  const h = windowSize.height || (typeof window !== "undefined" ? window.innerHeight : 900) || 900;
+  const availableWidth = Math.max(300, w - 32);
+  const availableHeight = Math.max(200, h - 140);
+  const fullscreenScale = Math.max(0.1, Math.min(1.0, availableWidth / 1600, availableHeight / 900)) || 0.8;
 
   // Auto-set the suggested template from AI analysis, and extract colors (only on new session or if empty)
   useEffect(() => {
@@ -2056,6 +3135,121 @@ function Results({
     });
   };
 
+  const getTemplateDefaultColors = (tpl: string, preset: string) => {
+    let bg = "#F5F1E8";
+    let primary = "#121212";
+    let secondary = "#6B7280";
+    let accent = "#C8E84A";
+
+    if (preset === "minimal") {
+      bg = "#FFFFFF";
+      primary = "#0F172A";
+      secondary = "#475569";
+      accent = "#0F172A";
+    } else if (preset === "dark") {
+      bg = "#0A0B0E";
+      primary = "#F8FAFC";
+      secondary = "#94A3B8";
+      accent = "#C8E84A";
+    } else if (preset === "gradient") {
+      bg = extractedColors.bg || "#F5F1E8";
+      accent = extractedColors.accent || "#C8E84A";
+      const getSimpleLuminance = (hex: string): number => {
+        const cleanHex = (hex || "").replace("#", "").trim();
+        let r = 255, g = 255, b = 255;
+        if (cleanHex.length === 3) {
+          r = parseInt(cleanHex[0] + cleanHex[0], 16);
+          g = parseInt(cleanHex[1] + cleanHex[1], 16);
+          b = parseInt(cleanHex[2] + cleanHex[2], 16);
+        } else if (cleanHex.length === 6) {
+          r = parseInt(cleanHex.substring(0, 2), 16);
+          g = parseInt(cleanHex.substring(2, 4), 16);
+          b = parseInt(cleanHex.substring(4, 6), 16);
+        }
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const avgLum = (getSimpleLuminance(bg) + getSimpleLuminance(accent)) / 2;
+      const isDark = avgLum < 140;
+      primary = isDark ? "#F8FAFC" : "#0F172A";
+      secondary = isDark ? "#D1D5DB" : "#4B5563";
+    } else {
+      if (tpl === "enterprise") {
+        bg = "#060B26";
+        primary = "#FFFFFF";
+        secondary = "#94A3B8";
+        accent = "#3B82F6";
+      } else if (tpl === "growth") {
+        bg = "#022315";
+        primary = "#FFFFFF";
+        secondary = "#A7F3D0";
+        accent = "#10B981";
+      } else if (tpl === "showcase") {
+        bg = "#FAF9F5";
+        primary = "#1C1917";
+        secondary = "#6B7280";
+        accent = "#D97706";
+      } else if (tpl === "executive") {
+        bg = "#FAF8F5";
+        primary = "#0F172A";
+        secondary = "#4B5563";
+        accent = "#10B981";
+      } else if (tpl === "boost_sales") {
+        bg = "#070B1E";
+        primary = "#FFFFFF";
+        secondary = "#D1D5DB";
+        accent = "#8B5CF6";
+      } else if (tpl === "all_in_one") {
+        bg = "#F4F9F6";
+        primary = "#0F172A";
+        secondary = "#4B5563";
+        accent = "#10B981";
+      } else if (tpl === "save_time") {
+        bg = "#0A1428";
+        primary = "#FFFFFF";
+        secondary = "#94A3B8";
+        accent = "#3B82F6";
+      } else if (tpl === "reports_growth") {
+        bg = "#FFF6F0";
+        primary = "#1E293B";
+        secondary = "#475569";
+        accent = "#F97316";
+      } else if (tpl === "manage_everything") {
+        bg = "#150A21";
+        primary = "#FFFFFF";
+        secondary = "#D1D5DB";
+        accent = "#EC4899";
+      } else if (tpl === "powerful_features") {
+        bg = "#F0F9FF";
+        primary = "#0F172A";
+        secondary = "#4B5563";
+        accent = "#0EA5E9";
+      } else if (tpl === "smart_recommendations") {
+        bg = "#FFF5F7";
+        primary = "#0F172A";
+        secondary = "#4B5563";
+        accent = "#F43F5E";
+      } else if (tpl === "realtime_analytics") {
+        bg = "#041211";
+        primary = "#FFFFFF";
+        secondary = "#94A3B8";
+        accent = "#14B8A6";
+      } else if (tpl === "tools_success") {
+        bg = "#FCFAF2";
+        primary = "#1E293B";
+        secondary = "#475569";
+        accent = "#EAB308";
+      } else {
+        bg = extractedColors.bg;
+        primary = extractedColors.primary;
+        secondary = extractedColors.secondary;
+        accent = extractedColors.accent;
+      }
+    }
+    return { bg, primary, secondary, accent };
+  };
+
+
+
   const renderCanvasContent = (scale: number, watermarkOverride?: boolean) => (
     <div style={{ width: 1600 * scale, height: 900 * scale, overflow: "hidden" }} className="relative bg-card rounded-xl border border-border shadow-md select-none">
       <div
@@ -2079,6 +3273,10 @@ function Results({
           screenshot={preview || ""}
           watermark={false}
           appName={result?.appName || "app"}
+          logo={logo}
+          featureTextSize={featureTextSize}
+          featureSpacing={featureSpacing}
+          featureIconSize={featureIconSize}
         />
       </div>
     </div>
@@ -2135,6 +3333,7 @@ function Results({
               colors={colors}
               isMobile={false}
               renderCanvasContent={(s) => renderCanvasContent(s)}
+              logo={logo}
             />
           )}
 
@@ -2145,6 +3344,7 @@ function Results({
               colors={colors}
               isMobile={true}
               renderCanvasContent={(s) => renderCanvasContent(s)}
+              logo={logo}
             />
           )}
         </div>
@@ -2174,6 +3374,10 @@ function Results({
               screenshot={preview || ""}
               watermark={false}
               appName={result?.appName || ""}
+              logo={logo}
+              featureTextSize={featureTextSize}
+              featureSpacing={featureSpacing}
+              featureIconSize={featureIconSize}
             />
           </div>
         </div>
@@ -2236,10 +3440,21 @@ function Results({
               { id: "sidebyside", label: "V1 Split" },
               { id: "spotlight", label: "V1 Spotlight" },
               { id: "modernsaas", label: "V1 Modern SaaS" },
+              { id: "boost_sales", label: "Boost Sales" },
+              { id: "all_in_one", label: "All-in-One Solution" },
+              { id: "save_time", label: "Save Time" },
+              { id: "reports_growth", label: "Reports & Growth" },
+              { id: "manage_everything", label: "Manage Everything" },
+              { id: "powerful_features", label: "Powerful Features" },
+              { id: "smart_recommendations", label: "Smart Recommendations" },
+              { id: "realtime_analytics", label: "Real-Time Analytics" },
+              { id: "tools_success", label: "Tools for Success" },
             ].map((t) => (
               <button
                 key={t.id}
-                onClick={() => setTemplate(t.id)}
+                onClick={() => {
+                  setTemplate(t.id);
+                }}
                 className={`py-2 px-3 rounded-lg border text-left transition flex items-center justify-between ${
                   template === t.id
                     ? "border-lime bg-lime/10 text-lime font-bold"
@@ -2271,7 +3486,11 @@ function Results({
             ].map((s) => (
               <button
                 key={s.id}
-                onClick={() => setStylePreset(s.id as any)}
+                onClick={() => {
+                  setStylePreset(s.id as any);
+                  const defaults = getTemplateDefaultColors(template, s.id);
+                  setColors(defaults);
+                }}
                 className={`py-2 px-3 rounded-lg border text-left transition ${
                   stylePreset === s.id
                     ? "border-lime bg-lime/10 text-lime"
@@ -2323,42 +3542,111 @@ function Results({
         </div>
 
         {/* Color Settings */}
-        {stylePreset !== "minimal" && stylePreset !== "dark" && (
-          <div className="space-y-3 border-t border-border pt-4">
+        <div className="space-y-3 border-t border-border pt-4">
+          <div className="flex items-center justify-between">
             <label className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
               5. Custom Color Palette
             </label>
-            <div className="grid grid-cols-3 gap-2 text-xs font-mono">
-              <div>
-                <label className="block text-[10px] opacity-60 mb-1">Background</label>
-                <input
-                  type="color"
-                  value={colors.bg}
-                  onChange={(e) => setColors((prev) => ({ ...prev, bg: e.target.value }))}
-                  className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] opacity-60 mb-1">Text/Primary</label>
-                <input
-                  type="color"
-                  value={colors.primary}
-                  onChange={(e) => setColors((prev) => ({ ...prev, primary: e.target.value }))}
-                  className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] opacity-60 mb-1">Accent</label>
-                <input
-                  type="color"
-                  value={colors.accent}
-                  onChange={(e) => setColors((prev) => ({ ...prev, accent: e.target.value }))}
-                  className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
-                />
-              </div>
+          </div>
+          
+          <div className="grid grid-cols-4 gap-2 text-xs font-mono">
+            <div>
+              <label className="block text-[10px] opacity-60 mb-1 truncate">BG Color</label>
+              <input
+                type="color"
+                value={colors.bg}
+                onChange={(e) => setColors((prev) => ({ ...prev, bg: e.target.value }))}
+                className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] opacity-60 mb-1 truncate">Primary Text</label>
+              <input
+                type="color"
+                value={colors.primary}
+                onChange={(e) => setColors((prev) => ({ ...prev, primary: e.target.value }))}
+                className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] opacity-60 mb-1 truncate">Secondary Text</label>
+              <input
+                type="color"
+                value={colors.secondary || "#6B7280"}
+                onChange={(e) => setColors((prev) => ({ ...prev, secondary: e.target.value }))}
+                className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] opacity-60 mb-1 truncate">Accent</label>
+              <input
+                type="color"
+                value={colors.accent}
+                onChange={(e) => setColors((prev) => ({ ...prev, accent: e.target.value }))}
+                className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
+              />
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Feature Callout Controls */}
+        <div className="space-y-4 border-t border-border pt-4">
+          <label className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+            6. Feature Callout Controls
+          </label>
+          <div className="space-y-3 text-xs font-mono">
+            {/* Feature Text Size Slider */}
+            <div>
+              <div className="flex justify-between items-center text-muted-foreground mb-1">
+                <span>Text Size</span>
+                <span className="text-lime font-bold">{featureTextSize.toFixed(2)}x</span>
+              </div>
+              <input
+                type="range"
+                min="0.7"
+                max="1.5"
+                step="0.05"
+                value={featureTextSize}
+                onChange={(e) => setFeatureTextSize(parseFloat(e.target.value))}
+                className="w-full accent-lime cursor-pointer bg-muted h-1 rounded-lg appearance-none"
+              />
+            </div>
+
+            {/* Feature Spacing Slider */}
+            <div>
+              <div className="flex justify-between items-center text-muted-foreground mb-1">
+                <span>Spacing / Gap</span>
+                <span className="text-lime font-bold">{featureSpacing}px</span>
+              </div>
+              <input
+                type="range"
+                min="8"
+                max="40"
+                step="1"
+                value={featureSpacing}
+                onChange={(e) => setFeatureSpacing(parseInt(e.target.value))}
+                className="w-full accent-lime cursor-pointer bg-muted h-1 rounded-lg appearance-none"
+              />
+            </div>
+
+            {/* Feature Icon Size Slider */}
+            <div>
+              <div className="flex justify-between items-center text-muted-foreground mb-1">
+                <span>Icon / Bullet Size</span>
+                <span className="text-lime font-bold">{featureIconSize.toFixed(2)}x</span>
+              </div>
+              <input
+                type="range"
+                min="0.7"
+                max="1.5"
+                step="0.05"
+                value={featureIconSize}
+                onChange={(e) => setFeatureIconSize(parseFloat(e.target.value))}
+                className="w-full accent-lime cursor-pointer bg-muted h-1 rounded-lg appearance-none"
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Actions & Export Panel */}
         <div className="border-t border-border pt-6 mt-4 space-y-4">
@@ -2393,30 +3681,40 @@ function Results({
       />
 
       {/* Fullscreen Modal Overlay */}
-      {isFullscreen && (
-        <div className="fixed inset-0 bg-neutral-950/98 backdrop-blur-xl z-[100] flex items-center justify-center p-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200 font-sans">
+      {isFullscreen && isMounted && createPortal(
+        <div 
+          onClick={() => setIsFullscreen(false)}
+          className="fixed inset-0 bg-neutral-950/98 backdrop-blur-xl z-[100] flex items-center justify-center p-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200 font-sans cursor-zoom-out"
+        >
           {/* Close Button */}
           <button
-            onClick={() => setIsFullscreen(false)}
-            className="absolute top-6 right-6 z-50 size-12 rounded-full bg-neutral-900/80 hover:bg-neutral-850 text-white flex items-center justify-center border border-white/10 transition-all hover:scale-105 active:scale-95 shadow-xl text-lg hover:border-white/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsFullscreen(false);
+            }}
+            className="absolute top-6 right-6 z-50 size-12 rounded-full bg-neutral-900/80 hover:bg-neutral-850 text-white flex items-center justify-center border border-white/10 transition-all hover:scale-105 active:scale-95 shadow-xl text-lg hover:border-white/20 cursor-pointer"
             aria-label="Close fullscreen preview"
           >
             ✕
           </button>
 
           {/* Modal Content - Scaled Canvas */}
-          <div className="w-full h-full flex items-center justify-center overflow-hidden">
-            <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-neutral-900 shadow-3xl max-w-full max-h-full">
-              {renderCanvasContent(fullscreenScale)}
-            </div>
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative rounded-xl overflow-hidden border border-white/10 shadow-3xl max-w-full max-h-full cursor-default select-none"
+          >
+            {renderCanvasContent(fullscreenScale)}
           </div>
 
           {/* Floating Control Bar */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex gap-3 p-2 bg-neutral-900/90 backdrop-blur-md rounded-full border border-white/10 shadow-2xl w-full max-w-md hover:border-white/20 transition-colors">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex gap-3 p-2 bg-neutral-900/90 backdrop-blur-md rounded-full border border-white/10 shadow-2xl w-full max-w-md hover:border-white/20 transition-colors cursor-default"
+          >
             <button
               onClick={handleDownload}
               disabled={downloading}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-lime text-ink font-semibold py-3 hover:opacity-90 transition disabled:opacity-60 text-xs animate-pulse"
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-lime text-ink font-semibold py-3 hover:opacity-90 transition disabled:opacity-60 text-xs animate-pulse cursor-pointer"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
@@ -2425,12 +3723,13 @@ function Results({
             </button>
             <button
               onClick={() => setIsFullscreen(false)}
-              className="flex-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold py-3 transition text-xs text-center"
+              className="flex-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold py-3 transition text-xs text-center cursor-pointer"
             >
               Back to Editor
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
