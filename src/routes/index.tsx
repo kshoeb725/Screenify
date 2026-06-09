@@ -744,7 +744,7 @@ function Preview({
             Change screenshot
           </button>
         </div>
-        <p className="mt-6 text-xs font-mono text-muted-foreground">Typically 3–5 seconds.</p>
+        <p className="mt-6 text-xs font-mono text-muted-foreground">Typically 30–60 seconds.</p>
       </div>
     </div>
   );
@@ -779,7 +779,7 @@ function Loading({ preview }: { preview: string | null }) {
           ))}
         </ul>
         <p className="mt-8 text-xs font-mono text-muted-foreground">
-          Typically 3–5 seconds. Hang tight.
+          Typically 30–60 seconds. Hang tight.
         </p>
       </div>
     </div>
@@ -1452,9 +1452,9 @@ function TemplateCanvas({
           <div className="flex justify-between items-center z-10">
             <div className="flex items-center gap-2.5">
               {logo ? (
-                <img src={logo} alt="Logo" className="h-7 max-w-[120px] object-contain" />
+                <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
               ) : (
-                <ChatBubbleIcon size={28} />
+                <ChatBubbleIcon size={38} />
               )}
               <span className="font-mono text-[12px] tracking-wider px-4 py-1.5 rounded-full font-bold uppercase"
                     style={{ color: accentColor, backgroundColor: `${accentColor}20` }}>
@@ -1583,13 +1583,13 @@ function TemplateCanvas({
           <div className="col-span-5 flex flex-col justify-center h-full pr-2 z-10">
             <div className="flex items-center gap-3 mb-6 z-10">
               {logo ? (
-                <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain" />
+                <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
               ) : (
-                <div className="size-8 rounded-lg flex items-center justify-center font-bold text-md text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)` }}>
+                <div className="size-11 rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)` }}>
                   {appName ? appName[0].toUpperCase() : "S"}
                 </div>
               )}
-              <span className="font-extrabold text-[18px] tracking-tight uppercase" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+              <span className="font-extrabold text-[22px] tracking-tight uppercase" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
             </div>
             
             <h1 className="text-[64px] font-black leading-[1.08] mb-4 font-sans-jakarta" style={{ color: textColor }}>
@@ -1648,11 +1648,11 @@ function TemplateCanvas({
           {/* Left Side: Serif Copy & Brand */}
           <div className="col-span-6 flex flex-col justify-between h-full py-8 pr-8 z-10">
             {/* Top Logo */}
-            <div className="flex items-center gap-3 text-[15px] font-black tracking-[0.3em] uppercase font-serif-elegant" style={{ color: bodyTextColor }}>
+            <div className="flex items-center gap-3 text-[18px] font-black tracking-[0.3em] uppercase font-serif-elegant" style={{ color: bodyTextColor }}>
               {logo ? (
-                <img src={logo} alt="Logo" className="h-7 max-w-[120px] object-contain" />
+                <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
               ) : (
-                <FMonogramIcon size={28} />
+                <FMonogramIcon size={38} />
               )}
               <span>{appName || "FAIRE"}</span>
             </div>
@@ -1701,11 +1701,11 @@ function TemplateCanvas({
               {/* Brand Logo representation */}
               <div className="flex items-center gap-2.5 font-black text-lg mb-6 tracking-wide font-sans-outfit" style={{ color: bodyTextColor }}>
                 {logo ? (
-                  <img src={logo} alt="Logo" className="h-7 max-w-[120px] object-contain" />
+                  <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
                 ) : (
-                  <IsometricBoxIcon size={32} />
+                  <IsometricBoxIcon size={42} />
                 )}
-                <span className="uppercase tracking-widest text-sm">{appName || "Shipway"}</span>
+                <span className="uppercase tracking-widest text-base">{appName || "Shipway"}</span>
               </div>
  
               {/* Headline */}
@@ -2039,13 +2039,13 @@ function TemplateCanvas({
           <div className="col-span-5 flex flex-col justify-center z-10 h-full">
             <div className="flex items-center gap-3.5 mb-8">
               {logo ? (
-                <img src={logo} alt="Logo" className="h-9 max-w-[130px] object-contain rounded-lg" />
+                <img src={logo} alt="Logo" className="h-12 max-w-[180px] object-contain rounded-lg" />
               ) : (
-                <div className="size-9 rounded-lg flex items-center justify-center font-bold text-lg" style={{ background: colors.accent, color: getContrastRatio(colors.accent, "#FFFFFF") >= 4.5 ? "#FFFFFF" : "#0F172A" }}>
+                <div className="size-12 rounded-xl flex items-center justify-center font-bold text-xl" style={{ background: colors.accent, color: getContrastRatio(colors.accent, "#FFFFFF") >= 4.5 ? "#FFFFFF" : "#0F172A" }}>
                   {appName ? appName[0].toUpperCase() : "S"}
                 </div>
               )}
-              <span className="font-extrabold text-[20px] tracking-wide uppercase opacity-90" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+              <span className="font-extrabold text-[24px] tracking-wide uppercase opacity-90" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
             </div>
 
             <h1 className="text-[52px] font-black leading-[1.15] tracking-tight mb-6" style={{ color: textColor }}>
@@ -2107,7 +2107,7 @@ function TemplateCanvas({
             <div>
               <div className="mb-6 flex items-center gap-3">
                 {logo ? (
-                  <img src={logo} alt="Logo" className="h-7 max-w-[120px] object-contain" />
+                  <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
                 ) : (
                   <span className="px-3.5 py-1.5 rounded-full text-[13px] font-bold tracking-wider uppercase border"
                         style={{ backgroundColor: `${accentColor}15`, color: accentColor, borderColor: `${accentColor}25` }}>
@@ -2191,7 +2191,7 @@ function TemplateCanvas({
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-center z-10 h-full">
             {logo && (
-              <img src={logo} alt="Logo" className="h-8 max-w-[130px] object-contain rounded mb-8" />
+              <img src={logo} alt="Logo" className="h-12 max-w-[180px] object-contain rounded mb-8" />
             )}
 
             <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
@@ -2254,7 +2254,7 @@ function TemplateCanvas({
           {/* Top Header Section with Logo and Centered Text */}
           <div className="w-full flex flex-col items-center text-center z-20 mt-1 select-none">
             {logo ? (
-              <img src={logo} alt="Logo" className="h-8 max-w-[130px] object-contain rounded mb-4" />
+              <img src={logo} alt="Logo" className="h-12 max-w-[180px] object-contain rounded mb-4" />
             ) : (
               <div className="h-2" />
             )}
@@ -2401,7 +2401,7 @@ function TemplateCanvas({
             <div>
               <div className="flex items-center gap-3.5 mb-6">
                 {logo ? (
-                  <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded" />
+                  <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded" />
                 ) : (
                   <div className="px-3 py-1.5 rounded-lg border text-xs font-mono font-bold tracking-wider"
                        style={{ backgroundColor: `${accentColor}15`, borderColor: `${accentColor}25`, color: accentColor }}>
@@ -2514,7 +2514,7 @@ function TemplateCanvas({
           {/* Right Column */}
           <div className="col-span-5 flex flex-col justify-center z-10 h-full pl-6">
             {logo && (
-              <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded mb-6" />
+              <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded mb-6" />
             )}
 
             <h1 className="text-[48px] font-black leading-[1.15] tracking-tight mb-5" style={{ color: textColor }}>
@@ -2568,7 +2568,7 @@ function TemplateCanvas({
           <div className="col-span-5 flex flex-col justify-center z-10 h-full">
             <div className="flex items-center gap-3 mb-6">
               {logo ? (
-                <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded" />
+                <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded" />
               ) : (
                 <span className="px-3.5 py-1.5 rounded-full text-[12px] font-bold tracking-wider uppercase border"
                       style={{ backgroundColor: `${accentColor}15`, color: accentColor, borderColor: `${accentColor}25` }}>
@@ -2621,79 +2621,137 @@ function TemplateCanvas({
         </div>
       )}
 
-      {/* Template 8 – Real-Time Analytics */}
+      {/* Template 8 – Real-Time Analytics (Pedestal Stage Redesign) */}
       {template === "realtime_analytics" && (
-        <div className="h-full grid grid-cols-12 gap-10 items-center px-20 py-16 font-sans-jakarta relative overflow-hidden">
+        <div className="h-full flex flex-col justify-between px-20 py-16 font-sans-jakarta relative overflow-hidden">
           {/* Radial teal glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full blur-[140px] pointer-events-none" style={{ backgroundColor: `${accentColor}0D` }} />
+          {/* Dotted background overlay */}
+          <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{
+            backgroundImage: `radial-gradient(${textColor} 1.5px, transparent 1.5px)`,
+            backgroundSize: "24px 24px"
+          }} />
 
-          {/* Left Column */}
-          <div className="col-span-5 flex flex-col justify-center z-10 h-full">
-            <div className="flex items-center gap-3 mb-6">
-              {logo ? (
-                <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded" />
-              ) : (
-                <span className="px-3.5 py-1.5 rounded-full text-[12px] font-bold tracking-wider uppercase border font-mono"
-                      style={{ backgroundColor: `${accentColor}15`, color: accentColor, borderColor: `${accentColor}25` }}>
-                  LIVE STATUS
-                </span>
-              )}
+          {/* Centered Top Header Section */}
+          <div className="w-full flex flex-col items-center text-center z-20 mt-1 select-none">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="relative flex size-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="font-mono text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: accentColor }}>
+                {appName ? appName : "Real-time Analytics"}
+              </span>
             </div>
-
-            <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
+            <h1 className="text-[50px] font-black leading-[1.15] tracking-tight max-w-4xl mx-auto mb-3" style={{ color: textColor }}>
               {renderHeadline(headline || "Real-time Analytics For **Real Growth**", "realtime_analytics")}
             </h1>
-
-            <p className="text-[19px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+            <p className="text-[18px] opacity-80 max-w-2xl mx-auto font-bold leading-relaxed" style={{ color: secondaryColor }}>
               {subheadline || "Track performance in real-time and stay ahead of the competition."}
             </p>
-
-            <div className="flex flex-col" style={{ gap: featureSpacing }}>
-              {features.filter(Boolean).map((feat, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="rounded-full flex items-center justify-center border shrink-0"
-                       style={{ 
-                         width: `${28 * featureIconSize}px`, 
-                         height: `${28 * featureIconSize}px`,
-                         backgroundColor: `${accentColor}20`,
-                         color: accentColor,
-                         borderColor: `${accentColor}30`
-                       }}>
-                    <svg style={{ width: `${16 * featureIconSize}px`, height: `${16 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                  </div>
-                  <span className="font-bold" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Right Column */}
-          <div className="col-span-7 flex justify-end z-10">
-            <div className="w-[840px] rounded-2xl border shadow-2xl p-2.5"
-                 style={{
-                   backgroundColor: isDark ? "#090D10" : "#FFFFFF",
-                   borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.08)"
-                 }}>
-              <div className="flex items-center gap-1.5 px-3 pb-2.5 border-b mb-2"
-                   style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)" }}>
-                <div className="size-2.5 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
-                <div className="size-2.5 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
-                <div className="size-2.5 rounded-full" style={{ backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
-                <div className="text-[10px] font-mono border px-6 py-0.5 rounded-md mx-auto truncate max-w-[240px]"
+          {/* Bottom Split Layout Section */}
+          <div className="grid grid-cols-12 gap-12 items-center z-10 w-full mb-2">
+            
+            {/* Left Column (col-span-5) - Vertical Feature Cards */}
+            <div className="col-span-5 flex flex-col gap-4">
+              {features.filter(Boolean).slice(0, 4).map((feat, i) => {
+                const subtexts = [
+                  "Track performance and live events",
+                  "Automate actions with smart rules",
+                  "Focus on metrics that drive growth",
+                  "Centralize all your operations"
+                ];
+                const icons = [
+                  <svg key="0" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                  </svg>,
+                  <svg key="1" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.656 48.656 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3M3 12c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M3 12l-3 3m3-3l3-3" />
+                  </svg>,
+                  <svg key="2" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+                  </svg>,
+                  <svg key="3" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 12.481c-.131.224-.312.405-.536.536m0-5.801c.224.131.405.312.536.536m0-5.801c-.131-.224-.312-.405-.536-.536" />
+                  </svg>
+                ];
+                return (
+                  <div key={i} className="flex items-center gap-4.5 p-4.5 rounded-2xl border backdrop-blur-md transition-all duration-300 hover:scale-[1.02]"
+                       style={{
+                         backgroundColor: isDark ? "rgba(255, 255, 255, 0.03)" : "rgba(255, 255, 255, 0.8)",
+                         borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)"
+                       }}>
+                    <div className="rounded-xl flex items-center justify-center shrink-0 size-10.5 border"
+                         style={{ 
+                           backgroundColor: isDark ? "rgba(255,255,255,0.02)" : `${accentColor}10`,
+                           color: accentColor,
+                           borderColor: isDark ? "rgba(255,255,255,0.12)" : `${accentColor}30`,
+                           boxShadow: `0 0 10px ${accentColor}1A`
+                         }}>
+                      {icons[i % icons.length]}
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold tracking-tight text-[15.5px]" style={{ color: bodyTextColor, fontSize: `${16.5 * featureTextSize}px` }}>{feat}</h4>
+                      <p className="text-xs opacity-65 font-medium mt-0.5 leading-normal" style={{ color: secondaryColor }}>{subtexts[i % subtexts.length]}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Right Column (col-span-7) - Centered Mockup standing on a 3D glowing pedestal */}
+            <div className="col-span-7 flex flex-col items-center justify-center relative h-[450px]">
+              
+              {/* Outer Glowing Base Ellipse */}
+              <div className="absolute -bottom-10 w-[720px] h-[48px] rounded-full z-0 pointer-events-none"
+                   style={{
+                     background: isDark ? "radial-gradient(ellipse at center, rgba(16,185,129,0.12) 0%, transparent 70%)" : "radial-gradient(ellipse at center, rgba(16,185,129,0.06) 0%, transparent 70%)",
+                   }} />
+              
+              {/* Pedestal Outer Rim */}
+              <div className="absolute -bottom-6 w-[640px] h-[36px] rounded-full z-10 pointer-events-none border-2"
+                   style={{
+                     background: isDark ? "rgba(7, 16, 20, 0.95)" : "rgba(240, 248, 245, 0.95)",
+                     borderColor: `${accentColor}80`,
+                     boxShadow: `0 0 35px ${accentColor}90, inset 0 0 15px ${accentColor}40`,
+                     transform: "perspective(800px) rotateX(65deg) scaleY(1.2)"
+                   }} />
+              
+              {/* Pedestal Inner Surface Offset */}
+              <div className="absolute -bottom-[2px] w-[560px] h-[28px] rounded-full z-10 pointer-events-none border"
+                   style={{
+                     background: isDark ? "rgba(10, 25, 30, 0.98)" : "rgba(220, 240, 235, 0.98)",
+                     borderColor: `${accentColor}50`,
+                     boxShadow: `0 0 15px ${accentColor}60`,
+                     transform: "perspective(800px) rotateX(65deg) scaleY(1.2)"
+                   }} />
+
+              {/* Browser mockup resting on the pedestal */}
+              <div className="relative z-20 w-[780px] shadow-2xl transition-transform duration-300 hover:scale-[1.01] mb-2">
+                <div className="w-full rounded-2xl border overflow-hidden p-2.5 backdrop-blur-sm"
                      style={{
-                       backgroundColor: isDark ? "rgba(0, 0, 0, 0.2)" : "rgba(0, 0, 0, 0.03)",
-                       color: secondaryColor,
-                       borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
+                       backgroundColor: isDark ? "rgba(10, 16, 22, 0.85)" : "rgba(255, 255, 255, 0.9)",
+                       borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)"
                      }}>
-                  live.analytics.dashboard
+                  
+                  {/* Browser top controls */}
+                  <div className="flex items-center gap-1.5 px-3.5 pb-2.5 pt-1 border-b mb-2.5"
+                       style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.05)" }}>
+                    <div className="size-2 rounded-full bg-red-400" />
+                    <div className="size-2 rounded-full bg-yellow-400" />
+                    <div className="size-2 rounded-full bg-green-400" />
+                  </div>
+                  
+                  {/* Screenshot frame */}
+                  <div className="relative overflow-hidden rounded-xl border"
+                       style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.03)" }}>
+                    <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[380px]" />
+                  </div>
                 </div>
               </div>
-              <div className="relative overflow-hidden rounded-b-xl border"
-                   style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)" }}>
-                <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[440px]" />
-              </div>
+
             </div>
           </div>
         </div>
@@ -2713,7 +2771,7 @@ function TemplateCanvas({
             <div>
               <div className="flex items-center gap-3.5 mb-6">
                 {logo ? (
-                  <img src={logo} alt="Logo" className="h-8 max-w-[120px] object-contain rounded" />
+                  <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded" />
                 ) : (
                   <span className="px-3.5 py-1.5 rounded-lg border-2 shadow-[2px_2px_0px_rgba(0,0,0,0.9)] text-xs font-mono font-bold tracking-wider"
                         style={{ backgroundColor: `${accentColor}20`, borderColor: bodyTextColor, color: bodyTextColor }}>
