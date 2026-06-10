@@ -18,7 +18,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              AI-powered Shopify App Store promo image generator. Upload one screenshot, get three
+              AI-powered Shopify App Store promo image generator. Upload one screenshot, get
               polished, store-ready images in seconds.
             </p>
           </div>
