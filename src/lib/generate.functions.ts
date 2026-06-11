@@ -56,27 +56,28 @@ async function callGeminiEndpoint(
   modelName: string,
   version: "v1beta" | "v1",
   prompt: string,
-  mimeType: string,
-  base64Data: string,
+  images: { mimeType: string; base64Data: string }[],
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/${version}/models/${modelName}:generateContent?key=${key}`;
+  
+  const imageParts = images.map((img) => ({
+    inlineData: {
+      mimeType: img.mimeType,
+      data: img.base64Data,
+    },
+  }));
+
   const payload: any = {
     contents: [
       {
         parts: [
           { text: prompt },
-          {
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Data,
-            },
-          },
+          ...imageParts,
         ],
       },
     ],
   };
 
-  // v1beta supports responseMimeType
   if (version === "v1beta") {
     payload.generationConfig = {
       responseMimeType: "application/json",
@@ -104,28 +105,22 @@ async function callGeminiEndpoint(
   return textOutput;
 }
 
-async function analyzeImage(prompt: string, imageDataUrl: string): Promise<string> {
+async function analyzeImages(prompt: string, imageDataUrls: string[]): Promise<string> {
   const geminiKey = process.env.GEMINI_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
 
   if (geminiKey) {
-    const { mimeType, base64Data } = parseDataUrl(imageDataUrl);
-
-    // 1. Try to dynamically discover supported models from the user's key
+    const parsedImages = imageDataUrls.map(url => parseDataUrl(url));
     const discovered = await getSupportedMultimodalModels(geminiKey);
-    
-    // 2. Build the attempt list prioritizing discovered models
     const attempts: { version: "v1beta" | "v1"; model: string }[] = [];
     
     if (discovered.length > 0) {
-      // Prioritize discovered flash models in v1beta for JSON output, then v1
       discovered.forEach(m => {
         attempts.push({ version: "v1beta", model: m });
         attempts.push({ version: "v1", model: m });
       });
     }
 
-    // Static fallback models in case discovery failed or returned incomplete models
     const fallbackModels = [
       "gemini-1.5-flash",
       "gemini-1.5-flash-8b",
@@ -146,14 +141,13 @@ async function analyzeImage(prompt: string, imageDataUrl: string): Promise<strin
     let lastError: Error | null = null;
     for (const attempt of attempts) {
       try {
-        console.log(`[Gemini API] Trying model ${attempt.model} on ${attempt.version}...`);
+        console.log(`[Gemini API] Trying model ${attempt.model} on ${attempt.version} with ${parsedImages.length} images...`);
         const responseText = await callGeminiEndpoint(
           geminiKey,
           attempt.model,
           attempt.version,
           prompt,
-          mimeType,
-          base64Data,
+          parsedImages,
         );
         console.log(`[Gemini API] Success with model ${attempt.model} on ${attempt.version}!`);
         return responseText;
@@ -181,7 +175,10 @@ async function analyzeImage(prompt: string, imageDataUrl: string): Promise<strin
               role: "user",
               content: [
                 { type: "text", text: prompt },
-                { type: "image_url", image_url: { url: imageDataUrl } },
+                ...imageDataUrls.map((url) => ({
+                  type: "image_url",
+                  image_url: { url },
+                })),
               ],
             },
           ],
@@ -204,10 +201,12 @@ async function analyzeImage(prompt: string, imageDataUrl: string): Promise<strin
 }
 
 const InputSchema = z.object({
-  imageDataUrl: z
-    .string()
-    .min(50)
-    .refine((s) => s.startsWith("data:image/"), "Must be an image data URL"),
+  imageDataUrls: z
+    .array(
+      z.string().min(50).refine((s) => s.startsWith("data:image/"), "Must be an image data URL")
+    )
+    .min(1)
+    .max(6),
   email: z.string().trim().email().max(255),
   appName: z.string().trim().min(1).max(100),
   targetAudience: z.string().trim().min(1).max(300),
@@ -216,16 +215,34 @@ const InputSchema = z.object({
   backgroundStyle: z.string().trim().max(200).optional().default(""),
 });
 
+type SlideVariantCopy = {
+  headline: string;
+  subheadline: string;
+  features: string[];
+};
+
+type SlideData = {
+  slideNumber: number;
+  role: string;
+  suggestedTemplate: "executive" | "conversion" | "showcase" | "enterprise" | "growth";
+  suggestedPreset: "modern" | "minimal" | "gradient" | "dark";
+  variants: {
+    feature: SlideVariantCopy;
+    benefit: SlideVariantCopy;
+    outcome: SlideVariantCopy;
+  };
+};
+
 type AnalysisPlan = {
   appName: string;
   category: string;
-  suggestedTemplate: "executive" | "conversion" | "showcase" | "enterprise" | "growth";
-  detectedFeatures: string[];
-  variants: {
-    feature: { headline: string; subheadline: string; features: string[] };
-    benefit: { headline: string; subheadline: string; features: string[] };
-    outcome: { headline: string; subheadline: string; features: string[] };
+  auditScore: number;
+  auditFeedback: {
+    categoryConventions: string;
+    narrativeStrength: string;
+    copyImpact: string;
   };
+  slides: SlideData[];
 };
 
 function extractJSON(raw: string): string {
@@ -242,7 +259,7 @@ function extractJSON(raw: string): string {
 }
 
 async function analyze(
-  imageDataUrl: string,
+  imageDataUrls: string[],
   ctx: {
     appName: string;
     targetAudience: string;
@@ -251,81 +268,109 @@ async function analyze(
     backgroundStyle: string;
   },
 ): Promise<AnalysisPlan> {
-  const prompt = `You are a Shopify App Store marketing expert. Analyze the uploaded screenshot of a Shopify merchant app and generate professional, high-converting SaaS marketing copy, identify features, and select the best layout template.
+  const prompt = `You are a Shopify App Store conversion marketing strategist. Analyze the uploaded screenshot(s) of a Shopify merchant app and generate a complete, high-converting sequence of 6 App Store screenshots representing a strategic storytelling narrative.
 
 Context:
 - App Name: ${ctx.appName}
 - Target Audience: ${ctx.targetAudience}
 - Objective: ${ctx.objective}
 
-Look closely at the uploaded screenshot:
-1. Identify the app's primary category (e.g., Analytics, Inventory, Marketing, Operations, Customer Service, etc.).
-2. Determine which template style suits the screenshot best:
-   - "executive" (best for analytics, reporting, professional SaaS dashboards)
-   - "conversion" (best for marketing, sales boosting, popups, discounts, conversions)
-   - "showcase" (best for product showcases, general utility, clean interfaces)
-   - "enterprise" (best for inventory, operations, workflows, multi-location, security)
-   - "growth" (best for SEO, speed, Shopify growth, checkout customization, revenue boosters)
-3. Detect up to 4 key features visible in the UI (e.g., "sales chart", "product table", "settings sync", "email template builder").
-4. Create 3 distinct marketing copy variations using powerful, trending, and highly professional SaaS keywords (e.g., "Accelerate", "Automate", "Streamline", "Scale", "Maximized"). Do NOT use any emojis (like 🚀, ⚡, 📈, etc.) in the headlines, subheadlines, or features. All text must be purely alphanumeric with standard punctuation:
-   - "feature": Feature-focused copy (emphasizes *what* it does, e.g., "Track Inventory Across Every Location")
-   - "benefit": Benefit-focused copy (emphasizes *how* it helps the merchant, e.g., "Save Time with Automated Inventory Updates")
-   - "outcome": Outcome-focused copy (emphasizes *results/success metrics*, e.g., "Reduce Stock Errors and Improve Accuracy")
-   Ensure each variation has:
-   - a headline (max 6 words)
-   - a subheadline (max 15 words)
-   - 3 short feature highlights (max 5 words each)
+We are designing exactly 6 screenshots in sequence:
+- Slide 1: Hook / Hero Benefit (Scroll stopper, focuses on the primary value proposition)
+- Slide 2: Problem & Solution (A visual setup of the merchant pain point and the app's answer)
+- Slide 3: Key Feature A (Deep-dive into the first key interactive element)
+- Slide 4: Key Feature B (Deep-dive into the second key feature or integration)
+- Slide 5: Outcome / Social Proof (Focuses on metrics, growth, conversion increase, or reviews)
+- Slide 6: Setup / Integrations / Trust (Shows how easy it is to configure and that it "Works with Shopify")
 
-Return ONLY valid JSON (no markdown, no prose) with this exact schema:
+For each slide, perform these operations:
+1. Determine which visual template suits it best:
+   - "executive" (best for analytics, tables, dashboard metrics)
+   - "conversion" (best for sales badges, revenue trackers, review counts)
+   - "showcase" (best for clean UI cards, general layouts, and hero previews)
+   - "enterprise" (best for workflow configuration, status grids, security)
+   - "growth" (best for speed tests, checkout widgets, direct revenue metrics)
+2. Select the optimal color preset: "modern", "minimal", "gradient", or "dark".
+3. Write three distinct copywriting variations (strictly alphanumeric, max 6 words for headlines, max 15 words for subheadlines, and exactly 3 feature highlights of max 5 words each. Do NOT use emojis):
+   - "feature" (emphasizes *what* it does)
+   - "benefit" (emphasizes *how* it saves time or increases sales)
+   - "outcome" (emphasizes *results/success metrics*)
+
+Also evaluate the app's baseline Listing Score (out of 100) and provide short strategic audit feedback (under 40 words per category).
+
+Return ONLY valid JSON with this exact schema:
 {
   "appName": "${ctx.appName}",
-  "category": "one-word or two-word category",
-  "suggestedTemplate": "executive | conversion | showcase | enterprise | growth",
-  "detectedFeatures": ["feature 1", "feature 2", "feature 3"],
-  "variants": {
-    "feature": {
-      "headline": "Feature-focused headline (max 6 words, no emojis)",
-      "subheadline": "Supporting subheadline (max 15 words, no emojis)",
-      "features": ["feature 1 (no emojis)", "feature 2 (no emojis)", "feature 3 (no emojis)"]
-    },
-    "benefit": {
-      "headline": "Benefit-focused headline (max 6 words, no emojis)",
-      "subheadline": "Supporting subheadline (max 15 words, no emojis)",
-      "features": ["benefit 1 (no emojis)", "benefit 2 (no emojis)", "benefit 3 (no emojis)"]
-    },
-    "outcome": {
-      "headline": "Outcome-focused headline (max 6 words, no emojis)",
-      "subheadline": "Supporting subheadline (max 15 words, no emojis)",
-      "features": ["outcome 1 (no emojis)", "outcome 2 (no emojis)", "outcome 3 (no emojis)"]
+  "category": "app category (e.g. Marketing, Store design, Orders and shipping)",
+  "auditScore": 85,
+  "auditFeedback": {
+    "categoryConventions": "Critique of how well this aligns with standard app store layouts.",
+    "narrativeStrength": "Critique of the screenshot sequence flow and storytelling.",
+    "copyImpact": "Critique of headline effectiveness and value focus."
+  },
+  "slides": [
+    {
+      "slideNumber": 1,
+      "role": "Hook / Hero Benefit",
+      "suggestedTemplate": "showcase | executive | conversion | enterprise | growth",
+      "suggestedPreset": "modern | minimal | gradient | dark",
+      "variants": {
+        "feature": {
+          "headline": "Headline (max 6 words)",
+          "subheadline": "Subheadline (max 15 words)",
+          "features": ["highlight 1 (max 5 words)", "highlight 2", "highlight 3"]
+        },
+        "benefit": {
+          "headline": "Headline (max 6 words)",
+          "subheadline": "Subheadline (max 15 words)",
+          "features": ["highlight 1 (max 5 words)", "highlight 2", "highlight 3"]
+        },
+        "outcome": {
+          "headline": "Headline (max 6 words)",
+          "subheadline": "Subheadline (max 15 words)",
+          "features": ["highlight 1 (max 5 words)", "highlight 2", "highlight 3"]
+        }
+      }
     }
-  }
+    // ... Repeat for slides 2, 3, 4, 5, 6 in order
+  ]
 }`;
 
-  const raw = await analyzeImage(prompt, imageDataUrl);
+  const raw = await analyzeImages(prompt, imageDataUrls);
   const cleaned = extractJSON(raw);
   let parsed: AnalysisPlan;
   try {
     parsed = JSON.parse(cleaned);
   } catch {
-    console.error("Malformed plan JSON. Raw:", raw.slice(0, 800));
-    throw new Error("AI returned malformed plan. Please retry.");
+    console.error("Malformed plan JSON. Raw:", raw.slice(0, 1000));
+    throw new Error("AI returned malformed JSON plan. Please retry.");
   }
 
-  // Set default values / fallbacks if keys are missing
-  if (!parsed.suggestedTemplate) parsed.suggestedTemplate = "showcase";
-  if (!parsed.detectedFeatures) parsed.detectedFeatures = [];
-
-  if (!parsed.variants || !parsed.variants.feature || !parsed.variants.benefit || !parsed.variants.outcome) {
-    const backupCopy = {
-      headline: "Professional Merchant Tools",
-      subheadline: "Empower your Shopify store with high-performance management utilities.",
-      features: ["Easy to Setup", "Real-Time Updates", "Seamless Integration"]
-    };
-    parsed.variants = {
-      feature: parsed.variants?.feature || backupCopy,
-      benefit: parsed.variants?.benefit || backupCopy,
-      outcome: parsed.variants?.outcome || backupCopy
-    };
+  // Ensure slides array exists and contains all 6 slides
+  if (!parsed.slides || !Array.isArray(parsed.slides) || parsed.slides.length !== 6) {
+    parsed.slides = Array.from({ length: 6 }).map((_, i) => ({
+      slideNumber: i + 1,
+      role: ["Hook / Hero Benefit", "Problem & Solution", "Key Feature A", "Key Feature B", "Outcome / Social Proof", "Setup & Trust"][i],
+      suggestedTemplate: "showcase",
+      suggestedPreset: "modern",
+      variants: {
+        feature: {
+          headline: "Professional Store Solutions",
+          subheadline: "Empower your Shopify store with high-performance management utilities.",
+          features: ["Easy Setup", "Real-Time Sync", "Full Analytics"]
+        },
+        benefit: {
+          headline: "Boost Sales and Save Time",
+          subheadline: "Empower your Shopify store with high-performance management utilities.",
+          features: ["Save Hours Weekly", "Increase Conversions", "Automated Logic"]
+        },
+        outcome: {
+          headline: "Increase Installs and Growth",
+          subheadline: "Empower your Shopify store with high-performance management utilities.",
+          features: ["Double Installs", "Grow Store Revenue", "Higher Reviews"]
+        }
+      }
+    }));
   }
 
   return parsed;
@@ -334,7 +379,7 @@ Return ONLY valid JSON (no markdown, no prose) with this exact schema:
 export const generatePromos = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
-    const plan = await analyze(data.imageDataUrl, {
+    const plan = await analyze(data.imageDataUrls, {
       appName: data.appName,
       targetAudience: data.targetAudience,
       objective: data.objective,
@@ -348,8 +393,8 @@ export const generatePromos = createServerFn({ method: "POST" })
         app_name: data.appName,
         target_audience: data.targetAudience,
         objective: data.objective,
-        screenshot_ref: data.imageDataUrl.slice(0, 80) + "…",
-        generated_images: JSON.stringify(plan.variants),
+        screenshot_ref: data.imageDataUrls[0].slice(0, 80) + "… (and " + (data.imageDataUrls.length - 1) + " more)",
+        generated_images: JSON.stringify(plan.slides),
         palette: data.palette,
         background_style: data.backgroundStyle,
       });
@@ -360,8 +405,8 @@ export const generatePromos = createServerFn({ method: "POST" })
     return {
       appName: plan.appName,
       category: plan.category,
-      suggestedTemplate: plan.suggestedTemplate,
-      detectedFeatures: plan.detectedFeatures,
-      variants: plan.variants,
+      auditScore: plan.auditScore,
+      auditFeedback: plan.auditFeedback,
+      slides: plan.slides,
     };
   });

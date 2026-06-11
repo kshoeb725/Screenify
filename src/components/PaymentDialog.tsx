@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { useServerFn } from "@tanstack/react-start";
-import { initPaymentSession, getPaymentStatus } from "@/lib/payment.functions";
 import {
   Dialog,
   DialogContent,
@@ -9,104 +7,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-
-declare global {
-  interface Window {
-    LemonSqueezy?: {
-      Url: { Open: (url: string) => void; Close: () => void };
-      Setup: (opts: { eventHandler: (event: { event: string }) => void }) => void;
-    };
-    createLemonSqueezy?: () => void;
-  }
-}
-
-const PRICE_DISPLAY = "$0.50";
-
-function DemoCheckoutForm({ onSuccess }: { onSuccess: () => void }) {
-  const [processing, setProcessing] = useState(false);
-  const inputCls =
-    "w-full mt-1 rounded-lg border border-border bg-background px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime/50 focus:border-lime transition";
-  const labelCls =
-    "font-mono text-[10px] uppercase tracking-widest text-muted-foreground";
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProcessing(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    setProcessing(false);
-    onSuccess();
-  };
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="rounded-lg border border-lime/30 bg-lime/5 px-4 py-3 text-xs font-mono text-lime">
-        DEMO MODE · No real charge · Set LEMON_SQUEEZY_CHECKOUT_URL to go live
-      </div>
-      <div>
-        <label className={labelCls}>Card number</label>
-        <input defaultValue="4242 4242 4242 4242" className={inputCls} required />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>Expiry</label>
-          <input defaultValue="12/29" className={inputCls} required />
-        </div>
-        <div>
-          <label className={labelCls}>CVC</label>
-          <input defaultValue="123" className={inputCls} required />
-        </div>
-      </div>
-      <div className="flex items-center justify-between border-t border-border pt-4">
-        <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          Total
-        </span>
-        <span className="font-display text-2xl">{PRICE_DISPLAY}</span>
-      </div>
-      <button
-        type="submit"
-        disabled={processing}
-        className="w-full rounded-full bg-lime text-ink font-semibold py-3 text-sm hover:opacity-90 transition disabled:opacity-50"
-      >
-        {processing ? "Processing…" : `Pay ${PRICE_DISPLAY} (Demo)`}
-      </button>
-      <p className="text-[10px] text-center text-muted-foreground font-mono">
-        🔒 Demo mode · No real card is charged
-      </p>
-    </form>
-  );
-}
-
-function PollingState({ onManualCheck }: { onManualCheck: () => void }) {
-  return (
-    <div className="py-8 space-y-5 text-center">
-      <div className="mx-auto size-12 rounded-full border-2 border-lime border-t-transparent animate-spin" />
-      <div className="space-y-1">
-        <p className="font-mono text-sm text-muted-foreground">
-          Waiting for payment confirmation…
-        </p>
-        <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
-          Complete your purchase in the Lemon Squeezy checkout window. This
-          dialog updates automatically once your payment is confirmed.
-        </p>
-      </div>
-      <div className="flex items-center justify-between border-t border-border pt-4">
-        <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          Total
-        </span>
-        <span className="font-display text-2xl">{PRICE_DISPLAY}</span>
-      </div>
-      <button
-        onClick={onManualCheck}
-        className="w-full rounded-full bg-lime text-ink font-semibold py-3 text-sm hover:opacity-90 transition"
-      >
-        I've completed payment — check now
-      </button>
-      <p className="text-[10px] text-muted-foreground font-mono">
-        🔒 Secured by Lemon Squeezy
-      </p>
-    </div>
-  );
-}
 
 export function PaymentDialog({
   open,
@@ -119,169 +19,106 @@ export function PaymentDialog({
   onSuccess: () => void;
   email: string;
 }) {
-  const initSession = useServerFn(initPaymentSession);
-  const pollStatus = useServerFn(getPaymentStatus);
+  const [selectedPlan, setSelectedPlan] = useState<"growth" | "pro">("growth");
+  const [processing, setProcessing] = useState(false);
 
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [isDemo, setIsDemo] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [polling, setPolling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sessionIdRef = useRef<string | null>(null);
-
-  const stopPolling = () => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-  };
-
-  const handleSuccess = () => {
-    stopPolling();
-    toast.success("Payment confirmed! Your promos are unlocked.");
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProcessing(true);
+    // Simulate payment gateway delay
+    await new Promise((r) => setTimeout(r, 1200));
+    setProcessing(false);
+    toast.success(`Subscribed to ScreenMint ${selectedPlan === "growth" ? "Growth" : "Pro"} successfully!`);
     onSuccess();
     onOpenChange(false);
   };
 
-  const startPolling = (sid: string) => {
-    stopPolling();
-    setPolling(true);
-    pollRef.current = setInterval(async () => {
-      try {
-        const { status } = await pollStatus({ data: { sessionId: sid } });
-        if (status === "paid") {
-          handleSuccess();
-        } else if (status === "failed" || status === "refunded") {
-          stopPolling();
-          setPolling(false);
-          toast.error("Payment was not completed. Please try again.");
-        }
-      } catch {
-        // ignore transient polling errors
-      }
-    }, 2500);
-  };
-
-  const checkNow = async () => {
-    const sid = sessionIdRef.current;
-    if (!sid) return;
-    try {
-      const { status } = await pollStatus({ data: { sessionId: sid } });
-      if (status === "paid") {
-        handleSuccess();
-      } else {
-        toast.info("Payment not confirmed yet. Please complete the checkout.");
-      }
-    } catch {
-      toast.error("Could not check payment status. Please try again.");
-    }
-  };
-
-  useEffect(() => {
-    if (!open) {
-      stopPolling();
-      setSessionId(null);
-      setIsDemo(false);
-      setError(null);
-      setPolling(false);
-      sessionIdRef.current = null;
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    initSession({ data: { email } })
-      .then((res) => {
-        setSessionId(res.sessionId);
-        sessionIdRef.current = res.sessionId;
-
-        if (res.demo) {
-          setIsDemo(true);
-          return;
-        }
-
-        if (res.setupError) {
-          setError(res.setupError);
-          return;
-        }
-
-        if (!res.checkoutUrl) {
-          setError("No checkout URL configured.");
-          return;
-        }
-
-        // Ensure Lemon Squeezy embed script is initialized
-        if (typeof window.createLemonSqueezy === "function" && !window.LemonSqueezy) {
-          try { window.createLemonSqueezy(); } catch {}
-        }
-
-        // Try overlay first
-        if (window.LemonSqueezy?.Url?.Open) {
-          try {
-            window.LemonSqueezy.Url.Open(res.checkoutUrl);
-            startPolling(res.sessionId);
-            return;
-          } catch (err) {
-            console.error("Lemon Squeezy overlay failed, falling back to redirect:", err);
-          }
-        }
-
-        // Reliable fallback: full-page redirect (no popup blocker)
-        startPolling(res.sessionId);
-        window.location.href = res.checkoutUrl;
-
-      })
-      .catch((e) =>
-        setError(
-          e instanceof Error ? e.message : "Failed to initialize checkout",
-        ),
-      )
-      .finally(() => setLoading(false));
-
-    return () => stopPolling();
-  }, [open]);
-
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (!o) stopPolling();
-        onOpenChange(o);
-      }}
-    >
-      <DialogContent className="bg-background border-border max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-background border-border max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl">
-            Unlock your promos
+          <DialogTitle className="font-display text-3xl">
+            Upgrade to ScreenMint Pro
           </DialogTitle>
           <DialogDescription>
-            Pay once to download all 3 high-quality promo images as a ZIP
-            archive.
+            Unlock unlimited listing audits, high-resolution watermark-free downloads, and advanced growth analytics.
           </DialogDescription>
         </DialogHeader>
 
-        {loading && (
-          <div className="py-8 text-center text-muted-foreground text-sm font-mono animate-pulse">
-            Initializing secure checkout…
+        <form onSubmit={handleSubscribe} className="space-y-6">
+          <div className="rounded-lg border border-lime/30 bg-lime/5 px-4 py-3 text-xs font-mono text-lime">
+            💡 DEMO SUBSCRIPTION MODE · Complete mock checkout to unlock exports.
           </div>
-        )}
 
-        {error && (
-          <div className="py-4 text-center text-destructive text-sm rounded-lg border border-destructive/30 bg-destructive/5 px-4">
-            {error}
+          <div className="grid sm:grid-cols-2 gap-4">
+            {/* Growth Tier Card */}
+            <div
+              onClick={() => setSelectedPlan("growth")}
+              className={`p-5 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between ${
+                selectedPlan === "growth"
+                  ? "border-lime bg-lime/5"
+                  : "border-border hover:bg-card/45"
+              }`}
+            >
+              <div>
+                <h3 className="font-display text-xl leading-tight">Growth Plan</h3>
+                <p className="font-mono text-xs text-muted-foreground mt-1">Solo Shopify Devs</p>
+                <ul className="text-[11px] text-muted-foreground mt-4 space-y-2">
+                  <li>✓ Unlimited sequence audits</li>
+                  <li>✓ Full 6-slide copy sequences</li>
+                  <li>✓ Custom brand templates</li>
+                  <li>✓ Alt text & SEO keywords</li>
+                </ul>
+              </div>
+              <div className="border-t border-border/60 mt-5 pt-3 flex justify-between items-baseline">
+                <span className="font-display text-2xl font-bold text-white">$29</span>
+                <span className="text-[10px] text-muted-foreground font-mono">/ month</span>
+              </div>
+            </div>
+
+            {/* Pro Tier Card */}
+            <div
+              onClick={() => setSelectedPlan("pro")}
+              className={`p-5 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between ${
+                selectedPlan === "pro"
+                  ? "border-lime bg-lime/5"
+                  : "border-border hover:bg-card/45"
+              }`}
+            >
+              <div>
+                <h3 className="font-display text-xl leading-tight">Pro Plan</h3>
+                <p className="font-mono text-xs text-muted-foreground mt-1">Agencies & studios (4+ apps)</p>
+                <ul className="text-[11px] text-muted-foreground mt-4 space-y-2">
+                  <li>✓ Everything in Growth</li>
+                  <li>✓ Competitive intelligence alerts</li>
+                  <li>✓ Simulated A/B testing panel</li>
+                  <li>✓ Priority support & White-label</li>
+                </ul>
+              </div>
+              <div className="border-t border-border/60 mt-5 pt-3 flex justify-between items-baseline">
+                <span className="font-display text-2xl font-bold text-white">$79</span>
+                <span className="text-[10px] text-muted-foreground font-mono">/ month</span>
+              </div>
+            </div>
           </div>
-        )}
 
-        {!loading && !error && isDemo && (
-          <DemoCheckoutForm onSuccess={handleSuccess} />
-        )}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center text-xs font-mono border-t border-border pt-4">
+              <span className="text-muted-foreground">Subscribed Account:</span>
+              <span className="text-white truncate max-w-[200px]">{email || "you@company.com"}</span>
+            </div>
 
-        {!loading && !error && polling && (
-          <PollingState onManualCheck={checkNow} />
-        )}
+            <button
+              type="submit"
+              disabled={processing}
+              className="w-full rounded-full bg-lime text-ink font-semibold py-3.5 text-base hover:opacity-90 transition lime-glow disabled:opacity-50"
+            >
+              {processing
+                ? "Processing subscription..."
+                : `Activate ${selectedPlan === "growth" ? "Growth" : "Pro"} Subscription (Demo)`}
+            </button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

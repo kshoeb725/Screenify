@@ -166,18 +166,26 @@ function Index() {
   const generate = useServerFn(generatePromos);
   const { theme } = useTheme();
 
-  const [preview, setPreview] = useState<string | null>(() => {
+  const [previews, setPreviews] = useState<(string | null)[]>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("screenmint_preview");
+      const saved = localStorage.getItem("screenmint_previews");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length === 6) return parsed;
+        } catch {}
+      }
     }
-    return null;
+    return Array(6).fill(null);
   });
+
   const [status, setStatus] = useState<"idle" | "preview" | "loading" | "done">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("screenmint_status") as any) || "idle";
     }
     return "idle";
   });
+
   const [result, setResult] = useState<Result | null>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("screenmint_result");
@@ -187,6 +195,7 @@ function Index() {
     }
     return null;
   });
+
   const [form, setForm] = useState<FormData>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("screenmint_form");
@@ -196,12 +205,13 @@ function Index() {
     }
     return { email: "", appName: "", targetAudience: "", objective: "" };
   });
+
   const [paid, setPaid] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("screenmint_paid");
-      return saved !== "false"; // default to true
+      return saved === "true"; // default to false
     }
-    return true;
+    return false;
   });
 
   const [logo, setLogo] = useState<string | null>(() => {
@@ -212,6 +222,7 @@ function Index() {
   });
 
   const fileRef = useRef<HTMLInputElement>(null);
+  const [activeSlotIdx, setActiveSlotIdx] = useState<number | undefined>(undefined);
 
   const [extractedColors, setExtractedColors] = useState<{ bg: string; primary: string; secondary: string; accent: string }>(() => {
     if (typeof window !== "undefined") {
@@ -239,16 +250,12 @@ function Index() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
-        if (preview) {
-          localStorage.setItem("screenmint_preview", preview);
-        } else {
-          localStorage.removeItem("screenmint_preview");
-        }
+        localStorage.setItem("screenmint_previews", JSON.stringify(previews));
       } catch (e) {
-        console.warn("localStorage quota exceeded for preview screenshot", e);
+        console.warn("localStorage quota exceeded for previews", e);
       }
     }
-  }, [preview]);
+  }, [previews]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -298,47 +305,77 @@ function Index() {
     }
   }, [logo]);
 
-  const handleUpload = useCallback(async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image (PNG, JPG, or WebP).");
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      toast.error("Image too large. Keep it under 10MB.");
-      return;
-    }
+  const handleUpload = useCallback(async (files: FileList | File[], slotIndex?: number) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
 
-    const toastId = toast.loading("Processing screenshot and enhancing quality...");
+    const toastId = toast.loading(`Processing ${fileArray.length} screenshot(s)...`);
     try {
-      const dataUrl = await readAsDataURL(file);
-      const img = await loadImage(dataUrl);
+      const processedDataUrls: string[] = [];
 
-      // Perform Blur Detection (Variance of Laplacian)
-      const isBlurry = detectBlur(img);
-      if (isBlurry) {
-        toast.dismiss(toastId);
-        toast.error("Uploaded screenshot is too blurry or low-quality. Please upload a clear, sharp screenshot.", {
-          duration: 6000,
-        });
-        return;
+      for (const file of fileArray) {
+        if (!file.type.startsWith("image/")) {
+          toast.error(`"${file.name}" is not an image.`);
+          continue;
+        }
+        if (file.size > MAX_BYTES) {
+          toast.error(`"${file.name}" is too large (>10MB).`);
+          continue;
+        }
+
+        const dataUrl = await readAsDataURL(file);
+        const img = await loadImage(dataUrl);
+
+        // Perform blur checking
+        const isBlurry = detectBlur(img);
+        if (isBlurry) {
+          toast.warning(`"${file.name}" is slightly blurry, but loading it anyway.`, { duration: 4000 });
+        }
+
+        const compressed = await compressImage(dataUrl).catch(() => dataUrl);
+        processedDataUrls.push(compressed);
       }
 
-      const compressed = await compressImage(dataUrl).catch(() => dataUrl);
-      setPreview(compressed);
+      setPreviews((prev) => {
+        const next = [...prev];
+        if (slotIndex !== undefined && slotIndex >= 0 && slotIndex < 6) {
+          if (processedDataUrls.length > 0) {
+            next[slotIndex] = processedDataUrls[0];
+          }
+        } else {
+          let pIdx = 0;
+          for (let i = 0; i < 6 && pIdx < processedDataUrls.length; i++) {
+            if (next[i] === null) {
+              next[i] = processedDataUrls[pIdx++];
+            }
+          }
+          if (pIdx < processedDataUrls.length) {
+            for (let i = 0; i < 6 && pIdx < processedDataUrls.length; i++) {
+              next[i] = processedDataUrls[pIdx++];
+            }
+          }
+        }
+        return next;
+      });
+
       setResult(null);
-      setPaid(true);
+      setPaid(false); // default mock checkout state
       setStatus("preview");
       toast.dismiss(toastId);
-      toast.success("Screenshot loaded and enhanced successfully!");
+      toast.success("Screenshots loaded successfully!");
     } catch (err) {
       toast.dismiss(toastId);
-      toast.error("Failed to process image. Please try another file.");
+      toast.error("Failed to process image files.");
       console.error(err);
     }
   }, []);
 
   const handleGenerate = useCallback(async () => {
-    if (!preview) return;
+    const activeScreens = previews.filter((p): p is string => p !== null);
+    if (activeScreens.length === 0) {
+      toast.error("Please upload at least one screenshot first.");
+      return;
+    }
     if (!form.email.trim() || !form.appName.trim() || !form.targetAudience.trim() || !form.objective.trim()) {
       toast.error("Please fill in all fields.");
       return;
@@ -347,9 +384,10 @@ function Index() {
       toast.error("Please enter a valid email address.");
       return;
     }
+    
     setStatus("loading");
     try {
-      const { palette, backgroundStyle } = await extractFromDataUrl(preview, 5);
+      const { palette, backgroundStyle } = await extractFromDataUrl(activeScreens[0], 5);
       const bg = palette[1] ?? "#F5F1E8";
       const primary = palette[0] ?? "#121212";
       const secondary = palette[3] ?? palette[1] ?? "#6B7280";
@@ -358,7 +396,7 @@ function Index() {
 
       const res = await generate({
         data: {
-          imageDataUrl: preview,
+          imageDataUrls: activeScreens,
           email: form.email.trim(),
           appName: form.appName.trim(),
           targetAudience: form.targetAudience.trim(),
@@ -367,33 +405,29 @@ function Index() {
           backgroundStyle,
         },
       });
-      
-      // Set new session flag before updating state to trigger the mount sync
+
       if (typeof window !== "undefined") {
         localStorage.setItem("screenmint_is_new_session", "true");
       }
 
       setResult(res);
-      setPaid(false);
+      setPaid(false); // require mock checkout for unwatermarked export
       setStatus("done");
-      toast.success("Marketing copy generated! Choose your template below.");
+      toast.success("Optimized screenshot sequence generated! Open the Design Studio below.");
     } catch (e) {
       setStatus("preview");
-      toast.error(e instanceof Error ? e.message : "Generation failed");
+      toast.error(e instanceof Error ? e.message : "Optimization failed. Please try again.");
     }
-  }, [generate, preview, form]);
+  }, [generate, previews, form]);
 
   const onReset = useCallback(() => {
-    setPreview(null);
+    setPreviews(Array(6).fill(null));
     setResult(null);
     setPaid(false);
     setLogo(null);
     setStatus("idle");
-    setFeatureTextSize(1.0);
-    setFeatureSpacing(18);
-    setFeatureIconSize(1.0);
     if (typeof window !== "undefined") {
-      localStorage.removeItem("screenmint_preview");
+      localStorage.removeItem("screenmint_previews");
       localStorage.removeItem("screenmint_status");
       localStorage.removeItem("screenmint_result");
       localStorage.removeItem("screenmint_form");
@@ -402,6 +436,7 @@ function Index() {
       localStorage.removeItem("screenmint_logo");
       localStorage.removeItem("screenmint_is_new_session");
       
+      localStorage.removeItem("screenmint_slide_configs");
       localStorage.removeItem("screenmint_template");
       localStorage.removeItem("screenmint_stylePreset");
       localStorage.removeItem("screenmint_variant");
@@ -414,6 +449,7 @@ function Index() {
       localStorage.removeItem("screenmint_featureIconSize");
     }
   }, []);
+
 
   return (
     <main className="min-h-screen bg-background text-foreground grain">
@@ -431,23 +467,28 @@ function Index() {
       <Toaster theme={theme} position="top-center" />
       <Nav />
       <section className="mx-auto max-w-6xl px-6 pt-16 pb-24">
-        {status === "idle" && !preview && <Hero onPick={() => fileRef.current?.click()} onDrop={handleUpload} />}
-        {status === "preview" && preview && (
+        {status === "idle" && previews.filter(p => p !== null).length === 0 && (
+          <Hero onPick={() => fileRef.current?.click()} onDrop={handleUpload} />
+        )}
+        {(status === "preview" || (status === "idle" && previews.filter(p => p !== null).length > 0)) && (
           <Preview
-            image={preview}
+            previews={previews}
+            setPreviews={setPreviews}
             form={form}
             setForm={setForm}
             logo={logo}
             setLogo={setLogo}
             onGenerate={handleGenerate}
             onReset={onReset}
+            handleUploadSlot={(files, slotIdx) => handleUpload(files, slotIdx)}
           />
         )}
-        {status === "loading" && <Loading preview={preview} />}
+        {status === "loading" && <Loading previews={previews} />}
         {status === "done" && result && (
           <Results
             result={result}
-            preview={preview}
+            previews={previews}
+            setPreviews={setPreviews}
             logo={logo}
             paid={paid}
             onPaid={() => setPaid(true)}
@@ -459,11 +500,12 @@ function Index() {
         <input
           ref={fileRef}
           type="file"
+          multiple
           accept="image/png,image/jpeg,image/webp"
           className="hidden"
           onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) handleUpload(f);
+            const files = e.target.files;
+            if (files && files.length > 0) handleUpload(files);
             e.target.value = "";
           }}
         />
@@ -514,7 +556,7 @@ function Nav() {
   );
 }
 
-function Hero({ onPick, onDrop }: { onPick: () => void; onDrop: (f: File) => void }) {
+function Hero({ onPick, onDrop }: { onPick: () => void; onDrop: (files: FileList) => void }) {
   const [dragging, setDragging] = useState(false);
   return (
     <div className="rise">
@@ -522,13 +564,12 @@ function Hero({ onPick, onDrop }: { onPick: () => void; onDrop: (f: File) => voi
         For Shopify app developers
       </p>
       <h1 className="mt-4 font-display text-5xl sm:text-7xl md:text-8xl leading-[0.95] tracking-tight text-balance">
-        One screenshot.
+        Optimized listings.
         <br />
-        <span className="italic text-lime">One</span> store-ready promo.
+        <span className="italic text-lime">Higher</span> install conversion.
       </h1>
       <p className="mt-6 max-w-xl text-lg text-muted-foreground text-balance">
-        Drop a single screenshot of your Shopify app. Get a polished App Store image in under a
-        minute. No designer, no Figma, no settings.
+        Upload your app screenshots to receive an instant listing audit score and generate a category-optimized 5-6 screenshot sequence that converts merchants.
       </p>
 
       <div
@@ -538,8 +579,8 @@ function Hero({ onPick, onDrop }: { onPick: () => void; onDrop: (f: File) => voi
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
-          const f = e.dataTransfer.files?.[0];
-          if (f) onDrop(f);
+          const files = e.dataTransfer.files;
+          if (files && files.length > 0) onDrop(files);
         }}
         className={`mt-12 relative overflow-hidden rounded-2xl border-2 border-dashed transition cursor-pointer ${
           dragging ? "border-lime bg-lime/5 lime-glow" : "border-border bg-card/40 hover:bg-card/70"
@@ -551,13 +592,13 @@ function Hero({ onPick, onDrop }: { onPick: () => void; onDrop: (f: File) => voi
               <path d="M12 5v14M5 12l7-7 7 7" />
             </svg>
           </div>
-          <p className="font-display text-3xl mb-2">Drop your app screenshot</p>
-          <p className="text-muted-foreground mb-6 text-sm">PNG, JPG, or WebP · up to 10MB</p>
+          <p className="font-display text-3xl mb-2">Drop your app screenshots (up to 6 files)</p>
+          <p className="text-muted-foreground mb-6 text-sm">PNG, JPG, or WebP · drag files at once or upload separately</p>
           <button
             onClick={(e) => { e.stopPropagation(); onPick(); }}
             className="inline-flex items-center gap-2 rounded-full bg-lime text-ink font-semibold px-6 py-3 hover:opacity-90 transition lime-glow"
           >
-            Choose screenshot
+            Choose files to upload
             <span className="font-mono text-xs opacity-70">↵</span>
           </button>
         </div>
@@ -565,9 +606,9 @@ function Hero({ onPick, onDrop }: { onPick: () => void; onDrop: (f: File) => voi
 
       <div className="mt-16 grid sm:grid-cols-3 gap-px bg-border rounded-2xl overflow-hidden border border-border">
         {[
-          { n: "01", t: "Upload", d: "One screenshot. That's the entire input." },
-          { n: "02", t: "Analyze", d: "AI reads layout, purpose, and key UI." },
-          { n: "03", t: "Generate", d: `1 promo image · Pay ${PRICE_DISPLAY} to download.` },
+          { n: "01", t: "Upload Screenshots", d: "Drop up to 6 screenshots. AI handles layout, margins, and resolution." },
+          { n: "02", t: "Listing Audit Score", d: "Instantly score your listing against store conventions and guidelines." },
+          { n: "03", t: "Optimize Sequence", d: "Generate category-targeted copywriting and templates for all 6 slots." },
         ].map((s) => (
           <div key={s.n} className="bg-card p-7">
             <div className="font-mono text-xs text-lime mb-3">{s.n}</div>
@@ -581,197 +622,377 @@ function Hero({ onPick, onDrop }: { onPick: () => void; onDrop: (f: File) => voi
 }
 
 function Preview({
-  image,
+  previews,
+  setPreviews,
   form,
   setForm,
   logo,
   setLogo,
   onGenerate,
   onReset,
+  handleUploadSlot,
 }: {
-  image: string;
+  previews: (string | null)[];
+  setPreviews: React.Dispatch<React.SetStateAction<(string | null)[]>>;
   form: FormData;
   setForm: React.Dispatch<React.SetStateAction<FormData>>;
   logo: string | null;
   setLogo: React.Dispatch<React.SetStateAction<string | null>>;
   onGenerate: () => void;
   onReset: () => void;
+  handleUploadSlot: (files: FileList | File[], slotIndex: number) => void;
 }) {
   const logoRef = useRef<HTMLInputElement>(null);
-  
+  const slotFileRef = useRef<HTMLInputElement>(null);
+  const [activeSlotIdx, setActiveSlotIdx] = useState<number | null>(null);
+
   const update = (k: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const inputCls =
     "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime/50 focus:border-lime transition";
-  const labelCls = "block font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5";
+  const labelCls = "block font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5 font-bold";
+
+  // Story Arc Roles
+  const roles = [
+    "Slide 1: Hook / Hero Benefit",
+    "Slide 2: Problem & Solution",
+    "Slide 3: Key Feature A",
+    "Slide 4: Key Feature B",
+    "Slide 5: Outcome / Proof",
+    "Slide 6: Easy Setup & Trust"
+  ];
+
+  // Dynamic audit score calculation (rules-based client audit)
+  const calculateAuditScore = () => {
+    let score = 10; // baseline
+
+    const uploadedCount = previews.filter(p => p !== null).length;
+    // 1. Screenshot Sequence (max 25 pts)
+    if (uploadedCount === 1) score += 5;
+    else if (uploadedCount === 2) score += 10;
+    else if (uploadedCount === 3) score += 15;
+    else if (uploadedCount === 4) score += 20;
+    else if (uploadedCount >= 5) score += 25;
+
+    // 2. Copy Quality (max 20 pts)
+    if (form.objective.trim().length > 20) score += 10;
+    if (form.targetAudience.trim().length > 15) score += 10;
+
+    // 3. Visual Consistency (max 15 pts)
+    if (logo) score += 10;
+    if (uploadedCount >= 3) score += 5;
+
+    // 4. Category Alignment (max 20 pts)
+    if (form.objective.trim() && form.targetAudience.trim()) {
+      score += 20;
+    } else if (form.objective.trim() || form.targetAudience.trim()) {
+      score += 10;
+    }
+
+    // 5. Technical Compliance (max 10 pts)
+    if (uploadedCount > 0) score += 10; // crop & resolution resizing automatically verified by build pipeline
+
+    return Math.min(100, score);
+  };
+
+  const auditScore = calculateAuditScore();
+
+  const getScoreColor = (num: number) => {
+    if (num < 50) return "text-red-500 border-red-500 bg-red-500/10";
+    if (num < 75) return "text-amber-500 border-amber-500 bg-amber-500/10";
+    return "text-lime border-lime bg-lime/10";
+  };
+
+  const triggerSlotUpload = (idx: number) => {
+    setActiveSlotIdx(idx);
+    setTimeout(() => {
+      slotFileRef.current?.click();
+    }, 20);
+  };
+
+  const removeSlotImage = (idx: number) => {
+    setPreviews((prev) => {
+      const next = [...prev];
+      next[idx] = null;
+      return next;
+    });
+  };
 
   return (
-    <div className="rise grid md:grid-cols-2 gap-10 items-start min-h-[60vh]">
-      <div className="relative rounded-2xl overflow-hidden border border-border bg-card md:sticky md:top-8">
-        <img src={image} alt="Your upload" className="w-full h-auto block" />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-transparent" />
-        <div className="absolute bottom-4 left-4 right-4 font-mono text-xs text-cream/80">your_upload.png</div>
-      </div>
-      <div>
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-lime mb-4">Tell us about your app</p>
-        <h2 className="font-display text-4xl sm:text-5xl mb-3">A few details.</h2>
-        <p className="text-muted-foreground mb-6 text-sm">
-          These help the AI generate promos that actually match your app instead of generic ones.
-        </p>
+    <div className="rise grid lg:grid-cols-12 gap-10 items-start min-h-[60vh]">
+      {/* Narrative Sequence Grid - Left 7 columns */}
+      <div className="lg:col-span-7 space-y-6">
+        <div>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-lime bg-lime/10 px-2 py-0.5 rounded">
+            ASO Narrative Arc
+          </span>
+          <h2 className="font-display text-4xl mt-1.5 mb-2">Screenshot Story Sequence</h2>
+          <p className="text-muted-foreground text-sm">
+            Upload custom screenshots for each slot to tell a structured merchant story. Blank slots will generate with placeholder graphics.
+          </p>
+        </div>
 
-        <div className="space-y-4 mb-6">
-          <div>
-            <label className={labelCls}>Email address *</label>
-            <input
-              type="email"
-              required
-              value={form.email}
-              onChange={update("email")}
-              placeholder="you@company.com"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>App name *</label>
-            <input
-              type="text"
-              required
-              value={form.appName}
-              onChange={update("appName")}
-              placeholder="e.g. ReviewBoost"
-              maxLength={100}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>App logo (Optional)</label>
-            <div className="flex items-center gap-4 mt-1">
-              {logo ? (
-                <div className="relative size-14 rounded-xl border border-border bg-card overflow-hidden shrink-0 flex items-center justify-center">
-                  <img src={logo} alt="Logo" className="w-full h-full object-contain" />
-                  <button
-                    onClick={() => setLogo(null)}
-                    type="button"
-                    className="absolute -top-1 -right-1 size-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-[10px] shadow-md transition"
-                  >
-                    ×
-                  </button>
-                </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {previews.map((preview, i) => (
+            <div
+              key={i}
+              className={`relative rounded-xl border overflow-hidden bg-card/40 aspect-[16/9] flex flex-col justify-between p-3 group transition ${
+                preview ? "border-border hover:border-lime/40" : "border-dashed border-border hover:border-lime/30"
+              }`}
+            >
+              {preview ? (
+                <>
+                  <img src={preview} alt={roles[i]} className="absolute inset-0 w-full h-full object-cover opacity-80" />
+                  <div className="absolute inset-0 bg-neutral-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => triggerSlotUpload(i)}
+                      className="bg-lime text-ink rounded-full px-3 py-1.5 text-xs font-semibold hover:opacity-90 shadow"
+                    >
+                      Replace
+                    </button>
+                    <button
+                      onClick={() => removeSlotImage(i)}
+                      className="bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow"
+                      title="Remove screen"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </>
               ) : (
                 <div
-                  onClick={() => logoRef.current?.click()}
-                  className="size-14 rounded-xl border border-dashed border-border hover:border-lime/60 bg-card/50 hover:bg-card flex flex-col items-center justify-center cursor-pointer shrink-0 text-muted-foreground hover:text-lime transition"
+                  onClick={() => triggerSlotUpload(i)}
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 cursor-pointer text-muted-foreground hover:text-lime transition p-2 text-center"
                 >
-                  <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <svg className="size-5 opacity-60" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
+                  <span className="text-[10px] font-mono tracking-tight uppercase">Upload Screen</span>
                 </div>
               )}
-              <div className="flex-1">
-                <button
-                  type="button"
-                  onClick={() => logoRef.current?.click()}
-                  className="px-4 py-2 border border-border rounded-lg text-xs font-semibold hover:bg-card transition"
-                >
-                  {logo ? "Change logo" : "Upload logo"}
-                </button>
-                <p className="text-[11px] text-muted-foreground mt-1.5">PNG, JPG or SVG. Transparent background recommended.</p>
+              
+              <div className="relative z-10 font-mono text-[9px] bg-black/60 text-white/95 px-1.5 py-0.5 rounded w-fit max-w-full truncate">
+                {roles[i]}
               </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Hidden slot file selector */}
+        <input
+          ref={slotFileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files;
+            if (f && f.length > 0 && activeSlotIdx !== null) {
+              handleUploadSlot(f, activeSlotIdx);
+            }
+            e.target.value = "";
+          }}
+        />
+      </div>
+
+      {/* Audit & Details Side - Right 5 columns */}
+      <div className="lg:col-span-5 space-y-6 md:sticky md:top-8">
+        {/* Listing score card */}
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-xl relative overflow-hidden">
+          <div className="flex items-center gap-4">
+            <div className={`size-16 rounded-full border-2 flex items-center justify-center font-display text-2xl font-bold shrink-0 shadow-inner ${getScoreColor(auditScore)}`}>
+              {auditScore}
+            </div>
+            <div>
+              <h3 className="font-display text-xl leading-tight">Listing Audit Score</h3>
+              <p className="text-muted-foreground text-xs mt-1">
+                {auditScore < 50 ? "Weak listing configuration. Needs action." : auditScore < 75 ? "Moderate listing. Fill details to improve." : "Highly optimized sequence settings!"}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-2.5 text-xs border-t border-border pt-4">
+            <div className="flex justify-between items-center text-muted-foreground">
+              <span>Sequence Narrative (Min 4 screenshots):</span>
+              <span className={previews.filter(p => p !== null).length >= 4 ? "text-lime font-bold" : "text-amber-500"}>
+                {previews.filter(p => p !== null).length} / 6 screens
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-muted-foreground">
+              <span>App Details Completed:</span>
+              <span className={form.appName.trim() && form.targetAudience.trim() ? "text-lime font-bold" : "text-amber-500"}>
+                {form.appName.trim() && form.targetAudience.trim() ? "Complete" : "Incomplete"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-muted-foreground">
+              <span>Brand Identity (Logo uploaded):</span>
+              <span className={logo ? "text-lime font-bold" : "text-gray-400"}>
+                {logo ? "Loaded" : "Missing"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Input Details */}
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4">
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-lime mb-1.5 font-bold">App Details</p>
+            <h3 className="font-display text-2xl leading-none">Listing Settings</h3>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className={labelCls}>Email address *</label>
               <input
-                ref={logoRef}
-                type="file"
-                accept="image/png,image/jpeg,image/svg+xml"
-                className="hidden"
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  if (f) {
-                    if (f.size > 2 * 1024 * 1024) {
-                      toast.error("Logo too large. Keep it under 2MB.");
-                      return;
+                type="email"
+                required
+                value={form.email}
+                onChange={update("email")}
+                placeholder="you@company.com"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>App name *</label>
+              <input
+                type="text"
+                required
+                value={form.appName}
+                onChange={update("appName")}
+                placeholder="e.g. ReviewBoost"
+                maxLength={100}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>App logo (Optional)</label>
+              <div className="flex items-center gap-4 mt-1">
+                {logo ? (
+                  <div className="relative size-12 rounded-xl border border-border bg-card overflow-hidden shrink-0 flex items-center justify-center">
+                    <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+                    <button
+                      onClick={() => setLogo(null)}
+                      type="button"
+                      className="absolute -top-1 -right-1 size-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-[9px] shadow transition"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => logoRef.current?.click()}
+                    className="size-12 rounded-xl border border-dashed border-border hover:border-lime/60 bg-card/50 hover:bg-card flex flex-col items-center justify-center cursor-pointer shrink-0 text-muted-foreground hover:text-lime transition"
+                  >
+                    <svg className="size-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <button
+                    type="button"
+                    onClick={() => logoRef.current?.click()}
+                    className="px-3 py-1.5 border border-border rounded-lg text-[10px] font-semibold hover:bg-card transition"
+                  >
+                    {logo ? "Change logo" : "Upload logo"}
+                  </button>
+                  <p className="text-[9px] text-muted-foreground mt-1">PNG, JPG or SVG. Transparent background suggested.</p>
+                </div>
+                <input
+                  ref={logoRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      if (f.size > 2 * 1024 * 1024) {
+                        toast.error("Logo too large. Keep under 2MB.");
+                        return;
+                      }
+                      try {
+                        const dataUrl = await readAsDataURL(f);
+                        setLogo(dataUrl);
+                        toast.success("Logo uploaded!");
+                      } catch {
+                        toast.error("Failed to read logo.");
+                      }
                     }
-                    try {
-                      const dataUrl = await readAsDataURL(f);
-                      setLogo(dataUrl);
-                      toast.success("Logo uploaded successfully!");
-                    } catch {
-                      toast.error("Failed to read logo file.");
-                    }
-                  }
-                  e.target.value = "";
-                }}
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Target audience *</label>
+              <input
+                type="text"
+                required
+                value={form.targetAudience}
+                onChange={update("targetAudience")}
+                placeholder="e.g. fashion DTC merchants on Shopify Plus"
+                maxLength={300}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Main objective / outcome *</label>
+              <textarea
+                required
+                value={form.objective}
+                onChange={update("objective")}
+                placeholder="e.g. increase product page conversion with social proof badges"
+                maxLength={500}
+                rows={2}
+                className={inputCls}
               />
             </div>
           </div>
-          <div>
-            <label className={labelCls}>Target audience *</label>
-            <input
-              type="text"
-              required
-              value={form.targetAudience}
-              onChange={update("targetAudience")}
-              placeholder="e.g. fashion DTC merchants on Shopify Plus"
-              maxLength={300}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Main objective / outcome *</label>
-            <textarea
-              required
-              value={form.objective}
-              onChange={update("objective")}
-              placeholder="e.g. increase product page conversion with social proof"
-              maxLength={500}
-              rows={3}
-              className={inputCls}
-            />
-          </div>
-        </div>
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={onGenerate}
-            className="inline-flex items-center gap-2 rounded-full bg-lime text-ink font-semibold px-8 py-3.5 text-base hover:opacity-90 transition lime-glow"
-          >
-            Generate promo
-            <span className="font-mono text-xs opacity-70">↵</span>
-          </button>
-          <button
-            onClick={onReset}
-            className="rounded-full border border-border px-6 py-3.5 text-sm hover:bg-card transition"
-          >
-            Change screenshot
-          </button>
+          <div className="flex flex-wrap gap-2.5 pt-2">
+            <button
+              onClick={onGenerate}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-lime text-ink font-semibold px-6 py-3 hover:opacity-90 transition lime-glow"
+            >
+              Optimize Listing
+              <span className="font-mono text-xs opacity-70">↵</span>
+            </button>
+            <button
+              onClick={onReset}
+              className="rounded-full border border-border px-5 py-3 hover:bg-card transition text-sm"
+            >
+              Reset Set
+            </button>
+          </div>
         </div>
-        <p className="mt-6 text-xs font-mono text-muted-foreground">Typically 30–60 seconds.</p>
       </div>
     </div>
   );
 }
 
-function Loading({ preview }: { preview: string | null }) {
+function Loading({ previews }: { previews: (string | null)[] }) {
+  const activeCount = previews.filter(p => p !== null).length;
   const steps = [
-    "Reading your screenshot",
-    "Identifying app purpose",
-    "Planning your layout concept",
-    "Writing custom copy copy",
+    `Ingesting ${activeCount} uploaded screens...`,
+    "Benchmarking categories and layouts...",
+    "Planning 6-screenshot strategic narrative arc...",
+    "Generating custom headlines & subheadlines...",
+    "Visualizing simulated store previews..."
   ];
   return (
     <div className="rise grid md:grid-cols-2 gap-10 items-center min-h-[60vh]">
-      <div className="relative rounded-2xl overflow-hidden border border-border bg-card">
-        {preview && <img src={preview} alt="Your upload" className="w-full h-auto block" />}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-transparent" />
-        <div className="absolute bottom-4 left-4 right-4 font-mono text-xs text-cream/80">your_upload.png</div>
+      <div className="relative rounded-2xl overflow-hidden border border-border bg-card p-6 flex flex-col gap-3 justify-center items-center aspect-[16/10] bg-slate-900/40">
+        <div className="size-16 rounded-full border-4 border-lime border-t-transparent animate-spin" />
+        <span className="font-mono text-xs text-lime mt-2 animate-pulse">Running Multimodal Analysis</span>
       </div>
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-lime mb-4">Generating</p>
-        <h2 className="font-display text-4xl sm:text-5xl mb-8">Building your editor canvas…</h2>
-        <ul className="space-y-3">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-lime mb-4">Optimizing Listing</p>
+        <h2 className="font-display text-4xl sm:text-5xl mb-8">Running listing intelligence suite…</h2>
+        <ul className="space-y-3.5">
           {steps.map((s, i) => (
-            <li key={s} className="flex items-center gap-3 text-muted-foreground">
+            <li key={s} className="flex items-center gap-3 text-sm text-muted-foreground">
               <span
-                className="size-2 rounded-full bg-lime animate-pulse"
+                className="size-2 rounded-full bg-lime animate-pulse animate-duration-1000"
                 style={{ animationDelay: `${i * 200}ms` }}
               />
               <span>{s}</span>
@@ -779,7 +1000,7 @@ function Loading({ preview }: { preview: string | null }) {
           ))}
         </ul>
         <p className="mt-8 text-xs font-mono text-muted-foreground">
-          Typically 30–60 seconds. Hang tight.
+          Typically takes 30–60 seconds to execute. Hang tight.
         </p>
       </div>
     </div>
@@ -1410,7 +1631,7 @@ function TemplateCanvas({
         <div className={`rounded px-6 py-1 text-[11px] font-mono text-center max-w-[250px] mx-auto overflow-hidden text-ellipsis whitespace-nowrap ${
           isDark ? "bg-white/5 text-white/40" : "bg-gray-100 text-gray-400"
         }`}>
-          admin.shopify.com/apps/{appName?.toLowerCase() || "dashboard"}
+          {appName?.toLowerCase() || "dashboard"}
         </div>
         <div className="w-10" />
       </div>
@@ -1776,7 +1997,7 @@ function TemplateCanvas({
                  : 'linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px)',
                backgroundSize: '35px 35px'
              }}>
-          <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: isDark ? "#021A11" : "transparent", opacity: isDark ? 0.75 : 0 }} />
+          <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: stylePreset === "gradient" ? "transparent" : (isDark ? "#021A11" : "transparent"), opacity: isDark ? 0.75 : 0 }} />
           <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] rounded-full bg-green-500/10 blur-3xl pointer-events-none" />
  
           <div className="flex items-center justify-between mt-0 z-10">
@@ -2843,6 +3064,19 @@ function TemplateCanvas({
           </div>
         </div>
       )}
+      
+      {watermark && (
+        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none select-none z-50 overflow-hidden p-6">
+          {Array.from({ length: 9 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="flex items-center justify-center text-gray-950/8 dark:text-white/4 font-mono text-[24px] font-black uppercase tracking-[0.2em] rotate-[-28deg] select-none whitespace-nowrap"
+            >
+              Screenify Preview
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -2854,13 +3088,15 @@ function ShopifyStoreListingPreview({
   isMobile,
   renderCanvasContent,
   logo,
+  sequenceLength = 6,
 }: {
   appName: string;
   category: string;
   colors: { bg: string; primary: string; secondary: string; accent: string };
   isMobile: boolean;
-  renderCanvasContent: (scale: number) => React.ReactNode;
+  renderCanvasContent: (scale: number, slideIdx: number) => React.ReactNode;
   logo: string | null;
+  sequenceLength?: number;
 }) {
   if (isMobile) {
     return (
@@ -2900,8 +3136,8 @@ function ShopifyStoreListingPreview({
               </div>
             )}
             <div>
-              <h2 className="font-bold text-lg leading-tight text-gray-900">{appName || "Screenify App"}</h2>
-              <p className="text-xs text-gray-500 mt-0.5">by Screenify Solutions</p>
+              <h2 className="font-bold text-lg leading-tight text-gray-900">{appName || "ScreenMint App"}</h2>
+              <p className="text-xs text-gray-500 mt-0.5">by ScreenMint Solutions</p>
               <div className="flex items-center gap-1 mt-1 text-xs text-gray-600">
                 <span className="text-yellow-500">★★★★★</span>
                 <span className="font-semibold">5.0</span>
@@ -2920,20 +3156,18 @@ function ShopifyStoreListingPreview({
 
         {/* Carousel Preview Section */}
         <div className="px-5 py-6 bg-white mt-2 flex-1 flex flex-col justify-start">
-          <h3 className="font-bold text-sm text-gray-800 mb-3">Media Gallery</h3>
+          <h3 className="font-bold text-sm text-gray-800 mb-3 font-sans">Media Gallery</h3>
           
-          <div className="w-full overflow-hidden flex justify-center">
-            {renderCanvasContent(320 / 1600)}
-          </div>
-
-          <div className="flex justify-center gap-1.5 mt-3">
-            <span className="size-1.5 bg-[#008060] rounded-full" />
-            <span className="size-1.5 bg-gray-200 rounded-full" />
-            <span className="size-1.5 bg-gray-200 rounded-full" />
+          <div className="w-full overflow-x-auto flex gap-3 pb-3 scrollbar-thin">
+            {Array.from({ length: sequenceLength }).map((_, i) => (
+              <div key={i} className="shrink-0 border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                {renderCanvasContent(280 / 1600, i)}
+              </div>
+            ))}
           </div>
 
           <div className="mt-6 border-t border-gray-100 pt-4">
-            <h4 className="font-bold text-xs text-gray-800 uppercase tracking-wide mb-1">Key App Category</h4>
+            <h4 className="font-bold text-xs text-gray-800 uppercase tracking-wide mb-1 font-sans">Key App Category</h4>
             <p className="text-xs text-gray-600 capitalize bg-gray-100 px-2.5 py-1 rounded w-fit font-mono">{category || "Shopify Utilities"}</p>
           </div>
         </div>
@@ -2986,8 +3220,8 @@ function ShopifyStoreListingPreview({
           <div className="flex-1">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="font-bold text-2xl text-gray-900 leading-tight">{appName || "Screenify App"}</h2>
-                <p className="text-sm text-gray-500 mt-1">by <span className="underline cursor-pointer text-gray-600">Screenify Solutions</span></p>
+                <h2 className="font-bold text-2xl text-gray-900 leading-tight">{appName || "ScreenMint App"}</h2>
+                <p className="text-sm text-gray-500 mt-1">by <span className="underline cursor-pointer text-gray-600">ScreenMint Solutions</span></p>
               </div>
               <div className="flex flex-col items-end">
                 <div className="flex items-center gap-1 text-sm text-gray-800 font-medium">
@@ -3013,23 +3247,15 @@ function ShopifyStoreListingPreview({
         {/* Media Carousel */}
         <div className="mt-8 border-t border-gray-100 pt-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-base text-gray-800">Media gallery</h3>
-            <span className="text-xs text-[#008060] font-semibold cursor-pointer hover:underline">View All</span>
+            <h3 className="font-bold text-base text-gray-800 font-sans">Media Gallery</h3>
           </div>
 
-          <div className="flex gap-4 items-center overflow-hidden">
-            <div className="shrink-0">
-              {renderCanvasContent(600 / 1600)}
-            </div>
-            <div className="w-[180px] h-[100px] bg-gray-50 rounded-xl border border-gray-200/60 flex items-center justify-center text-gray-300 font-mono text-[9px] uppercase tracking-wider">
-              Screenshot 2
-            </div>
-          </div>
-
-          <div className="flex justify-start gap-1.5 mt-4 ml-2">
-            <span className="size-2 bg-[#008060] rounded-full" />
-            <span className="size-2 bg-gray-200 rounded-full" />
-            <span className="size-2 bg-gray-200 rounded-full" />
+          <div className="flex gap-4 items-center overflow-x-auto pb-4 scrollbar-thin">
+            {Array.from({ length: sequenceLength }).map((_, i) => (
+              <div key={i} className="shrink-0 border border-slate-100 rounded-xl overflow-hidden shadow-md">
+                {renderCanvasContent(480 / 1600, i)}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -3039,7 +3265,8 @@ function ShopifyStoreListingPreview({
 
 function Results({
   result,
-  preview,
+  previews,
+  setPreviews,
   logo,
   paid,
   onPaid,
@@ -3048,7 +3275,8 @@ function Results({
   extractedColors,
 }: {
   result: Result;
-  preview: string | null;
+  previews: (string | null)[];
+  setPreviews: React.Dispatch<React.SetStateAction<(string | null)[]>>;
   logo: string | null;
   paid: boolean;
   onPaid: () => void;
@@ -3056,274 +3284,45 @@ function Results({
   email: string;
   extractedColors: { bg: string; primary: string; secondary: string; accent: string };
 }) {
-  const [template, setTemplate] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("screenmint_template") || "showcase";
-    }
-    return "showcase";
-  });
-  const [stylePreset, setStylePreset] = useState<"modern" | "minimal" | "gradient" | "dark">((() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("screenmint_stylePreset") as any) || "modern";
-    }
-    return "modern";
-  })());
-  const [variant, setVariant] = useState<"feature" | "benefit" | "outcome">((() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("screenmint_variant") as any) || "feature";
-    }
-    return "feature";
-  })());
+  const [activeSlideIdx, setActiveSlideIdx] = useState(0);
   const [previewMode, setPreviewMode] = useState<"editor" | "shopify_desktop" | "shopify_mobile">("editor");
-
-  const [headline, setHeadline] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("screenmint_headline") || "";
-    }
-    return "";
-  });
-  const [subheadline, setSubheadline] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("screenmint_subheadline") || "";
-    }
-    return "";
-  });
-  const [features, setFeatures] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("screenmint_features");
-      if (saved) {
-        try { return JSON.parse(saved); } catch {}
-      }
-    }
-    return ["", "", ""];
-  });
-  const [colors, setColors] = useState<{ bg: string; primary: string; secondary: string; accent: string }>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("screenmint_colors");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          return {
-            bg: parsed.bg || "#F5F1E8",
-            primary: parsed.primary || "#121212",
-            secondary: parsed.secondary || "#6B7280",
-            accent: parsed.accent || "#C8E84A",
-          };
-        } catch {}
-      }
-    }
-    return extractedColors;
-  });
-
-  const [featureTextSize, setFeatureTextSize] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("screenmint_featureTextSize");
-      return saved ? parseFloat(saved) : 1.0;
-    }
-    return 1.0;
-  });
-  const [featureSpacing, setFeatureSpacing] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("screenmint_featureSpacing");
-      return saved ? parseInt(saved) : 18;
-    }
-    return 18;
-  });
-  const [featureIconSize, setFeatureIconSize] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("screenmint_featureIconSize");
-      return saved ? parseFloat(saved) : 1.0;
-    }
-    return 1.0;
-  });
+  const [variant, setVariant] = useState<"feature" | "benefit" | "outcome">("feature");
   const [downloading, setDownloading] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
-
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 1600, height: 900 });
   const [isMounted, setIsMounted] = useState(false);
 
-  const isInitialMount = useRef(true);
+  const uploadedCount = previews.filter(p => p !== null).length || 1;
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_template", template);
+    if (activeSlideIdx >= uploadedCount) {
+      setActiveSlideIdx(Math.max(0, uploadedCount - 1));
     }
-  }, [template]);
+  }, [uploadedCount, activeSlideIdx]);
 
-  useEffect(() => {
+  const [slideConfigs, setSlideConfigs] = useState<{
+    template: string;
+    stylePreset: string;
+    headline: string;
+    subheadline: string;
+    features: string[];
+    colors: { bg: string; primary: string; secondary: string; accent: string };
+    featureTextSize: number;
+    featureSpacing: number;
+    featureIconSize: number;
+  }[]>(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_stylePreset", stylePreset);
-    }
-  }, [stylePreset]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_variant", variant);
-    }
-  }, [variant]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_headline", headline);
-    }
-  }, [headline]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_subheadline", subheadline);
-    }
-  }, [subheadline]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_features", JSON.stringify(features));
-    }
-  }, [features]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_colors", JSON.stringify(colors));
-    }
-  }, [colors]);
-
-
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_featureTextSize", String(featureTextSize));
-    }
-  }, [featureTextSize]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_featureSpacing", String(featureSpacing));
-    }
-  }, [featureSpacing]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("screenmint_featureIconSize", String(featureIconSize));
-    }
-  }, [featureIconSize]);
-
-  useEffect(() => {
-    setIsMounted(true);
-    setWindowSize({
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
-    const handleResize = () => {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (!isFullscreen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsFullscreen(false);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    
-    // Prevent background scrolling when fullscreen overlay is active
-    document.body.style.overflow = "hidden";
-    
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [isFullscreen]);
-
-  const w = windowSize.width || (typeof window !== "undefined" ? window.innerWidth : 1600) || 1600;
-  const h = windowSize.height || (typeof window !== "undefined" ? window.innerHeight : 900) || 900;
-  const availableWidth = Math.max(300, w - 32);
-  const availableHeight = Math.max(200, h - 140);
-  const fullscreenScale = Math.max(0.1, Math.min(1.0, availableWidth / 1600, availableHeight / 900)) || 0.8;
-
-  // Auto-set the suggested template from AI analysis, and extract colors (only on new session or if empty)
-  useEffect(() => {
-    if (result) {
-      const isNewSession = typeof window !== "undefined" && localStorage.getItem("screenmint_is_new_session") === "true";
-      const hasSavedTemplate = typeof window !== "undefined" && localStorage.getItem("screenmint_template");
-
-      if (isNewSession || !hasSavedTemplate) {
-        if (result.suggestedTemplate) {
-          setTemplate(result.suggestedTemplate);
-        }
-        setColors(extractedColors);
+      const saved = localStorage.getItem("screenmint_slide_configs");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length === 6) return parsed;
+        } catch {}
       }
     }
-  }, [result, extractedColors]);
-
-  // Sync with AI copy variants when user toggles Feature/Benefit/Outcome tabs
-  // But skip it if we are just loading from a page refresh (not a new session)
-  useEffect(() => {
-    if (result && result.variants) {
-      const isNewSession = typeof window !== "undefined" && localStorage.getItem("screenmint_is_new_session") === "true";
-
-      if (isInitialMount.current) {
-        isInitialMount.current = false;
-        if (!isNewSession) {
-          // Skip initial sync on page refresh, to preserve custom edits from localStorage
-          return;
-        }
-      }
-
-      // Otherwise (new session or tab clicked), sync with AI variants
-      const activeCopy = result.variants[variant];
-      if (activeCopy) {
-        setHeadline(activeCopy.headline || "");
-        setSubheadline(activeCopy.subheadline || "");
-        setFeatures(activeCopy.features || ["", "", ""]);
-      }
-
-      // Once synchronized for new session, clear the is_new_session flag
-      if (isNewSession) {
-        localStorage.removeItem("screenmint_is_new_session");
-      }
-    }
-  }, [result, variant]);
-
-  const handleDownload = async () => {
-    const node = document.getElementById("export-node");
-    if (!node) return;
-    setDownloading(true);
-    try {
-      const dataUrl = await htmlToImage.toPng(node, {
-        width: 1600,
-        height: 900,
-        pixelRatio: 3, // Triple resolution for ultra-crisp output (4800x2700 px)
-      });
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `${result?.appName?.toLowerCase() || "screenmint"}-promo-${variant}.png`;
-      a.click();
-      
-      if (!paid) {
-        toast.info("Downloaded watermarked preview. Click 'Unlock All' to remove the watermark!");
-      } else {
-        toast.success("High-res unwatermarked PNG downloaded!");
-      }
-    } catch (err) {
-      console.error("Export failed:", err);
-      toast.error("Failed to generate download image.");
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  const updateFeature = (index: number, val: string) => {
-    setFeatures((prev) => {
-      const copy = [...prev];
-      copy[index] = val;
-      return copy;
-    });
-  };
+    return [];
+  });
 
   const getTemplateDefaultColors = (tpl: string, preset: string) => {
     let bg = "#F5F1E8";
@@ -3344,24 +3343,8 @@ function Results({
     } else if (preset === "gradient") {
       bg = extractedColors.bg || "#F5F1E8";
       accent = extractedColors.accent || "#C8E84A";
-      const getSimpleLuminance = (hex: string): number => {
-        const cleanHex = (hex || "").replace("#", "").trim();
-        let r = 255, g = 255, b = 255;
-        if (cleanHex.length === 3) {
-          r = parseInt(cleanHex[0] + cleanHex[0], 16);
-          g = parseInt(cleanHex[1] + cleanHex[1], 16);
-          b = parseInt(cleanHex[2] + cleanHex[2], 16);
-        } else if (cleanHex.length === 6) {
-          r = parseInt(cleanHex.substring(0, 2), 16);
-          g = parseInt(cleanHex.substring(2, 4), 16);
-          b = parseInt(cleanHex.substring(4, 6), 16);
-        }
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-      };
-      const avgLum = (getSimpleLuminance(bg) + getSimpleLuminance(accent)) / 2;
-      const isDark = avgLum < 140;
-      primary = isDark ? "#F8FAFC" : "#0F172A";
-      secondary = isDark ? "#D1D5DB" : "#4B5563";
+      primary = "#0F172A";
+      secondary = "#4B5563";
     } else {
       if (tpl === "enterprise") {
         bg = "#060B26";
@@ -3388,89 +3371,263 @@ function Results({
         primary = "#FFFFFF";
         secondary = "#D1D5DB";
         accent = "#8B5CF6";
-      } else if (tpl === "all_in_one") {
-        bg = "#F4F9F6";
-        primary = "#0F172A";
-        secondary = "#4B5563";
-        accent = "#10B981";
-      } else if (tpl === "save_time") {
-        bg = "#0A1428";
-        primary = "#FFFFFF";
-        secondary = "#94A3B8";
-        accent = "#3B82F6";
-      } else if (tpl === "reports_growth") {
-        bg = "#FFF6F0";
-        primary = "#1E293B";
-        secondary = "#475569";
-        accent = "#F97316";
-      } else if (tpl === "manage_everything") {
-        bg = "#150A21";
-        primary = "#FFFFFF";
-        secondary = "#D1D5DB";
-        accent = "#EC4899";
-      } else if (tpl === "powerful_features") {
-        bg = "#F0F9FF";
-        primary = "#0F172A";
-        secondary = "#4B5563";
-        accent = "#0EA5E9";
-      } else if (tpl === "smart_recommendations") {
-        bg = "#FFF5F7";
-        primary = "#0F172A";
-        secondary = "#4B5563";
-        accent = "#F43F5E";
-      } else if (tpl === "realtime_analytics") {
-        bg = "#041211";
-        primary = "#FFFFFF";
-        secondary = "#94A3B8";
-        accent = "#14B8A6";
-      } else if (tpl === "tools_success") {
-        bg = "#FCFAF2";
-        primary = "#1E293B";
-        secondary = "#475569";
-        accent = "#EAB308";
       } else {
-        bg = extractedColors.bg;
-        primary = extractedColors.primary;
-        secondary = extractedColors.secondary;
-        accent = extractedColors.accent;
+        bg = extractedColors.bg || "#FAF9F5";
+        primary = extractedColors.primary || "#1F2937";
+        secondary = extractedColors.secondary || "#4B5563";
+        accent = extractedColors.accent || "#3B82F6";
       }
     }
     return { bg, primary, secondary, accent };
   };
 
+  // Populate from AI generated slides on new session
+  useEffect(() => {
+    if (result && result.slides && slideConfigs.length === 0) {
+      const initial = result.slides.map((s: any) => {
+        const activeCopy = s.variants[variant] || s.variants["feature"];
+        const defaultColors = getTemplateDefaultColors(s.suggestedTemplate, s.suggestedPreset);
+        return {
+          template: s.suggestedTemplate || "showcase",
+          stylePreset: s.suggestedPreset || "modern",
+          headline: activeCopy.headline || "",
+          subheadline: activeCopy.subheadline || "",
+          features: activeCopy.features || ["", "", ""],
+          colors: defaultColors,
+          featureTextSize: 1.0,
+          featureSpacing: 18,
+          featureIconSize: 1.0,
+        };
+      });
+      setSlideConfigs(initial);
+    }
+  }, [result]);
 
+  // Sync with AI copy variants when toggling Feature/Benefit/Outcome tabs
+  useEffect(() => {
+    if (result && result.slides && slideConfigs.length === 6) {
+      const isNewSession = typeof window !== "undefined" && localStorage.getItem("screenmint_is_new_session") === "true";
+      
+      setSlideConfigs((prev) =>
+        prev.map((cfg, idx) => {
+          const s = result.slides[idx];
+          if (!s) return cfg;
+          const activeCopy = s.variants[variant] || s.variants["feature"];
+          return {
+            ...cfg,
+            headline: activeCopy.headline || "",
+            subheadline: activeCopy.subheadline || "",
+            features: activeCopy.features || ["", "", ""],
+          };
+        })
+      );
 
-  const renderCanvasContent = (scale: number, watermarkOverride?: boolean) => (
-    <div style={{ width: 1600 * scale, height: 900 * scale, overflow: "hidden" }} className="relative bg-card rounded-xl border border-border shadow-md select-none">
-      <div
-        style={{
-          width: 1600,
-          height: 900,
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
-          position: "absolute",
-          left: 0,
-          top: 0
-        }}
-      >
-        <TemplateCanvas
-          template={template}
-          stylePreset={stylePreset}
-          headline={headline}
-          subheadline={subheadline}
-          features={features}
-          colors={colors}
-          screenshot={preview || ""}
-          watermark={false}
-          appName={result?.appName || "app"}
-          logo={logo}
-          featureTextSize={featureTextSize}
-          featureSpacing={featureSpacing}
-          featureIconSize={featureIconSize}
-        />
+      if (isNewSession && variant === "feature") {
+        localStorage.removeItem("screenmint_is_new_session");
+      }
+    }
+  }, [variant]);
+
+  // Save configs to localStorage
+  useEffect(() => {
+    if (slideConfigs.length === 6) {
+      localStorage.setItem("screenmint_slide_configs", JSON.stringify(slideConfigs));
+    }
+  }, [slideConfigs]);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setWindowSize({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isFullscreen]);
+
+  const updateActiveSlide = (fields: Partial<typeof slideConfigs[0]>) => {
+    setSlideConfigs((prev) => {
+      const next = [...prev];
+      next[activeSlideIdx] = { ...next[activeSlideIdx], ...fields };
+      return next;
+    });
+  };
+
+  const updateActiveFeature = (index: number, val: string) => {
+    setSlideConfigs((prev) => {
+      const next = [...prev];
+      const feats = [...next[activeSlideIdx].features];
+      feats[index] = val;
+      next[activeSlideIdx] = { ...next[activeSlideIdx], features: feats };
+      return next;
+    });
+  };
+
+  const updateActiveColors = (colorFields: Partial<typeof slideConfigs[0]["colors"]>) => {
+    setSlideConfigs((prev) => {
+      const next = [...prev];
+      next[activeSlideIdx] = {
+        ...next[activeSlideIdx],
+        colors: { ...next[activeSlideIdx].colors, ...colorFields }
+      };
+      return next;
+    });
+  };
+
+  const handleApplyToAll = () => {
+    const active = slideConfigs[activeSlideIdx];
+    if (!active) return;
+    const { stylePreset, colors, featureTextSize, featureSpacing, featureIconSize } = active;
+    setSlideConfigs((prev) =>
+      prev.map((cfg) => ({
+        ...cfg,
+        stylePreset,
+        colors: { ...colors },
+        featureTextSize,
+        featureSpacing,
+        featureIconSize,
+      }))
+    );
+    toast.success("Applied current styling settings to all other templates!");
+  };
+
+  const handleDownload = async () => {
+    const node = document.getElementById("export-node");
+    if (!node) return;
+    setDownloading(true);
+    try {
+      const dataUrl = await htmlToImage.toPng(node, {
+        width: 1600,
+        height: 900,
+        pixelRatio: 2.5,
+      });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `${result?.appName?.toLowerCase() || "screenmint"}-slide-${activeSlideIdx + 1}.png`;
+      a.click();
+      
+      if (!paid) {
+        toast.info("Downloaded watermarked preview. Click 'Unlock All' to remove the watermark!");
+      } else {
+        toast.success("High-res unwatermarked PNG downloaded!");
+      }
+    } catch (err) {
+      console.error("Export failed:", err);
+      toast.error("Failed to generate download image.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    setDownloading(true);
+    toast.info(`Preparing sequence export... downloading ${uploadedCount} images.`);
+    try {
+      for (let i = 0; i < uploadedCount; i++) {
+        const node = document.getElementById(`export-node-${i}`);
+        if (node) {
+          const dataUrl = await htmlToImage.toPng(node, {
+            width: 1600,
+            height: 900,
+            pixelRatio: 2.5,
+          });
+          const a = document.createElement("a");
+          a.href = dataUrl;
+          a.download = `${result?.appName?.toLowerCase() || "screenmint"}-slide-${i + 1}.png`;
+          a.click();
+          await new Promise(r => setTimeout(r, 450));
+        }
+      }
+      toast.success(`Successfully exported all ${uploadedCount} screenshots!`);
+    } catch (err) {
+      console.error("Sequence export failed:", err);
+      toast.error("Failed to batch export all slides.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const w = windowSize.width || 1600;
+  const h = windowSize.height || 900;
+  const availableWidth = Math.max(300, w - 32);
+  const availableHeight = Math.max(200, h - 140);
+  const fullscreenScale = Math.max(0.1, Math.min(1.0, availableWidth / 1600, availableHeight / 900)) || 0.8;
+
+  const activeConfig = slideConfigs[activeSlideIdx];
+
+  const renderCanvasContent = (scale: number, slideIdx: number, watermarkOverride?: boolean) => {
+    const config = slideConfigs[slideIdx];
+    if (!config) return <div className="animate-pulse bg-muted rounded aspect-[16/9] w-full" />;
+    
+    return (
+      <div style={{ width: 1600 * scale, height: 900 * scale, overflow: "hidden" }} className="relative bg-card rounded-xl border border-border shadow-md select-none">
+        <div
+          style={{
+            width: 1600,
+            height: 900,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            position: "absolute",
+            left: 0,
+            top: 0
+          }}
+        >
+          <TemplateCanvas
+            template={config.template}
+            stylePreset={config.stylePreset}
+            headline={config.headline}
+            subheadline={config.subheadline}
+            features={config.features}
+            colors={config.colors}
+            screenshot={previews[slideIdx] || ""}
+            watermark={watermarkOverride !== undefined ? watermarkOverride : !paid}
+            appName={result?.appName || "app"}
+            logo={logo}
+            featureTextSize={config.featureTextSize}
+            featureSpacing={config.featureSpacing}
+            featureIconSize={config.featureIconSize}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  const roles = [
+    "Slide 1: Hook / Hero",
+    "Slide 2: Problem/Solution",
+    "Slide 3: Key Feature A",
+    "Slide 4: Key Feature B",
+    "Slide 5: Outcomes / Proof",
+    "Slide 6: Easy Setup & Trust"
+  ];
+
+  if (!activeConfig) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh]">
+        <div className="size-10 rounded-full border-4 border-lime border-t-transparent animate-spin mb-4" />
+        <p className="font-mono text-sm text-muted-foreground">Initializing Design Studio...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="rise flex flex-col lg:flex-row gap-8 items-start min-h-[60vh]">
@@ -3501,7 +3658,7 @@ function Results({
         <div className="w-full flex justify-center">
           {previewMode === "editor" && (
             <div className="relative rounded-2xl overflow-hidden border border-border bg-card shadow-2xl max-w-full group">
-              {renderCanvasContent(0.44)}
+              {renderCanvasContent(0.44, activeSlideIdx)}
               
               {/* Fullscreen View Trigger */}
               <button
@@ -3520,10 +3677,11 @@ function Results({
             <ShopifyStoreListingPreview
               appName={result?.appName || ""}
               category={result?.category || ""}
-              colors={colors}
+              colors={activeConfig.colors}
               isMobile={false}
-              renderCanvasContent={(s) => renderCanvasContent(s)}
+              renderCanvasContent={(s, idx) => renderCanvasContent(s, idx)}
               logo={logo}
+              sequenceLength={uploadedCount}
             />
           )}
 
@@ -3531,48 +3689,109 @@ function Results({
             <ShopifyStoreListingPreview
               appName={result?.appName || ""}
               category={result?.category || ""}
-              colors={colors}
+              colors={activeConfig.colors}
               isMobile={true}
-              renderCanvasContent={(s) => renderCanvasContent(s)}
+              renderCanvasContent={(s, idx) => renderCanvasContent(s, idx)}
               logo={logo}
+              sequenceLength={uploadedCount}
             />
           )}
         </div>
 
-        {/* Info label under preview */}
-        <p className="mt-4 text-xs font-mono text-muted-foreground text-center">
-          Rendered directly in your browser. Pixel-perfect 1600x900px export.
-        </p>
+        {/* Horizontal scroll slide navigator */}
+        <div className="w-full mt-8 space-y-2.5 max-w-[840px] px-2">
+          <div className="flex items-center justify-between border-b border-border/40 pb-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+              Sequence Navigator ({uploadedCount} Slides)
+            </span>
+            <span className="font-mono text-[9px] text-muted-foreground/60 hidden sm:inline">
+              Select a card to edit layout and copywriting
+            </span>
+          </div>
+          <div className="flex overflow-x-auto gap-3.5 pb-3.5 scrollbar-thin w-full justify-start items-center">
+            {slideConfigs.slice(0, uploadedCount).map((cfg, i) => {
+              const isActive = activeSlideIdx === i;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActiveSlideIdx(i)}
+                  className={`flex flex-col p-2.5 rounded-2xl border transition-all duration-200 text-left relative overflow-hidden group shadow-sm hover:shadow-md hover:scale-[1.02] w-[170px] shrink-0 ${
+                    isActive
+                      ? "border-lime bg-lime/10 shadow-lime/5 ring-1 ring-lime/20"
+                      : "border-border bg-card/50 hover:bg-card"
+                  }`}
+                >
+                  {/* Badge Row */}
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded ${isActive ? "bg-lime text-ink" : "bg-muted text-muted-foreground"}`}>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="font-mono text-[8.5px] text-muted-foreground truncate max-w-[90px] font-bold">
+                      {roles[i]?.split(":")[1]?.trim() || roles[i] || `Slide ${i + 1}`}
+                    </span>
+                  </div>
 
-        {/* Hidden Export Node */}
+                  {/* Thumbnail Canvas wrapper */}
+                  <div className={`rounded-xl overflow-hidden border transition-colors flex justify-center items-center bg-card ${isActive ? "border-lime/30" : "border-slate-800/40"}`}>
+                    {renderCanvasContent(140 / 1600, i, false)}
+                  </div>
+                  
+                  {/* Subtle hover overlay */}
+                  <div className="absolute inset-0 bg-lime/5 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Hidden Export Node (Active slide) */}
         <div style={{ width: 0, height: 0, overflow: "hidden", position: "absolute", pointerEvents: "none" }}>
-          <div
-            id="export-node"
-            style={{
-              width: 1600,
-              height: 900,
-              position: "relative",
-            }}
-          >
+          <div id="export-node" style={{ width: 1600, height: 900, position: "relative" }}>
             <TemplateCanvas
-              template={template}
-              stylePreset={stylePreset}
-              headline={headline}
-              subheadline={subheadline}
-              features={features}
-              colors={colors}
-              screenshot={preview || ""}
+              template={activeConfig.template}
+              stylePreset={activeConfig.stylePreset}
+              headline={activeConfig.headline}
+              subheadline={activeConfig.subheadline}
+              features={activeConfig.features}
+              colors={activeConfig.colors}
+              screenshot={previews[activeSlideIdx] || ""}
               watermark={false}
               appName={result?.appName || ""}
               logo={logo}
-              featureTextSize={featureTextSize}
-              featureSpacing={featureSpacing}
-              featureIconSize={featureIconSize}
+              featureTextSize={activeConfig.featureTextSize}
+              featureSpacing={activeConfig.featureSpacing}
+              featureIconSize={activeConfig.featureIconSize}
             />
           </div>
         </div>
 
-
+        {/* Hidden Export Nodes (All slides) */}
+        <div style={{ width: 0, height: 0, overflow: "hidden", position: "absolute", pointerEvents: "none" }}>
+          {Array.from({ length: uploadedCount }).map((_, i) => {
+            const cfg = slideConfigs[i];
+            if (!cfg) return null;
+            return (
+              <div key={i} id={`export-node-${i}`} style={{ width: 1600, height: 900, position: "relative" }}>
+                <TemplateCanvas
+                  template={cfg.template}
+                  stylePreset={cfg.stylePreset}
+                  headline={cfg.headline}
+                  subheadline={cfg.subheadline}
+                  features={cfg.features}
+                  colors={cfg.colors}
+                  screenshot={previews[i] || ""}
+                  watermark={false}
+                  appName={result?.appName || ""}
+                  logo={logo}
+                  featureTextSize={cfg.featureTextSize}
+                  featureSpacing={cfg.featureSpacing}
+                  featureIconSize={cfg.featureIconSize}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Editor & Control Panel Side */}
@@ -3617,7 +3836,7 @@ function Results({
         {/* Layout Template Selector */}
         <div>
           <label className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-bold">
-            2. Select Layout Template
+            2. Select Slide Layout ({roles[activeSlideIdx]})
           </label>
           <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
             {[
@@ -3642,25 +3861,21 @@ function Results({
             ].map((t) => (
               <button
                 key={t.id}
-                onClick={() => {
-                  setTemplate(t.id);
-                }}
+                onClick={() => updateActiveSlide({ template: t.id })}
                 className={`py-2 px-3 rounded-lg border text-left transition flex items-center justify-between ${
-                  template === t.id
+                  activeConfig.template === t.id
                     ? "border-lime bg-lime/10 text-lime font-bold"
                     : "border-border hover:bg-card text-muted-foreground"
                 }`}
               >
                 <span>{t.label}</span>
-                {result?.suggestedTemplate === t.id && (
+                {result?.slides[activeSlideIdx]?.suggestedTemplate === t.id && (
                   <span className="text-[9px] bg-lime/20 text-lime px-1.5 py-0.5 rounded font-bold uppercase tracking-wider scale-90">Auto</span>
                 )}
               </button>
             ))}
           </div>
         </div>
-
-        {/* Smart Annotations removed */}
 
         {/* Style Selector */}
         <div className="border-t border-border pt-4">
@@ -3677,12 +3892,11 @@ function Results({
               <button
                 key={s.id}
                 onClick={() => {
-                  setStylePreset(s.id as any);
-                  const defaults = getTemplateDefaultColors(template, s.id);
-                  setColors(defaults);
+                  const defaults = getTemplateDefaultColors(activeConfig.template, s.id);
+                  updateActiveSlide({ stylePreset: s.id, colors: defaults });
                 }}
                 className={`py-2 px-3 rounded-lg border text-left transition ${
-                  stylePreset === s.id
+                  activeConfig.stylePreset === s.id
                     ? "border-lime bg-lime/10 text-lime"
                     : "border-border hover:bg-card"
                 }`}
@@ -3696,34 +3910,34 @@ function Results({
         {/* Text Settings */}
         <div className="space-y-4 border-t border-border pt-4">
           <label className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1 font-bold">
-            4. Modify Marketing Copy
+            4. Modify Marketing Copy (Slide {activeSlideIdx + 1})
           </label>
           <div>
             <label className="block text-[10px] opacity-60 mb-1">Headline (Max 6 words recommended)</label>
             <input
               type="text"
-              value={headline}
-              onChange={(e) => setHeadline(e.target.value)}
+              value={activeConfig.headline}
+              onChange={(e) => updateActiveSlide({ headline: e.target.value })}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime/50"
             />
           </div>
           <div>
             <label className="block text-[10px] opacity-60 mb-1">Subheadline (Max 15 words recommended)</label>
             <textarea
-              value={subheadline}
-              onChange={(e) => setSubheadline(e.target.value)}
+              value={activeConfig.subheadline}
+              onChange={(e) => updateActiveSlide({ subheadline: e.target.value })}
               rows={2}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime/50"
             />
           </div>
           <div className="space-y-2">
             <label className="block text-[10px] opacity-60">Feature Callouts (Max 5 words each)</label>
-            {features.map((feat, idx) => (
+            {activeConfig.features.map((feat, idx) => (
               <input
                 key={idx}
                 type="text"
                 value={feat}
-                onChange={(e) => updateFeature(idx, e.target.value)}
+                onChange={(e) => updateActiveFeature(idx, e.target.value)}
                 placeholder={`Feature Callout 0${idx+1}`}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime/50"
               />
@@ -3733,19 +3947,17 @@ function Results({
 
         {/* Color Settings */}
         <div className="space-y-3 border-t border-border pt-4">
-          <div className="flex items-center justify-between">
-            <label className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-              5. Custom Color Palette
-            </label>
-          </div>
+          <label className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+            5. Custom Color Palette
+          </label>
           
           <div className="grid grid-cols-4 gap-2 text-xs font-mono">
             <div>
               <label className="block text-[10px] opacity-60 mb-1 truncate">BG Color</label>
               <input
                 type="color"
-                value={colors.bg}
-                onChange={(e) => setColors((prev) => ({ ...prev, bg: e.target.value }))}
+                value={activeConfig.colors.bg}
+                onChange={(e) => updateActiveColors({ bg: e.target.value })}
                 className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
               />
             </div>
@@ -3753,8 +3965,8 @@ function Results({
               <label className="block text-[10px] opacity-60 mb-1 truncate">Primary Text</label>
               <input
                 type="color"
-                value={colors.primary}
-                onChange={(e) => setColors((prev) => ({ ...prev, primary: e.target.value }))}
+                value={activeConfig.colors.primary}
+                onChange={(e) => updateActiveColors({ primary: e.target.value })}
                 className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
               />
             </div>
@@ -3762,8 +3974,8 @@ function Results({
               <label className="block text-[10px] opacity-60 mb-1 truncate">Secondary Text</label>
               <input
                 type="color"
-                value={colors.secondary || "#6B7280"}
-                onChange={(e) => setColors((prev) => ({ ...prev, secondary: e.target.value }))}
+                value={activeConfig.colors.secondary || "#6B7280"}
+                onChange={(e) => updateActiveColors({ secondary: e.target.value })}
                 className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
               />
             </div>
@@ -3771,8 +3983,8 @@ function Results({
               <label className="block text-[10px] opacity-60 mb-1 truncate">Accent</label>
               <input
                 type="color"
-                value={colors.accent}
-                onChange={(e) => setColors((prev) => ({ ...prev, accent: e.target.value }))}
+                value={activeConfig.colors.accent}
+                onChange={(e) => updateActiveColors({ accent: e.target.value })}
                 className="w-full h-8 rounded border border-border bg-transparent p-0.5 cursor-pointer"
               />
             </div>
@@ -3782,84 +3994,117 @@ function Results({
         {/* Feature Callout Controls */}
         <div className="space-y-4 border-t border-border pt-4">
           <label className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-            6. Feature Callout Controls
+            6. Slide Callout Controls
           </label>
           <div className="space-y-3 text-xs font-mono">
-            {/* Feature Text Size Slider */}
             <div>
               <div className="flex justify-between items-center text-muted-foreground mb-1">
                 <span>Text Size</span>
-                <span className="text-lime font-bold">{featureTextSize.toFixed(2)}x</span>
+                <span className="text-lime font-bold">{activeConfig.featureTextSize.toFixed(2)}x</span>
               </div>
               <input
                 type="range"
                 min="0.7"
                 max="1.5"
                 step="0.05"
-                value={featureTextSize}
-                onChange={(e) => setFeatureTextSize(parseFloat(e.target.value))}
+                value={activeConfig.featureTextSize}
+                onChange={(e) => updateActiveSlide({ featureTextSize: parseFloat(e.target.value) })}
                 className="w-full accent-lime cursor-pointer bg-muted h-1 rounded-lg appearance-none"
               />
             </div>
 
-            {/* Feature Spacing Slider */}
             <div>
               <div className="flex justify-between items-center text-muted-foreground mb-1">
                 <span>Spacing / Gap</span>
-                <span className="text-lime font-bold">{featureSpacing}px</span>
+                <span className="text-lime font-bold">{activeConfig.featureSpacing}px</span>
               </div>
               <input
                 type="range"
                 min="8"
                 max="40"
                 step="1"
-                value={featureSpacing}
-                onChange={(e) => setFeatureSpacing(parseInt(e.target.value))}
+                value={activeConfig.featureSpacing}
+                onChange={(e) => updateActiveSlide({ featureSpacing: parseInt(e.target.value) })}
                 className="w-full accent-lime cursor-pointer bg-muted h-1 rounded-lg appearance-none"
               />
             </div>
 
-            {/* Feature Icon Size Slider */}
             <div>
               <div className="flex justify-between items-center text-muted-foreground mb-1">
-                <span>Icon / Bullet Size</span>
-                <span className="text-lime font-bold">{featureIconSize.toFixed(2)}x</span>
+                <span>Bullet Size</span>
+                <span className="text-lime font-bold">{activeConfig.featureIconSize.toFixed(2)}x</span>
               </div>
               <input
                 type="range"
                 min="0.7"
                 max="1.5"
                 step="0.05"
-                value={featureIconSize}
-                onChange={(e) => setFeatureIconSize(parseFloat(e.target.value))}
+                value={activeConfig.featureIconSize}
+                onChange={(e) => updateActiveSlide({ featureIconSize: parseFloat(e.target.value) })}
                 className="w-full accent-lime cursor-pointer bg-muted h-1 rounded-lg appearance-none"
               />
             </div>
           </div>
         </div>
 
+        {/* Apply style to all slides option */}
+        <div className="border-t border-border pt-4 mt-2">
+          <button
+            type="button"
+            onClick={handleApplyToAll}
+            className="w-full relative group overflow-hidden rounded-xl border border-lime/30 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-4 py-3.5 text-center text-xs font-bold uppercase tracking-widest text-lime transition-all duration-300 hover:border-lime/50 hover:shadow-[0_0_20px_rgba(200,232,74,0.15)] active:scale-[0.98]"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-lime/5 via-transparent to-lime/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <span className="relative z-10 flex items-center justify-center gap-2.5 font-mono text-[10px] tracking-widest">
+              <svg className="size-4 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.63 3.06m-11.13-.306A9 9 0 1120.25 12" />
+              </svg>
+              Apply Style to All Slides
+            </span>
+          </button>
+        </div>
+
         {/* Actions & Export Panel */}
-        <div className="border-t border-border pt-6 mt-4 space-y-4">
+        <div className="border-t border-border pt-6 mt-4 space-y-3">
           <button
             onClick={handleDownload}
+            disabled={downloading}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-lime text-lime font-semibold py-3 text-sm hover:bg-lime/5 transition disabled:opacity-60"
+          >
+            {downloading ? "Exporting..." : `Download Slide ${activeSlideIdx + 1}`}
+          </button>
+          
+          <button
+            onClick={handleDownloadAll}
             disabled={downloading}
             className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-lime text-ink font-semibold py-3.5 text-base hover:opacity-90 transition lime-glow disabled:opacity-60"
           >
             {downloading ? (
-              "Generating PNG..."
+              "Batch Exporting Set..."
             ) : (
               <>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
                 </svg>
-                {paid ? "Export High-Res PNG" : "Download Preview PNG"}
+                {paid ? "Export Full Optimized Set" : "Download Watermarked Set"}
               </>
             )}
           </button>
 
-          <div className="rounded-xl bg-lime/10 border border-lime/20 p-3 text-center text-xs font-mono text-lime">
-            ✓ Free High-Res Export Enabled (Development Mode)
-          </div>
+          {!paid && (
+            <button
+              onClick={() => setPayOpen(true)}
+              className="w-full text-center text-xs text-muted-foreground underline hover:text-white transition py-1"
+            >
+              Unlock Watermark-Free High-Res Exports
+            </button>
+          )}
+
+          {paid && (
+            <div className="rounded-xl bg-lime/10 border border-lime/20 p-3 text-center text-xs font-mono text-lime">
+              ✓ Pro Unwatermarked Exports Unlocked
+            </div>
+          )}
         </div>
       </div>
 
@@ -3874,46 +4119,39 @@ function Results({
       {isFullscreen && isMounted && createPortal(
         <div 
           onClick={() => setIsFullscreen(false)}
-          className="fixed inset-0 bg-neutral-950/98 backdrop-blur-xl z-[100] flex items-center justify-center p-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200 font-sans cursor-zoom-out"
+          className="fixed inset-0 bg-neutral-950/98 backdrop-blur-xl z-[100] flex items-center justify-center p-4 overflow-hidden animate-in fade-in duration-200 font-sans cursor-zoom-out"
         >
-          {/* Close Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               setIsFullscreen(false);
             }}
-            className="absolute top-6 right-6 z-50 size-12 rounded-full bg-neutral-900/80 hover:bg-neutral-850 text-white flex items-center justify-center border border-white/10 transition-all hover:scale-105 active:scale-95 shadow-xl text-lg hover:border-white/20 cursor-pointer"
-            aria-label="Close fullscreen preview"
+            className="absolute top-6 right-6 z-50 size-12 rounded-full bg-neutral-900/80 text-white flex items-center justify-center border border-white/10 transition shadow-xl text-lg hover:border-white/20"
           >
             ✕
           </button>
 
-          {/* Modal Content - Scaled Canvas */}
           <div 
             onClick={(e) => e.stopPropagation()}
             className="relative rounded-xl overflow-hidden border border-white/10 shadow-3xl max-w-full max-h-full cursor-default select-none"
           >
-            {renderCanvasContent(fullscreenScale)}
+            {renderCanvasContent(fullscreenScale, activeSlideIdx)}
           </div>
 
-          {/* Floating Control Bar */}
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex gap-3 p-2 bg-neutral-900/90 backdrop-blur-md rounded-full border border-white/10 shadow-2xl w-full max-w-md hover:border-white/20 transition-colors cursor-default"
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex gap-3 p-2 bg-neutral-900/90 backdrop-blur-md rounded-full border border-white/10 shadow-2xl w-full max-w-md cursor-default"
           >
             <button
               onClick={handleDownload}
               disabled={downloading}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-lime text-ink font-semibold py-3 hover:opacity-90 transition disabled:opacity-60 text-xs animate-pulse cursor-pointer"
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-lime text-ink font-semibold py-3 hover:opacity-90 transition disabled:opacity-60 text-xs"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-              </svg>
-              {paid ? "Export High-Res PNG" : "Download Preview PNG"}
+              Download Slide {activeSlideIdx + 1}
             </button>
             <button
               onClick={() => setIsFullscreen(false)}
-              className="flex-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold py-3 transition text-xs text-center cursor-pointer"
+              className="flex-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold py-3 transition text-xs text-center"
             >
               Back to Editor
             </button>
