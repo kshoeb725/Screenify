@@ -7,6 +7,7 @@ import { generatePromos } from "@/lib/generate.functions";
 import { useTheme } from "@/hooks/use-theme";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { Footer } from "@/components/Footer";
+import { LandingPage } from "@/components/LandingPage";
 import { extractFromDataUrl } from "@/lib/extract-palette";
 import * as htmlToImage from "html-to-image";
 
@@ -451,6 +452,8 @@ function Index() {
   }, []);
 
 
+  const showLanding = status === "idle" && previews.filter(p => p !== null).length === 0;
+
   return (
     <main className="min-h-screen bg-background text-foreground grain">
       <svg style={{ display: "none" }}>
@@ -465,92 +468,137 @@ function Index() {
         </defs>
       </svg>
       <Toaster theme={theme} position="top-center" />
-      <Nav />
-      <section className="mx-auto max-w-6xl px-6 pt-16 pb-24">
-        {status === "idle" && previews.filter(p => p !== null).length === 0 && (
-          <Hero onPick={() => fileRef.current?.click()} onDrop={handleUpload} />
-        )}
-        {(status === "preview" || (status === "idle" && previews.filter(p => p !== null).length > 0)) && (
-          <Preview
-            previews={previews}
-            setPreviews={setPreviews}
-            form={form}
-            setForm={setForm}
-            logo={logo}
-            setLogo={setLogo}
-            onGenerate={handleGenerate}
-            onReset={onReset}
-            handleUploadSlot={(files, slotIdx) => handleUpload(files, slotIdx)}
-          />
-        )}
-        {status === "loading" && <Loading previews={previews} />}
-        {status === "done" && result && (
-          <Results
-            result={result}
-            previews={previews}
-            setPreviews={setPreviews}
-            logo={logo}
-            paid={paid}
-            onPaid={() => setPaid(true)}
-            onReset={onReset}
-            email={form.email}
-            extractedColors={extractedColors}
-          />
-        )}
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          accept="image/png,image/jpeg,image/webp"
-          className="hidden"
-          onChange={(e) => {
-            const files = e.target.files;
-            if (files && files.length > 0) handleUpload(files);
-            e.target.value = "";
-          }}
+      <Nav status={status} onReset={onReset} onPick={() => fileRef.current?.click()} />
+      
+      {showLanding ? (
+        <LandingPage
+          onPick={() => fileRef.current?.click()}
+          onDrop={handleUpload}
         />
-      </section>
-      <FAQ />
+      ) : (
+        <section className="mx-auto max-w-6xl px-6 pt-16 pb-24">
+          {(status === "preview" || (status === "idle" && previews.filter(p => p !== null).length > 0)) && (
+            <Preview
+              previews={previews}
+              setPreviews={setPreviews}
+              form={form}
+              setForm={setForm}
+              logo={logo}
+              setLogo={setLogo}
+              onGenerate={handleGenerate}
+              onReset={onReset}
+              handleUploadSlot={(files, slotIdx) => handleUpload(files, slotIdx)}
+            />
+          )}
+          {status === "loading" && <Loading previews={previews} />}
+          {status === "done" && result && (
+            <Results
+              result={result}
+              previews={previews}
+              setPreviews={setPreviews}
+              logo={logo}
+              paid={paid}
+              onPaid={() => setPaid(true)}
+              onReset={onReset}
+              email={form.email}
+              extractedColors={extractedColors}
+            />
+          )}
+        </section>
+      )}
+
+      <input
+        ref={fileRef}
+        type="file"
+        multiple
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const files = e.target.files;
+          if (files && files.length > 0) handleUpload(files);
+          e.target.value = "";
+        }}
+      />
+      {!showLanding && <FAQ />}
       <Footer />
     </main>
   );
 }
 
-function Nav() {
+function Nav({ 
+  status, 
+  onReset, 
+  onPick 
+}: { 
+  status: "idle" | "preview" | "loading" | "done"; 
+  onReset: () => void; 
+  onPick: () => void;
+}) {
   const { theme, toggle } = useTheme();
+  const showBack = status !== "idle";
+  
   return (
-    <header className="mx-auto max-w-6xl px-6 pt-8 flex items-center justify-between">
-      <div className="flex items-center gap-2.5">
-        <img
-          src="/screenmint-icon.png"
-          alt="Screenify icon"
-          className="h-14 w-14 rounded-2xl object-cover"
-        />
-        <span className="font-display text-2xl tracking-tight">
-          Screen<span className="text-[#3ECFB2]">ify</span>
-        </span>
-      </div>
-      <div className="flex items-center gap-3 text-sm text-muted-foreground font-mono">
-        <span className="hidden sm:inline-flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-lime animate-pulse" /> AI live
-        </span>
-        <button
-          onClick={toggle}
-          className="inline-flex items-center justify-center rounded-full border border-border px-3 py-2 hover:bg-card transition"
-          aria-label="Toggle theme"
-          title="Toggle theme"
-        >
-          {theme === "dark" ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="5" />
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-            </svg>
-          ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
+      <div className="mx-auto max-w-6xl px-6 h-20 flex items-center justify-between">
+        
+        {/* Left side: Logo & Back Arrow */}
+        <div className="flex items-center gap-4">
+          {showBack && (
+            <button
+              onClick={onReset}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-xs font-semibold cursor-pointer transition active:scale-95 text-foreground"
+              title="Return to landing page"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span className="hidden sm:inline">Back to Home</span>
+            </button>
           )}
-        </button>
+          
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/screenmint-icon.png"
+              alt="Screenify icon"
+              className="h-10 w-10 rounded-xl object-cover"
+            />
+            <span className="font-display text-xl font-bold tracking-tight">
+              Screen<span className="text-[#3ECFB2]">ify</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Right side: CTAs and Theme Toggle */}
+        <div className="flex items-center gap-4 text-sm font-sans">
+          {!showBack && (
+            <button
+              onClick={onPick}
+              className="bg-emerald-600 dark:bg-[#3ECFB2] text-white dark:text-ink hover:opacity-90 font-semibold rounded-lg px-4 py-2 border-0 cursor-pointer text-xs"
+            >
+              Get Started
+            </button>
+          )}
+          
+          <button
+            onClick={toggle}
+            className="inline-flex items-center justify-center rounded-full border border-border p-2.5 hover:bg-card transition cursor-pointer text-foreground"
+            aria-label="Toggle theme"
+            title="Toggle theme"
+          >
+            {theme === "dark" ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            )}
+          </button>
+        </div>
+
       </div>
     </header>
   );
