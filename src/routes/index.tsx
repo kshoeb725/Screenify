@@ -1606,11 +1606,11 @@ function TemplateCanvas({
     });
     
     if (styleType === "glass") {
-      const glassBg = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(15, 23, 42, 0.08)";
+      const glassBg = isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(15, 23, 42, 0.12)";
       const glassBorder = isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(15, 23, 42, 0.15)";
       const glassText = isDark ? "#FFFFFF" : "#0F172A";
       return (
-        <div key={index} className="flex items-center gap-3.5 px-6 py-3 rounded-2xl shadow-lg font-sans-outfit font-black backdrop-blur-md transition hover:scale-[1.01]"
+        <div key={index} className="flex items-center gap-3.5 px-6 py-3 rounded-2xl shadow-lg font-sans-outfit font-black transition hover:scale-[1.01]"
              style={{ 
                backgroundColor: glassBg, 
                borderColor: glassBorder, 
@@ -1749,8 +1749,8 @@ function TemplateCanvas({
           {/* Floating visual elements around center mockup */}
           <div className="relative w-[700px] mx-auto my-3 flex items-center justify-center z-10">
             {/* Floating widget left */}
-            <div className={`absolute -left-28 bottom-12 w-52 p-4 border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col gap-3.5 rotate-[-4deg] select-none backdrop-blur-xl transition-all duration-300 hover:rotate-0 hover:scale-[1.03] z-20 ${
-              isDark ? "bg-slate-950/75 border-white/10 text-white" : "bg-white/85 border-slate-200/50 text-slate-800"
+            <div className={`absolute -left-28 bottom-12 w-52 p-4 border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col gap-3.5 rotate-[-4deg] select-none transition-all duration-300 hover:rotate-0 hover:scale-[1.03] z-20 ${
+              isDark ? "bg-slate-950/92 border-white/10 text-white" : "bg-white/95 border-slate-200/50 text-slate-800"
             }`}>
               <div className="flex items-center gap-2.5">
                 <div className="relative">
@@ -1787,8 +1787,8 @@ function TemplateCanvas({
             </div>
 
             {/* Floating widget right */}
-            <div className={`absolute -right-28 bottom-20 w-52 p-4 border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col gap-3 rotate-[3deg] select-none backdrop-blur-xl transition-all duration-300 hover:rotate-0 hover:scale-[1.03] z-20 ${
-              isDark ? "bg-slate-950/75 border-white/10 text-white" : "bg-white/85 border-slate-200/50 text-slate-800"
+            <div className={`absolute -right-28 bottom-20 w-52 p-4 border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col gap-3 rotate-[3deg] select-none transition-all duration-300 hover:rotate-0 hover:scale-[1.03] z-20 ${
+              isDark ? "bg-slate-950/92 border-white/10 text-white" : "bg-white/95 border-slate-200/50 text-slate-800"
             }`}>
               <div className="flex justify-between items-center">
                 <span className="font-mono text-[8px] font-black uppercase tracking-widest opacity-60">Real-time Analytics</span>
@@ -1871,8 +1871,8 @@ function TemplateCanvas({
             </p>
  
             {/* Redesigned feature highlight card */}
-            <div className={`p-5.5 rounded-3xl border mb-8 flex items-center justify-between gap-6 shadow-[0_15px_30px_rgba(0,0,0,0.08)] backdrop-blur-md transition-all duration-300 hover:scale-[1.01] ${
-              isDark ? "bg-slate-950/40 border-white/10" : "bg-white/90 border-slate-200/60"
+            <div className={`p-5.5 rounded-3xl border mb-8 flex items-center justify-between gap-6 shadow-[0_15px_30px_rgba(0,0,0,0.08)] transition-all duration-300 hover:scale-[1.01] ${
+              isDark ? "bg-slate-950/85 border-white/10" : "bg-white/95 border-slate-200/60"
             }`}>
               <div className="flex items-center gap-4.5">
                 <div className="size-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg bg-gradient-to-tr from-rose-500 to-orange-500 text-white">
@@ -2240,7 +2240,7 @@ function TemplateCanvas({
  
             {/* Left float badge */}
             <div
-              className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 backdrop-blur-md w-72 transition-all duration-300 hover:scale-[1.03]"
+              className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 w-72 transition-all duration-300 hover:scale-[1.03]"
               style={{
                 left: "-260px",
                 top: "80px",
@@ -2268,7 +2268,7 @@ function TemplateCanvas({
  
             {/* Right float badge */}
             <div
-              className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 backdrop-blur-md w-72 transition-all duration-300 hover:scale-[1.03]"
+              className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 w-72 transition-all duration-300 hover:scale-[1.03]"
               style={{
                 right: "-260px",
                 bottom: "80px",
@@ -2541,9 +2541,9 @@ function TemplateCanvas({
             {/* Left Column (col-span-3) - Stats & Insights 1 */}
             <div className="col-span-3 flex flex-col gap-6 h-full justify-center">
               {/* Metric Card 1 */}
-              <div className="p-6 rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
+              <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
                    style={{
-                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.75)" : "rgba(255, 255, 255, 0.85)",
+                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)",
                      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
                    }}>
                 <div className="flex justify-between items-center">
@@ -2562,9 +2562,9 @@ function TemplateCanvas({
               </div>
 
               {/* Feature Card 2 */}
-              <div className="p-6 rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
+              <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
                    style={{
-                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.75)" : "rgba(255, 255, 255, 0.85)",
+                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)",
                      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
                    }}>
                 <div className="rounded-xl flex items-center justify-center shrink-0 size-9 shadow-sm"
@@ -2586,9 +2586,9 @@ function TemplateCanvas({
 
             {/* Center Column (col-span-6) - Mockup Viewport */}
             <div className="col-span-6 flex justify-center items-center">
-              <div className="w-full rounded-2xl border shadow-2xl overflow-hidden p-2.5 backdrop-blur-sm"
+              <div className="w-full rounded-2xl border shadow-2xl overflow-hidden p-2.5"
                    style={{
-                     backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.8)",
+                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.6)" : "rgba(255, 255, 255, 0.95)",
                      borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.06)"
                    }}>
                 {/* Browser bar */}
@@ -2612,9 +2612,9 @@ function TemplateCanvas({
             {/* Right Column (col-span-3) - Stats & Insights 2 */}
             <div className="col-span-3 flex flex-col gap-6 h-full justify-center">
               {/* Metric Card 3 */}
-              <div className="p-6 rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
+              <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
                    style={{
-                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.75)" : "rgba(255, 255, 255, 0.85)",
+                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)",
                      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
                    }}>
                 <div className="flex justify-between items-center">
@@ -2633,9 +2633,9 @@ function TemplateCanvas({
               </div>
 
               {/* Feature Card 4 */}
-              <div className="p-6 rounded-2xl border shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
+              <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
                    style={{
-                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.75)" : "rgba(255, 255, 255, 0.85)",
+                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)",
                      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
                    }}>
                 <div className="rounded-xl flex items-center justify-center shrink-0 size-9 shadow-sm"
@@ -2947,9 +2947,9 @@ function TemplateCanvas({
                   </svg>
                 ];
                 return (
-                  <div key={i} className="flex items-center gap-4.5 p-4.5 rounded-2xl border backdrop-blur-md transition-all duration-300 hover:scale-[1.02]"
+                  <div key={i} className="flex items-center gap-4.5 p-4.5 rounded-2xl border transition-all duration-300 hover:scale-[1.02]"
                        style={{
-                         backgroundColor: isDark ? "rgba(255, 255, 255, 0.03)" : "rgba(255, 255, 255, 0.8)",
+                         backgroundColor: isDark ? "rgba(15, 23, 42, 0.9)" : "rgba(255, 255, 255, 0.95)",
                          borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)"
                        }}>
                     <div className="rounded-xl flex items-center justify-center shrink-0 size-10.5 border"
@@ -2999,9 +2999,9 @@ function TemplateCanvas({
 
               {/* Browser mockup resting on the pedestal */}
               <div className="relative z-20 w-[780px] shadow-2xl transition-transform duration-300 hover:scale-[1.01] mb-2">
-                <div className="w-full rounded-2xl border overflow-hidden p-2.5 backdrop-blur-sm"
+                <div className="w-full rounded-2xl border overflow-hidden p-2.5"
                      style={{
-                       backgroundColor: isDark ? "rgba(10, 16, 22, 0.85)" : "rgba(255, 255, 255, 0.9)",
+                       backgroundColor: isDark ? "rgba(10, 16, 22, 0.95)" : "rgba(255, 255, 255, 0.95)",
                        borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)"
                      }}>
                   
