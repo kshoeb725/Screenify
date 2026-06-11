@@ -246,68 +246,134 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
                 {/* Visual Connector / Scanning Laser */}
                 {isCardHovered && (
                   <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#3ECFB2] to-transparent shadow-[0_0_10px_#3ECFB2] z-30 animate-pulse" style={{ top: "45%" }} />
-                )}
-
-                {/* Back Element: Raw Input Screenshot */}
+                )}                 {/* Back Element: Raw Input Screenshot */}
                 <div 
-                  className="absolute w-[80%] aspect-[16/10] rounded-xl border border-border/80 bg-zinc-950/70 p-1.5 shadow-lg transition-transform duration-500"
+                  className="absolute w-[85%] aspect-[16/10] rounded-xl border border-border/80 bg-white shadow-lg transition-transform duration-500 overflow-hidden"
                   style={{ 
                     transform: isCardHovered 
                       ? "translateZ(10px) translateY(-50px) rotateX(10deg) rotateY(-5deg) scale(0.9)" 
                       : "translateZ(20px) translateY(-20px) rotate(-3deg)" 
                   }}
                 >
-                  <div className="w-full h-full rounded-lg bg-zinc-900 overflow-hidden flex flex-col border border-border/40">
-                    <div className="h-3 bg-zinc-800 flex items-center px-1.5 gap-1">
-                      <div className="size-1 rounded-full bg-zinc-700" /><div className="size-1 rounded-full bg-zinc-700" />
+                  {/* Browser top header */}
+                  <div className="h-5 bg-slate-100 flex items-center px-2.5 gap-1 border-b border-border/40">
+                    <div className="size-1.5 rounded-full bg-red-400" />
+                    <div className="size-1.5 rounded-full bg-yellow-400" />
+                    <div className="size-1.5 rounded-full bg-green-400" />
+                    <div className="h-3 w-32 bg-slate-200/60 rounded ml-4" />
+                  </div>
+                  
+                  {/* Main dashboard content */}
+                  <div className="flex h-[calc(100%-20px)] bg-slate-50">
+                    {/* Tiny Sidebar */}
+                    <div className="w-10 bg-slate-900 flex flex-col items-center py-2 gap-3 shrink-0">
+                      <div className="size-4 rounded bg-slate-700" />
+                      <div className="size-4 rounded bg-slate-700" />
+                      <div className="size-4 rounded bg-slate-700" />
+                      <div className="size-4 rounded bg-slate-700" />
                     </div>
-                    <div className="flex-1 p-2 flex flex-col gap-2">
-                      <div className="h-3 w-16 bg-zinc-800 rounded" />
-                      <div className="h-12 bg-zinc-850 rounded border border-zinc-800 flex items-center justify-center text-[8px] text-zinc-650 font-mono">
-                        Plain Analytics Dashboard
+                    {/* Tiny Content area */}
+                    <div className="flex-1 p-3 flex flex-col gap-2.5 overflow-hidden">
+                      <div className="flex justify-between items-center">
+                        <div className="h-3.5 w-24 bg-slate-300 rounded" />
+                        <div className="h-3 w-12 bg-slate-200 rounded" />
                       </div>
-                      <div className="flex gap-2">
-                        <div className="h-8 flex-1 bg-zinc-800 rounded" />
-                        <div className="h-8 flex-1 bg-zinc-800 rounded" />
+                      
+                      {/* Metric widgets */}
+                      <div className="grid grid-cols-3 gap-2 shrink-0">
+                        <div className="bg-white border border-border/50 rounded p-1.5 flex flex-col gap-1 shadow-sm">
+                          <div className="h-1.5 w-8 bg-slate-200 rounded" />
+                          <div className="h-3 w-12 bg-slate-400 rounded" />
+                        </div>
+                        <div className="bg-white border border-border/50 rounded p-1.5 flex flex-col gap-1 shadow-sm">
+                          <div className="h-1.5 w-8 bg-slate-200 rounded" />
+                          <div className="h-3 w-10 bg-slate-400 rounded" />
+                        </div>
+                        <div className="bg-white border border-border/50 rounded p-1.5 flex flex-col gap-1 shadow-sm">
+                          <div className="h-1.5 w-8 bg-slate-200 rounded" />
+                          <div className="h-3 w-8 bg-slate-400 rounded" />
+                        </div>
+                      </div>
+
+                      {/* Main Chart Graphic */}
+                      <div className="flex-1 bg-white border border-border/50 rounded p-2 flex flex-col justify-between shadow-sm relative min-h-[48px]">
+                        <div className="absolute inset-0 p-2 opacity-15 flex flex-col justify-between pointer-events-none">
+                          <div className="w-full h-px bg-slate-300" />
+                          <div className="w-full h-px bg-slate-300" />
+                          <div className="w-full h-px bg-slate-300" />
+                        </div>
+                        {/* SVG Drawing of line chart */}
+                        <svg className="w-full h-full text-emerald-500 overflow-visible z-10" viewBox="0 0 100 40">
+                          <path 
+                            d="M0 35 Q15 20, 30 25 T60 10 T90 5 T100 0" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2.5" 
+                            strokeLinecap="round"
+                          />
+                          {/* Points */}
+                          <circle cx="30" cy="25" r="2" fill="currentColor" />
+                          <circle cx="60" cy="10" r="2" fill="currentColor" />
+                        </svg>
                       </div>
                     </div>
                   </div>
-                  <div className="absolute -bottom-2 -right-2 bg-zinc-900 border border-border px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 shadow-md">
-                    Before: Raw Screen
+                  <div className="absolute -bottom-2 -right-2 bg-zinc-900 border border-border px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 shadow-md z-20">
+                    Before: Raw Screenshot
                   </div>
                 </div>
 
                 {/* Front Element: Screenify Rendered Creative */}
                 <div 
-                  className="absolute w-[85%] aspect-[16/9] rounded-xl border border-emerald-500/25 bg-gradient-to-br from-slate-900 via-[#0E1B18] to-slate-900 p-2 shadow-2xl transition-transform duration-500"
+                  className="absolute w-[90%] aspect-[16/9] rounded-xl border border-emerald-500/25 bg-gradient-to-br from-slate-950 via-[#0A1512] to-slate-950 p-3 shadow-2xl transition-transform duration-500 overflow-hidden"
                   style={{ 
                     transform: isCardHovered 
                       ? "translateZ(70px) translateY(40px) rotateX(5deg) rotateY(8deg) scale(1.05)" 
                       : "translateZ(50px) translateY(30px) rotate(2deg)" 
                   }}
                 >
-                  <div className="w-full h-full flex flex-col justify-between relative rounded-lg overflow-hidden border border-emerald-500/10 p-3 bg-card/40">
-                    <div className="absolute inset-0 bg-gradient-to-b from-[#3ECFB2]/5 to-transparent pointer-events-none" />
+                  {/* Banner overlay glow */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-transparent to-lime-500/5 pointer-events-none" />
+
+                  <div className="w-full h-full flex flex-col justify-between relative rounded-lg overflow-hidden border border-emerald-500/10 p-4 bg-[#0A1512]/40 backdrop-blur-sm">
                     
                     {/* Mock copy */}
-                    <div className="space-y-1 z-15">
-                      <span className="text-[6px] font-mono text-[#3ECFB2] uppercase tracking-wider">01. Live Analytics</span>
-                      <h4 className="text-xs font-bold text-slate-100 font-display">Track Store Performance In Real Time</h4>
+                    <div className="space-y-1 text-left z-20">
+                      <span className="text-[7px] font-bold font-mono text-[#3ECFB2] uppercase tracking-wider">01. Live Analytics</span>
+                      <h4 className="text-sm font-extrabold text-slate-100 font-display leading-tight">Track Store LTV in Real-Time</h4>
+                      <p className="text-[7px] text-slate-450">Increase merchant checkout value with live dashboards.</p>
                     </div>
 
                     {/* Framed device */}
-                    <div className="w-[85%] mx-auto mt-2 h-14 bg-zinc-950 rounded-t-lg border-t border-x border-slate-700 overflow-hidden p-1 shadow-2xl flex flex-col">
-                      <div className="h-1 bg-zinc-800 rounded-full w-8 mx-auto mb-1" />
-                      <div className="flex-1 rounded-t bg-zinc-900 border border-zinc-800 p-0.5 flex flex-col gap-0.5">
-                        <div className="h-1.5 w-8 bg-zinc-800 rounded" />
-                        <div className="h-8 bg-emerald-950/20 border border-emerald-900/30 rounded flex items-center justify-center text-[5px] text-[#3ECFB2] font-mono font-bold">
-                          1.4k Conversions
+                    <div className="w-[85%] mx-auto mt-2 h-[68px] bg-slate-900/90 rounded-t-lg border-t border-x border-slate-700/60 overflow-hidden p-1 shadow-2xl flex flex-col transform translate-y-1">
+                      <div className="h-3 bg-slate-950/80 rounded-t-md flex items-center px-2 gap-1 border-b border-slate-800">
+                        <div className="size-1 rounded-full bg-slate-700" />
+                        <div className="size-1 rounded-full bg-slate-700" />
+                        <span className="text-[6px] text-slate-500 ml-1 font-mono">dashboard / analytics</span>
+                      </div>
+                      <div className="flex-1 bg-white flex overflow-hidden">
+                        {/* Miniature layout of raw screen */}
+                        <div className="w-6 bg-slate-900 py-1 flex flex-col items-center shrink-0">
+                          <div className="size-2 rounded-full bg-slate-700" />
+                        </div>
+                        <div className="flex-1 p-1 flex flex-col gap-1 overflow-hidden">
+                          <div className="h-1.5 w-8 bg-slate-300 rounded" />
+                          <div className="grid grid-cols-2 gap-1 shrink-0">
+                            <div className="bg-slate-50 border border-slate-200 rounded p-0.5 flex flex-col gap-0.5">
+                              <div className="h-[2px] w-4 bg-slate-300 rounded" />
+                              <div className="h-1 bg-[#3ECFB2] rounded" />
+                            </div>
+                            <div className="bg-slate-50 border border-slate-200 rounded p-0.5 flex flex-col gap-0.5">
+                              <div className="h-[2px] w-4 bg-slate-300 rounded" />
+                              <div className="h-1 bg-[#3ECFB2] rounded" />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="absolute -bottom-2 -left-2 bg-emerald-950 border border-emerald-500/35 px-2 py-0.5 rounded text-[10px] font-mono text-[#3ECFB2] shadow-md">
+                  <div className="absolute -bottom-2 -left-2 bg-emerald-950 border border-emerald-500/35 px-2 py-0.5 rounded text-[10px] font-mono text-[#3ECFB2] shadow-md z-20">
                     After: Conversion Optimized
                   </div>
                 </div>
