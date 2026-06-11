@@ -428,6 +428,7 @@ function Index() {
     setLogo(null);
     setStatus("idle");
     if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
       localStorage.removeItem("screenmint_previews");
       localStorage.removeItem("screenmint_status");
       localStorage.removeItem("screenmint_result");
@@ -520,7 +521,7 @@ function Index() {
         }}
       />
       {!showLanding && <FAQ />}
-      <Footer />
+      <Footer onHomeClick={onReset} />
     </main>
   );
 }
@@ -557,17 +558,63 @@ function Nav({
             </button>
           )}
           
-          <div className="flex items-center gap-2.5">
+          <div 
+            onClick={() => {
+              if (showBack) {
+                onReset();
+              } else {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition"
+            title={showBack ? "Back to Landing Page" : "Scroll to Top"}
+          >
             <img
               src="/screenmint-icon.png"
               alt="Screenify icon"
               className="h-10 w-10 rounded-xl object-cover"
             />
-            <span className="font-display text-xl font-bold tracking-tight">
+            <span className="font-display text-xl font-bold tracking-tight text-foreground">
               Screen<span className="text-[#3ECFB2]">ify</span>
             </span>
           </div>
         </div>
+
+        {/* Middle: Navigation Links (Desktop only) */}
+        {!showBack && (
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+            <a 
+              href="#how-it-works" 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" }); 
+              }} 
+              className="hover:text-foreground transition-colors"
+            >
+              How It Works
+            </a>
+            <a 
+              href="#pricing" 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }); 
+              }} 
+              className="hover:text-foreground transition-colors"
+            >
+              Pricing
+            </a>
+            <a 
+              href="#faq" 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" }); 
+              }} 
+              className="hover:text-foreground transition-colors"
+            >
+              FAQ
+            </a>
+          </nav>
+        )}
 
         {/* Right side: CTAs and Theme Toggle */}
         <div className="flex items-center gap-4 text-sm font-sans">
@@ -1720,10 +1767,8 @@ function TemplateCanvas({
           {/* Logo & Category Header */}
           <div className="flex justify-between items-center z-10">
             <div className="flex items-center gap-2.5">
-              {logo ? (
+              {logo && (
                 <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
-              ) : (
-                <ChatBubbleIcon size={38} />
               )}
               <span className="font-mono text-[12px] tracking-wider px-4 py-1.5 rounded-full font-bold uppercase"
                     style={{ color: accentColor, backgroundColor: `${accentColor}20` }}>
@@ -1851,12 +1896,8 @@ function TemplateCanvas({
           
           <div className="col-span-5 flex flex-col justify-center h-full pr-2 z-10">
             <div className="flex items-center gap-3 mb-6 z-10">
-              {logo ? (
+              {logo && (
                 <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
-              ) : (
-                <div className="size-11 rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)` }}>
-                  {appName ? appName[0].toUpperCase() : "S"}
-                </div>
               )}
               <span className="font-extrabold text-[22px] tracking-tight uppercase" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
             </div>
@@ -1918,10 +1959,8 @@ function TemplateCanvas({
           <div className="col-span-6 flex flex-col justify-between h-full py-8 pr-8 z-10">
             {/* Top Logo */}
             <div className="flex items-center gap-3 text-[18px] font-black tracking-[0.3em] uppercase font-serif-elegant" style={{ color: bodyTextColor }}>
-              {logo ? (
+              {logo && (
                 <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
-              ) : (
-                <FMonogramIcon size={38} />
               )}
               <span>{appName || "FAIRE"}</span>
             </div>
@@ -1969,10 +2008,8 @@ function TemplateCanvas({
             <div>
               {/* Brand Logo representation */}
               <div className="flex items-center gap-2.5 font-black text-lg mb-6 tracking-wide font-sans-outfit" style={{ color: bodyTextColor }}>
-                {logo ? (
+                {logo && (
                   <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
-                ) : (
-                  <IsometricBoxIcon size={42} />
                 )}
                 <span className="uppercase tracking-widest text-base">{appName || "Shipway"}</span>
               </div>
@@ -2307,12 +2344,8 @@ function TemplateCanvas({
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-center z-10 h-full">
             <div className="flex items-center gap-3.5 mb-8">
-              {logo ? (
+              {logo && (
                 <img src={logo} alt="Logo" className="h-12 max-w-[180px] object-contain rounded-lg" />
-              ) : (
-                <div className="size-12 rounded-xl flex items-center justify-center font-bold text-xl" style={{ background: colors.accent, color: getContrastRatio(colors.accent, "#FFFFFF") >= 4.5 ? "#FFFFFF" : "#0F172A" }}>
-                  {appName ? appName[0].toUpperCase() : "S"}
-                </div>
               )}
               <span className="font-extrabold text-[24px] tracking-wide uppercase opacity-90" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
             </div>
@@ -2374,16 +2407,11 @@ function TemplateCanvas({
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-between z-10 h-full py-4">
             <div>
-              <div className="mb-6 flex items-center gap-3">
-                {logo ? (
+              {logo && (
+                <div className="mb-6 flex items-center gap-3">
                   <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
-                ) : (
-                  <span className="px-3.5 py-1.5 rounded-full text-[13px] font-bold tracking-wider uppercase border"
-                        style={{ backgroundColor: `${accentColor}15`, color: accentColor, borderColor: `${accentColor}25` }}>
-                    {appName || "Shopify App"}
-                  </span>
-                )}
-              </div>
+                </div>
+              )}
 
               <h1 className="text-[52px] font-black leading-[1.15] tracking-tight mb-5" style={{ color: textColor }}>
                 {renderHeadline(headline || "All-in-One **Solution for Your Store**", "all_in_one")}
@@ -2666,57 +2694,50 @@ function TemplateCanvas({
           <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full blur-[100px] pointer-events-none" style={{ backgroundColor: `${accentColor}10` }} />
 
           {/* Left Column */}
-          <div className="col-span-5 flex flex-col justify-between z-10 h-full py-4">
+          <div className="col-span-5 flex flex-col justify-center gap-8 z-10 h-full py-4">
             <div>
-              <div className="flex items-center gap-3.5 mb-6">
-                {logo ? (
+              {logo && (
+                <div className="flex items-center gap-3.5 mb-6">
                   <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded" />
-                ) : (
-                  <div className="px-3 py-1.5 rounded-lg border text-xs font-mono font-bold tracking-wider"
-                       style={{ backgroundColor: `${accentColor}15`, borderColor: `${accentColor}25`, color: accentColor }}>
-                    ADMIN PANEL
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
+              <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-4" style={{ color: textColor }}>
                 {renderHeadline(headline || "Manage Everything **From One Place**", "manage_everything")}
               </h1>
 
-              <p className="text-[19px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+              <p className="text-[19px] leading-relaxed opacity-85" style={{ color: secondaryColor }}>
                 {subheadline || "A unified dashboard for all your store operations."}
               </p>
             </div>
 
-            <div className="flex flex-col mt-auto" style={{ gap: featureSpacing }}>
-              <div className="flex flex-wrap" style={{ gap: featureSpacing }}>
-                {features.filter(Boolean).map((feat, i) => (
-                  <div key={i} className="inline-flex items-center gap-3.5 px-4.5 py-3.5 rounded-xl border shadow-sm"
-                       style={{
-                         backgroundColor: `${accentColor}15`,
-                         borderColor: `${accentColor}25`,
-                         color: bodyTextColor
-                       }}>
-                    <svg style={{ width: `${20 * featureIconSize}px`, height: `${20 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.63 3.06" />
+            <div className="flex flex-col gap-4 w-full">
+              {features.filter(Boolean).map((feat, i) => (
+                <div 
+                  key={i} 
+                  className="flex items-center gap-4.5 p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.02] shadow-sm"
+                  style={{
+                    backgroundColor: isDark ? "rgba(255, 255, 255, 0.03)" : "rgba(255, 255, 255, 0.75)",
+                    borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)",
+                    color: bodyTextColor
+                  }}
+                >
+                  <div 
+                    className="rounded-xl flex items-center justify-center shrink-0 size-10 border"
+                    style={{ 
+                      backgroundColor: `${accentColor}15`,
+                      color: accentColor,
+                      borderColor: `${accentColor}30`,
+                      boxShadow: `0 0 10px ${accentColor}1A`
+                    }}
+                  >
+                    <svg style={{ width: `${20 * featureIconSize}px`, height: `${20 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                     </svg>
-                    <span className="font-bold" style={{ fontSize: `${16 * featureTextSize}px` }}>{feat}</span>
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-4">
-                <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border"
-                     style={{
-                       backgroundColor: isDark ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.05)",
-                       borderColor: "rgba(16, 185, 129, 0.2)"
-                     }}>
-                  <svg className="size-4.5 text-emerald-400" viewBox="0 0 24 24" fill="currentColor" style={{ color: isDark ? "#34D399" : "#059669" }}>
-                    <path d="M19.782 9.273L16.27 4.195a.75.75 0 00-.616-.32h-7.31a.75.75 0 00-.615.32L4.218 9.273a2.25 2.25 0 00-.34 1.848l1.455 6.545A3.75 3.75 0 008.973 20.5h6.054a3.75 3.75 0 003.64-2.834l1.455-6.545a2.25 2.25 0 00-.34-1.848zM12 2.25a2.25 2.25 0 00-2.25 2.25v.75h4.5v-.75A2.25 2.25 0 0012 2.25z" />
-                  </svg>
-                  <span className="text-[12px] font-bold tracking-wider uppercase font-mono" style={{ color: isDark ? "#34D399" : "#059669" }}>Built for Shopify</span>
+                  <span className="font-extrabold text-[16.5px]" style={{ fontSize: `${16.5 * featureTextSize}px` }}>{feat}</span>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -2835,16 +2856,11 @@ function TemplateCanvas({
 
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-center z-10 h-full">
-            <div className="flex items-center gap-3 mb-6">
-              {logo ? (
+            {logo && (
+              <div className="flex items-center gap-3 mb-6">
                 <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded" />
-              ) : (
-                <span className="px-3.5 py-1.5 rounded-full text-[12px] font-bold tracking-wider uppercase border"
-                      style={{ backgroundColor: `${accentColor}15`, color: accentColor, borderColor: `${accentColor}25` }}>
-                  SMART UPSELL
-                </span>
-              )}
-            </div>
+              </div>
+            )}
 
             <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
               {renderHeadline(headline || "Increase AOV With **Smart Recommendations**", "smart_recommendations")}
@@ -3038,16 +3054,11 @@ function TemplateCanvas({
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-between z-10 h-full py-4">
             <div>
-              <div className="flex items-center gap-3.5 mb-6">
-                {logo ? (
+              {logo && (
+                <div className="flex items-center gap-3.5 mb-6">
                   <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded" />
-                ) : (
-                  <span className="px-3.5 py-1.5 rounded-lg border-2 shadow-[2px_2px_0px_rgba(0,0,0,0.9)] text-xs font-mono font-bold tracking-wider"
-                        style={{ backgroundColor: `${accentColor}20`, borderColor: bodyTextColor, color: bodyTextColor }}>
-                    MERCHANT TOOLS
-                  </span>
-                )}
-              </div>
+                </div>
+              )}
 
               <h1 className="text-[52px] font-black leading-[1.1] tracking-tight mb-5" style={{ color: textColor }}>
                 {renderHeadline(headline || "All the Tools You Need to **Succeed!**", "tools_success")}
@@ -3118,7 +3129,9 @@ function TemplateCanvas({
           {Array.from({ length: 9 }).map((_, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-center text-gray-950/8 dark:text-white/4 font-mono text-[24px] font-black uppercase tracking-[0.2em] rotate-[-28deg] select-none whitespace-nowrap"
+              className={`flex items-center justify-center font-mono text-[24px] font-black uppercase tracking-[0.2em] rotate-[-28deg] select-none whitespace-nowrap ${
+                isDark ? "text-white/15" : "text-gray-950/18"
+              }`}
             >
               Screenify Preview
             </div>

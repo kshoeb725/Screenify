@@ -1,6 +1,10 @@
 import { Link } from "@tanstack/react-router";
 
-export function Footer() {
+interface FooterProps {
+  onHomeClick?: () => void;
+}
+
+export function Footer({ onHomeClick }: FooterProps) {
   return (
     <footer className="border-t border-border bg-card/30">
       <div className="mx-auto max-w-6xl px-6 py-14">
@@ -18,8 +22,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              AI-powered Shopify App Store promo image generator. Upload one screenshot, get
-              polished, store-ready images in seconds.
+              The ultimate marketing design engine for Shopify developers. Transform raw app screenshots into high-converting, premium storefront graphics that build trust and drive installs.
             </p>
           </div>
 
@@ -32,6 +35,13 @@ export function Footer() {
               <li>
                 <Link
                   to="/"
+                  onClick={(e) => {
+                    if (onHomeClick) {
+                      onHomeClick();
+                    } else {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
                   className="transition-colors hover:text-foreground"
                 >
                   Home
@@ -63,12 +73,19 @@ export function Footer() {
             </h4>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li>
-                <a
-                  href="/"
+                <Link
+                  to="/"
+                  onClick={(e) => {
+                    if (onHomeClick) {
+                      onHomeClick();
+                    } else {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
                   className="transition-colors hover:text-foreground"
                 >
                   Generate Promos
-                </a>
+                </Link>
               </li>
               <li>
                 <a

@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { 
-  Upload, 
-  Sparkles, 
-  Layers, 
-  Download, 
-  Check, 
-  X, 
-  Zap, 
-  Maximize2, 
-  Palette, 
-  ShieldCheck, 
-  Flame, 
+import {
+  Upload,
+  Sparkles,
+  Layers,
+  Download,
+  Check,
+  X,
+  Zap,
+  Maximize2,
+  Palette,
+  ShieldCheck,
+  Flame,
   ArrowRight,
   ChevronRight,
   Star,
@@ -28,11 +28,37 @@ interface LandingPageProps {
 
 export function LandingPage({ onPick, onDrop }: LandingPageProps) {
   const [dragging, setDragging] = useState(false);
-  
+
   // Before vs After Slider State
   const [sliderPos, setSliderPos] = useState(50);
   const sliderRef = useRef<HTMLDivElement>(null);
   const isSliding = useRef(false);
+  const [userInteracted, setUserInteracted] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (userInteracted || isHovered) return;
+
+    let animationFrameId: number;
+    let direction = -1; // Start by scrolling towards the left side
+    let currentPos = sliderPos;
+
+    const animate = () => {
+      currentPos += direction * 0.15; // Slow, smooth speed
+      if (currentPos >= 85) {
+        currentPos = 85;
+        direction = -1;
+      } else if (currentPos <= 15) {
+        currentPos = 15;
+        direction = 1;
+      }
+      setSliderPos(currentPos);
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [userInteracted, isHovered]);
 
   const handleSliderMove = (clientX: number) => {
     if (!sliderRef.current) return;
@@ -66,29 +92,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
     };
   }, []);
 
-  // 3D Card Tilt State
-  const card3DRef = useRef<HTMLDivElement>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [isCardHovered, setIsCardHovered] = useState(false);
 
-  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!card3DRef.current) return;
-    const rect = card3DRef.current.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left - width / 2;
-    const mouseY = e.clientY - rect.top - height / 2;
-    
-    // Rotate max 12 degrees
-    const rotateX = -(mouseY / (height / 2)) * 12;
-    const rotateY = (mouseX / (width / 2)) * 12;
-    setTilt({ x: rotateX, y: rotateY });
-  };
-
-  const handleCardMouseLeave = () => {
-    setIsCardHovered(false);
-    setTilt({ x: 0, y: 0 });
-  };
 
   // Carousel State
   const [activeTemplate, setActiveTemplate] = useState(0);
@@ -170,9 +174,49 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
     }
   ];
 
+  const Custom3DStyles = () => (
+    <style dangerouslySetInnerHTML={{ __html: `
+      @keyframes float3D {
+        0%, 100% {
+          transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0);
+        }
+        50% {
+          transform: perspective(1000px) rotateX(4deg) rotateY(-1.5deg) translateY(-6px);
+        }
+      }
+      
+      @keyframes floatSub {
+        0%, 100% {
+          transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0);
+        }
+        50% {
+          transform: perspective(1000px) rotateX(2.5deg) rotateY(-1deg) translateY(-3px);
+        }
+      }
+
+      .animate-float-3d {
+        animation: float3D 6s ease-in-out infinite;
+        transform-style: preserve-3d;
+        backface-visibility: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .animate-float-sub {
+        animation: floatSub 6s ease-in-out infinite;
+        animation-delay: 0.4s;
+        transform-style: preserve-3d;
+        backface-visibility: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    `}} />
+  );
+
   return (
     <div className="w-full text-foreground select-none">
-      
+      <Custom3DStyles />
+
       {/* BACKGROUND DECORATIVE ELEMENTS */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] pointer-events-none overflow-hidden -z-10 opacity-30 dark:opacity-45">
         <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[80%] rounded-full bg-gradient-to-br from-[#3ECFB2] to-transparent blur-[120px]" />
@@ -180,236 +224,42 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
       </div>
 
       {/* HERO SECTION */}
-      <section className="relative pt-10 pb-20 md:pb-28 max-w-6xl mx-auto px-6">
-        <div className="grid lg:grid-cols-12 gap-12 items-center">
-          
-          {/* Left Column - Headline & Call to Action */}
-          <div className="lg:col-span-7 flex flex-col items-start text-left space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-[#3ECFB2] text-xs font-mono tracking-wider uppercase">
-              <Sparkles className="size-3.5" /> Built Exclusively for Shopify Creators
-            </div>
-            
-            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] text-balance">
-              Transform One Screenshot Into <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-[#3ECFB2] to-emerald-500 dark:from-[#3ECFB2] dark:via-[#5EEAD4] dark:to-[#C8E84A]">App Store Images</span> That Convert
-            </h1>
-            
-            <p className="max-w-xl text-lg text-muted-foreground leading-relaxed text-balance">
-              Upload a single screenshot and generate professional Shopify App Store marketing creatives in seconds. No designers, no Canva, no wasted time.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto pt-2">
-              <Button 
-                onClick={onPick}
-                className="bg-[#3ECFB2] dark:bg-gradient-to-r dark:from-[#3ECFB2] dark:to-[#059669] text-ink hover:opacity-95 font-semibold text-base py-6 px-10 rounded-xl cursor-pointer shadow-lg shadow-emerald-500/20 active:scale-98 transition-all flex items-center justify-center gap-2 border-0"
-              >
-                <Upload className="size-5" /> Get Started — Upload Screenshot
-              </Button>
-            </div>
-
-            {/* Micro proof badges */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2.5 pt-4 text-xs font-mono text-muted-foreground border-t border-border/60 w-full">
-              <span className="flex items-center gap-1"><Check className="size-3.5 text-[#3ECFB2]" /> 1600x900 Optimized</span>
-              <span className="flex items-center gap-1"><Check className="size-3.5 text-[#3ECFB2]" /> Exact Brand Matching</span>
-              <span className="flex items-center gap-1"><Check className="size-3.5 text-[#3ECFB2]" /> No Figma Skills Required</span>
-            </div>
+      <section className="relative pt-20 pb-20 md:pb-28 max-w-4xl mx-auto px-6 text-center">
+        <div className="flex flex-col items-center space-y-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-[#3ECFB2] text-xs font-mono tracking-wider uppercase">
+            <Sparkles className="size-3.5" /> Built Exclusively for Shopify Creators
           </div>
-          
-          {/* Right Column - Interactive 3D Showcase */}
-          <div className="lg:col-span-5 flex justify-center items-center">
-            <div 
-              ref={card3DRef}
-              onMouseMove={handleCardMouseMove}
-              onMouseEnter={() => setIsCardHovered(true)}
-              onMouseLeave={handleCardMouseLeave}
-              className="relative w-full max-w-[420px] aspect-[4/5] rounded-3xl border border-border/80 bg-card/65 backdrop-blur-xl p-6 shadow-2xl transition-all duration-200 flex flex-col justify-between overflow-hidden cursor-pointer"
-              style={{
-                transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(${isCardHovered ? 1.02 : 1}, ${isCardHovered ? 1.02 : 1}, 1)`,
-                transformStyle: "preserve-3d"
-              }}
+
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] text-balance animate-float-3d">
+            Turn Raw Screenshots Into <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-[#3ECFB2] to-emerald-500 dark:from-[#3ECFB2] dark:via-[#5EEAD4] dark:to-[#C8E84A]">Professional App Store Images</span>
+          </h1>
+
+          <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed text-balance animate-float-sub">
+            Turn raw screenshots into professional, brand-aligned marketing images. Screenify matches your colors, writes engaging copy, and builds ready-to-publish listing graphics instantly—no design experience required.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 w-full sm:w-auto pt-2">
+            <Button
+              onClick={onPick}
+              className="bg-[#3ECFB2] dark:bg-gradient-to-r dark:from-[#3ECFB2] dark:to-[#059669] text-ink hover:opacity-95 font-semibold text-base py-6 px-10 rounded-xl cursor-pointer shadow-lg shadow-emerald-500/20 active:scale-98 transition-all flex items-center justify-center gap-2 border-0"
             >
-              {/* Mesh ambient glow inside card */}
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-lime-500/5 pointer-events-none -z-10" />
-
-              {/* Card top banner */}
-              <div className="flex items-center justify-between border-b border-border/40 pb-4" style={{ transform: "translateZ(30px)" }}>
-                <div className="flex items-center gap-2">
-                  <div className="size-3 rounded-full bg-red-500" />
-                  <div className="size-3 rounded-full bg-yellow-500" />
-                  <div className="size-3 rounded-full bg-green-500" />
-                </div>
-                <span className="text-xs font-mono text-muted-foreground">screenify.app/preview</span>
-              </div>
-
-              {/* Center visuals - before and after stacking */}
-              <div className="relative flex-1 my-6 flex items-center justify-center" style={{ transform: "preserve-3d" }}>
-                
-                {/* Visual Connector / Scanning Laser */}
-                {isCardHovered && (
-                  <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#3ECFB2] to-transparent shadow-[0_0_10px_#3ECFB2] z-30 animate-pulse" style={{ top: "45%" }} />
-                )}                 {/* Back Element: Raw Input Screenshot */}
-                <div 
-                  className="absolute w-[85%] aspect-[16/10] rounded-xl border border-border/80 bg-white shadow-lg transition-transform duration-500 overflow-hidden"
-                  style={{ 
-                    transform: isCardHovered 
-                      ? "translateZ(10px) translateY(-50px) rotateX(10deg) rotateY(-5deg) scale(0.9)" 
-                      : "translateZ(20px) translateY(-20px) rotate(-3deg)" 
-                  }}
-                >
-                  {/* Browser top header */}
-                  <div className="h-5 bg-slate-100 flex items-center px-2.5 gap-1 border-b border-border/40">
-                    <div className="size-1.5 rounded-full bg-red-400" />
-                    <div className="size-1.5 rounded-full bg-yellow-400" />
-                    <div className="size-1.5 rounded-full bg-green-400" />
-                    <div className="h-3 w-32 bg-slate-200/60 rounded ml-4" />
-                  </div>
-                  
-                  {/* Main dashboard content */}
-                  <div className="flex h-[calc(100%-20px)] bg-slate-50">
-                    {/* Tiny Sidebar */}
-                    <div className="w-10 bg-slate-900 flex flex-col items-center py-2 gap-3 shrink-0">
-                      <div className="size-4 rounded bg-slate-700" />
-                      <div className="size-4 rounded bg-slate-700" />
-                      <div className="size-4 rounded bg-slate-700" />
-                      <div className="size-4 rounded bg-slate-700" />
-                    </div>
-                    {/* Tiny Content area */}
-                    <div className="flex-1 p-3 flex flex-col gap-2.5 overflow-hidden">
-                      <div className="flex justify-between items-center">
-                        <div className="h-3.5 w-24 bg-slate-300 rounded" />
-                        <div className="h-3 w-12 bg-slate-200 rounded" />
-                      </div>
-                      
-                      {/* Metric widgets */}
-                      <div className="grid grid-cols-3 gap-2 shrink-0">
-                        <div className="bg-white border border-border/50 rounded p-1.5 flex flex-col gap-1 shadow-sm">
-                          <div className="h-1.5 w-8 bg-slate-200 rounded" />
-                          <div className="h-3 w-12 bg-slate-400 rounded" />
-                        </div>
-                        <div className="bg-white border border-border/50 rounded p-1.5 flex flex-col gap-1 shadow-sm">
-                          <div className="h-1.5 w-8 bg-slate-200 rounded" />
-                          <div className="h-3 w-10 bg-slate-400 rounded" />
-                        </div>
-                        <div className="bg-white border border-border/50 rounded p-1.5 flex flex-col gap-1 shadow-sm">
-                          <div className="h-1.5 w-8 bg-slate-200 rounded" />
-                          <div className="h-3 w-8 bg-slate-400 rounded" />
-                        </div>
-                      </div>
-
-                      {/* Main Chart Graphic */}
-                      <div className="flex-1 bg-white border border-border/50 rounded p-2 flex flex-col justify-between shadow-sm relative min-h-[48px]">
-                        <div className="absolute inset-0 p-2 opacity-15 flex flex-col justify-between pointer-events-none">
-                          <div className="w-full h-px bg-slate-300" />
-                          <div className="w-full h-px bg-slate-300" />
-                          <div className="w-full h-px bg-slate-300" />
-                        </div>
-                        {/* SVG Drawing of line chart */}
-                        <svg className="w-full h-full text-emerald-500 overflow-visible z-10" viewBox="0 0 100 40">
-                          <path 
-                            d="M0 35 Q15 20, 30 25 T60 10 T90 5 T100 0" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="2.5" 
-                            strokeLinecap="round"
-                          />
-                          {/* Points */}
-                          <circle cx="30" cy="25" r="2" fill="currentColor" />
-                          <circle cx="60" cy="10" r="2" fill="currentColor" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-2 -right-2 bg-zinc-900 border border-border px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 shadow-md z-20">
-                    Before: Raw Screenshot
-                  </div>
-                </div>
-
-                {/* Front Element: Screenify Rendered Creative */}
-                <div 
-                  className="absolute w-[90%] aspect-[16/9] rounded-xl border border-emerald-500/25 bg-gradient-to-br from-slate-950 via-[#0A1512] to-slate-950 p-3 shadow-2xl transition-transform duration-500 overflow-hidden"
-                  style={{ 
-                    transform: isCardHovered 
-                      ? "translateZ(70px) translateY(40px) rotateX(5deg) rotateY(8deg) scale(1.05)" 
-                      : "translateZ(50px) translateY(30px) rotate(2deg)" 
-                  }}
-                >
-                  {/* Banner overlay glow */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-transparent to-lime-500/5 pointer-events-none" />
-
-                  <div className="w-full h-full flex flex-col justify-between relative rounded-lg overflow-hidden border border-emerald-500/10 p-4 bg-[#0A1512]/40 backdrop-blur-sm">
-                    
-                    {/* Mock copy */}
-                    <div className="space-y-1 text-left z-20">
-                      <span className="text-[7px] font-bold font-mono text-[#3ECFB2] uppercase tracking-wider">01. Live Analytics</span>
-                      <h4 className="text-sm font-extrabold text-slate-100 font-display leading-tight">Track Store LTV in Real-Time</h4>
-                      <p className="text-[7px] text-slate-450">Increase merchant checkout value with live dashboards.</p>
-                    </div>
-
-                    {/* Framed device */}
-                    <div className="w-[85%] mx-auto mt-2 h-[68px] bg-slate-900/90 rounded-t-lg border-t border-x border-slate-700/60 overflow-hidden p-1 shadow-2xl flex flex-col transform translate-y-1">
-                      <div className="h-3 bg-slate-950/80 rounded-t-md flex items-center px-2 gap-1 border-b border-slate-800">
-                        <div className="size-1 rounded-full bg-slate-700" />
-                        <div className="size-1 rounded-full bg-slate-700" />
-                        <span className="text-[6px] text-slate-500 ml-1 font-mono">dashboard / analytics</span>
-                      </div>
-                      <div className="flex-1 bg-white flex overflow-hidden">
-                        {/* Miniature layout of raw screen */}
-                        <div className="w-6 bg-slate-900 py-1 flex flex-col items-center shrink-0">
-                          <div className="size-2 rounded-full bg-slate-700" />
-                        </div>
-                        <div className="flex-1 p-1 flex flex-col gap-1 overflow-hidden">
-                          <div className="h-1.5 w-8 bg-slate-300 rounded" />
-                          <div className="grid grid-cols-2 gap-1 shrink-0">
-                            <div className="bg-slate-50 border border-slate-200 rounded p-0.5 flex flex-col gap-0.5">
-                              <div className="h-[2px] w-4 bg-slate-300 rounded" />
-                              <div className="h-1 bg-[#3ECFB2] rounded" />
-                            </div>
-                            <div className="bg-slate-50 border border-slate-200 rounded p-0.5 flex flex-col gap-0.5">
-                              <div className="h-[2px] w-4 bg-slate-300 rounded" />
-                              <div className="h-1 bg-[#3ECFB2] rounded" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="absolute -bottom-2 -left-2 bg-emerald-950 border border-emerald-500/35 px-2 py-0.5 rounded text-[10px] font-mono text-[#3ECFB2] shadow-md z-20">
-                    After: Conversion Optimized
-                  </div>
-                </div>
-
-                {/* Floating Tags (Depth Effect) */}
-                <div 
-                  className="absolute right-0 top-6 bg-[#C8E84A] text-ink text-[10px] font-bold font-mono px-2 py-1 rounded-lg shadow-lg transition-transform duration-500"
-                  style={{ transform: isCardHovered ? "translateZ(100px) translateX(25px) translateY(-10px)" : "translateZ(30px) translateX(10px)" }}
-                >
-                  ✨ AI Copy
-                </div>
-
-                <div 
-                  className="absolute left-[-10px] bottom-12 bg-zinc-900/90 text-[#3ECFB2] border border-border/80 text-[10px] font-bold font-mono px-2.5 py-1 rounded-lg shadow-lg transition-transform duration-500"
-                  style={{ transform: isCardHovered ? "translateZ(85px) translateX(-25px) translateY(20px)" : "translateZ(40px) translateX(-5px)" }}
-                >
-                  🎨 Brand Colors Match
-                </div>
-
-              </div>
-
-              {/* Card bottom footer info */}
-              <div className="flex items-center justify-between border-t border-border/40 pt-4" style={{ transform: "translateZ(40px)" }}>
-                <span className="text-xs text-muted-foreground font-mono">Hover to inspect layout depth</span>
-                <span className="text-xs text-[#3ECFB2] font-semibold flex items-center gap-1">Screenify AI <Sparkles className="size-3" /></span>
-              </div>
-            </div>
+              <Upload className="size-5" /> Get Started — Upload Screenshot
+            </Button>
           </div>
 
+          {/* Micro proof badges */}
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 pt-4 text-xs font-mono text-muted-foreground border-t border-border/60 w-full max-w-xl">
+            <span className="flex items-center gap-1"><Check className="size-3.5 text-[#3ECFB2]" /> 1600x900 Optimized</span>
+            <span className="flex items-center gap-1"><Check className="size-3.5 text-[#3ECFB2]" /> Exact Brand Matching</span>
+            <span className="flex items-center gap-1"><Check className="size-3.5 text-[#3ECFB2]" /> No Figma Skills Required</span>
+          </div>
         </div>
       </section>
 
       {/* BEFORE VS AFTER INTERACTIVE COMPARISON */}
       <section className="py-20 border-t border-border/40 bg-card/20 relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-6 text-center space-y-12">
-          
+
           <div className="space-y-4">
             <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">The Screenify Transformation</h2>
             <p className="max-w-2xl mx-auto text-base text-muted-foreground leading-relaxed">
@@ -418,97 +268,57 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
           </div>
 
           {/* Slider Container */}
-          <div 
+          <div
             ref={sliderRef}
             className="relative w-full aspect-[16/9] rounded-2xl border border-border overflow-hidden select-none cursor-ew-resize shadow-2xl group"
-            onMouseDown={(e) => { e.preventDefault(); isSliding.current = true; handleSliderMove(e.clientX); }}
-            onTouchStart={(e) => { isSliding.current = true; if(e.touches[0]) handleSliderMove(e.touches[0].clientX); }}
+            onMouseDown={(e) => { 
+              e.preventDefault(); 
+              isSliding.current = true; 
+              setUserInteracted(true); 
+              handleSliderMove(e.clientX); 
+            }}
+            onTouchStart={(e) => { 
+              isSliding.current = true; 
+              setUserInteracted(true); 
+              if (e.touches[0]) handleSliderMove(e.touches[0].clientX); 
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
           >
-            {/* Background Image / "BEFORE" SIDE (Visible on right) */}
-            <div className="absolute inset-0 bg-[#1e1e1e] flex flex-col items-center justify-center p-8 md:p-16">
-              {/* Dull raw screenshot mockup */}
-              <div className="w-full h-full rounded-xl bg-zinc-900 border border-zinc-800 shadow-lg p-3 flex flex-col">
-                <div className="h-5 bg-zinc-800/80 rounded-t flex items-center px-3 gap-1.5 border-b border-zinc-700/50">
-                  <div className="size-2.5 rounded-full bg-zinc-700" />
-                  <div className="size-2.5 rounded-full bg-zinc-700" />
-                  <span className="text-[10px] font-mono text-zinc-500 ml-2">Shopify Admin / analytics</span>
-                </div>
-                <div className="flex-1 bg-zinc-950 p-4 flex flex-col gap-3">
-                  <div className="h-6 w-32 bg-zinc-800 rounded" />
-                  <div className="grid grid-cols-3 gap-3 flex-1">
-                    <div className="bg-zinc-900 border border-zinc-850 rounded p-3 flex flex-col justify-between">
-                      <div className="h-3 w-12 bg-zinc-850 rounded" />
-                      <div className="h-6 w-20 bg-zinc-800 rounded" />
-                    </div>
-                    <div className="bg-zinc-900 border border-zinc-850 rounded p-3 flex flex-col justify-between">
-                      <div className="h-3 w-12 bg-zinc-850 rounded" />
-                      <div className="h-6 w-16 bg-zinc-800 rounded" />
-                    </div>
-                    <div className="bg-zinc-900 border border-zinc-850 rounded p-3 flex flex-col justify-between">
-                      <div className="h-3 w-12 bg-zinc-850 rounded" />
-                      <div className="h-6 w-14 bg-zinc-800 rounded" />
-                    </div>
-                  </div>
-                  <div className="h-16 bg-zinc-900 border border-zinc-850 rounded" />
-                </div>
-              </div>
-              
-              {/* Before badge */}
-              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur border border-white/10 px-3 py-1 rounded-full text-xs font-mono text-slate-300">
-                Before: Raw Shopify Screenshot
+            {/* Background Image / "AFTER" SIDE (Visible on right) */}
+            <div className="absolute inset-0 bg-[#0E1510] flex items-center justify-center">
+              <img 
+                src="/screenify-ready-to-publish.png" 
+                alt="After Screenify: Ready to Publish" 
+                className="w-full h-full object-contain select-none pointer-events-none"
+              />
+              {/* After badge */}
+              <div className="absolute top-4 right-4 bg-indigo-950/90 backdrop-blur border border-indigo-500/30 px-3 py-1 rounded-full text-xs font-mono text-indigo-400 z-10">
+                After Screenify: Ready to Publish
               </div>
             </div>
 
-            {/* Overlay Div / "AFTER" SIDE (Visible on left, size controlled by sliderPos) */}
-            <div 
-              className="absolute inset-y-0 left-0 overflow-hidden bg-gradient-to-tr from-slate-900 via-indigo-950 to-slate-900"
+            {/* Overlay Div / "BEFORE" SIDE (Visible on left, size controlled by sliderPos) */}
+            <div
+              className="absolute inset-y-0 left-0 overflow-hidden bg-[#1A1A1A]"
               style={{ width: `${sliderPos}%` }}
             >
               {/* Mirror of the complete inner layout, fixed at full container width */}
-              <div className="absolute inset-0 w-[864px] md:w-[896px] lg:w-[896px] h-full flex flex-col justify-between p-8 md:p-12" style={{ width: sliderRef.current?.getBoundingClientRect().width }}>
-                
-                {/* Visual Header copywriting */}
-                <div className="space-y-1.5 text-left max-w-md">
-                  <span className="text-xs font-bold font-mono text-indigo-400 uppercase tracking-widest">01. Live Analytics</span>
-                  <h3 className="text-xl md:text-3xl font-bold font-display text-white">Track Store Revenue & LTV In Real-Time</h3>
-                </div>
-
-                {/* Styled screenshot inside a beautiful canvas device */}
-                <div className="w-[85%] mx-auto mt-4 bg-slate-950 border border-slate-700/80 rounded-t-xl overflow-hidden p-2 shadow-2xl flex flex-col transform translate-y-2 border-b-0">
-                  <div className="h-6 bg-slate-900/90 flex items-center px-4 gap-2 border-b border-slate-800">
-                    <div className="size-2 rounded-full bg-red-500/80" />
-                    <div className="size-2 rounded-full bg-yellow-500/80" />
-                    <div className="size-2 rounded-full bg-green-500/80" />
-                    <span className="text-[10px] font-mono text-slate-400 ml-2">Orderly Dashboard / Analytics</span>
-                  </div>
-                  <div className="bg-slate-950 p-4 flex flex-col gap-3">
-                    <div className="h-5 w-24 bg-indigo-900/30 rounded border border-indigo-800/30" />
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="bg-indigo-950/20 border border-indigo-900/30 rounded p-3 flex flex-col justify-between">
-                        <div className="h-2 w-8 bg-slate-700 rounded" />
-                        <div className="text-sm font-bold text-[#3ECFB2] font-mono mt-2">$24,930</div>
-                      </div>
-                      <div className="bg-indigo-950/20 border border-indigo-900/30 rounded p-3 flex flex-col justify-between">
-                        <div className="h-2 w-8 bg-slate-700 rounded" />
-                        <div className="text-sm font-bold text-[#3ECFB2] font-mono mt-2">+12.4%</div>
-                      </div>
-                      <div className="bg-indigo-950/20 border border-indigo-900/30 rounded p-3 flex flex-col justify-between">
-                        <div className="h-2 w-8 bg-slate-700 rounded" />
-                        <div className="text-sm font-bold text-[#3ECFB2] font-mono mt-2">1,824 orders</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* After badge */}
-                <div className="absolute top-4 left-4 bg-indigo-950/90 backdrop-blur border border-indigo-500/30 px-3 py-1 rounded-full text-xs font-mono text-indigo-400">
-                  After Screenify: Ready to Publish
+              <div className="absolute inset-0 h-full flex items-center justify-center bg-[#F6F6F7]" style={{ width: sliderRef.current?.getBoundingClientRect().width }}>
+                <img 
+                  src="/shopify-raw-screenshot.jpg" 
+                  alt="Before: Raw Shopify Screenshot" 
+                  className="w-full h-full object-contain select-none pointer-events-none"
+                />
+                {/* Before badge */}
+                <div className="absolute top-4 left-4 bg-black/60 backdrop-blur border border-white/10 px-3 py-1 rounded-full text-xs font-mono text-slate-300 z-10">
+                  Before: Raw Shopify Screenshot
                 </div>
               </div>
             </div>
 
             {/* Slider bar & dragging handle */}
-            <div 
+            <div
               className="absolute inset-y-0 w-0.5 bg-[#3ECFB2] shadow-[0_0_10px_#3ECFB2] z-40 pointer-events-none"
               style={{ left: `${sliderPos}%` }}
             >
@@ -518,19 +328,12 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
             </div>
 
           </div>
-
-          <div className="flex justify-center gap-4 text-xs font-mono text-muted-foreground pt-2">
-            <span>← Slide left to reveal the RAW SCREENSHOT</span>
-            <span className="text-border">|</span>
-            <span>Slide right to reveal the DESIGNED CREATIVE →</span>
-          </div>
-
         </div>
       </section>
 
       {/* HOW IT WORKS TIMELINE */}
-      <section className="py-24 max-w-5xl mx-auto px-6 relative">
-        
+      <section id="how-it-works" className="py-24 max-w-5xl mx-auto px-6 relative">
+
         <div className="text-center space-y-4 mb-16">
           <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Four Steps to Shopify Success</h2>
           <p className="max-w-xl mx-auto text-base text-muted-foreground">
@@ -540,7 +343,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
 
         {/* Steps container */}
         <div className="relative grid md:grid-cols-4 gap-8">
-          
+
           {/* Vertical progress line for mobile, horizontal for desktop */}
           <div className="absolute left-[33px] md:left-0 md:top-8 right-0 md:h-0.5 bottom-0 w-0.5 md:w-full bg-border -z-10 hidden md:block" />
 
@@ -575,7 +378,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
             }
           ].map((item, index) => (
             <div key={index} className="relative flex md:flex-col items-start gap-6 md:gap-4 bg-card/30 border border-border/50 rounded-2xl p-5 md:p-6 hover:bg-card/65 transition-colors group">
-              
+
               {/* Step indicator */}
               <div className={`size-12 rounded-xl border flex items-center justify-center shrink-0 ${item.color} shadow-inner transition-transform group-hover:scale-110 duration-200`}>
                 <item.icon className="size-5" />
@@ -599,7 +402,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
       {/* WHY SCREENIFY (COMPARISON MATRIX) */}
       <section className="py-20 border-t border-border/40 bg-card/10">
         <div className="max-w-4xl mx-auto px-6">
-          
+
           <div className="text-center space-y-4 mb-16">
             <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Stop Wasting Hours in Canva</h2>
             <p className="max-w-xl mx-auto text-base text-muted-foreground">
@@ -607,238 +410,171 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
             </p>
           </div>
 
-          {/* Table Container */}
-          <div className="overflow-x-auto border border-border rounded-2xl bg-card/35 backdrop-blur-md">
-            <table className="w-full min-w-[600px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-border/80 bg-muted/40 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="p-5">Feature</th>
-                  <th className="p-5">Canva / Figma</th>
-                  <th className="p-5">Freelance Designer</th>
-                  <th className="p-5 text-[#3ECFB2] bg-[#3ECFB2]/5 font-bold">Screenify</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
+          {/* Table Container with 3D Perspective */}
+          <div className="w-full [perspective:1200px] py-4 overflow-visible">
+            <div 
+              className="w-full border border-border/85 rounded-2xl bg-card/30 backdrop-blur-md shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] [transform:none] md:[transform:rotateX(4deg)_rotateY(-2deg)_rotateZ(0.2deg)] hover:[transform:none] transition-all duration-500 ease-out p-3 sm:p-5 md:p-8 overflow-visible"
+            >
+              <div className="grid grid-cols-4 gap-y-1.5 md:gap-y-2 gap-x-2 md:gap-x-4 items-center text-[10px] sm:text-xs md:text-sm">
+                
+                {/* Headers */}
+                <div className="font-mono text-[9px] md:text-xs uppercase tracking-wider text-muted-foreground/80 p-2 md:p-4 font-semibold text-left">Feature</div>
+                <div className="font-mono text-[9px] md:text-xs uppercase tracking-wider text-muted-foreground/80 p-2 md:p-4 text-center font-semibold">
+                  <span className="hidden sm:inline">Canva / Figma</span>
+                  <span className="inline sm:hidden">Canva</span>
+                </div>
+                <div className="font-mono text-[9px] md:text-xs uppercase tracking-wider text-muted-foreground/80 p-2 md:p-4 text-center font-semibold">
+                  <span className="hidden sm:inline">Freelance Designer</span>
+                  <span className="inline sm:hidden">Freelancer</span>
+                </div>
+                <div className="relative font-mono text-[9px] md:text-xs uppercase tracking-wider text-[#3ECFB2] font-extrabold p-2 md:p-4 text-center bg-gradient-to-b from-[#3ECFB2]/12 to-[#3ECFB2]/6 rounded-t-xl border-t border-x border-[#3ECFB2]/20 shadow-md shadow-[#3ECFB2]/5">
+                  Screenify
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-500 to-[#3ECFB2] text-slate-950 font-sans text-[7px] md:text-[9px] font-extrabold px-2 md:px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-md whitespace-nowrap">
+                    Winner
+                  </span>
+                </div>
+
+                {/* Rows */}
                 {[
-                  { f: "Generation Speed", c: "1 - 2 Hours", d: "3 - 5 Days", s: "Under 30 Seconds", highlight: true },
-                  { f: "Project Pricing", c: "$15 - $20 / mo", d: "$150 - $400 / project", s: "Free / Starter plan", highlight: false },
-                  { f: "Shopify Dimension Fitting", c: "Manual adjust", d: "Needs correction", s: "Exact 1600x900 default", highlight: false },
-                  { f: "Brand Color Extraction", c: "Manual eye-drop", d: "Required guidelines", s: "Automatic (1-Click)", highlight: false },
-                  { f: "Contextual Copywriting", c: "Manual brainstorm", d: "Requires copywriter", s: "Built-in AI Generation", highlight: false },
-                  { f: "Batch Style Sync", c: "Duplicate & adjust", d: "N/A", s: "Apply to All (1-Click)", highlight: true }
-                ].map((row, idx) => (
-                  <tr key={idx} className="hover:bg-muted/10 transition-colors">
-                    <td className="p-5 font-medium text-foreground">{row.f}</td>
-                    <td className="p-5 text-muted-foreground">{row.c}</td>
-                    <td className="p-5 text-muted-foreground">{row.d}</td>
-                    <td className={`p-5 font-bold bg-[#3ECFB2]/5 ${row.highlight ? "text-emerald-600 dark:text-[#C8E84A]" : "text-emerald-500 dark:text-[#3ECFB2]"}`}>
-                      <span className="flex items-center gap-1.5">
-                        <CheckCircle2 className="size-4 shrink-0 text-emerald-500 dark:text-[#3ECFB2]" /> {row.s}
+                  { f: <>
+                      <span className="hidden sm:inline">Generation Speed</span>
+                      <span className="inline sm:hidden">Speed</span>
+                    </>,
+                    c: <>
+                      <span className="hidden sm:inline">1 - 2 Hours</span>
+                      <span className="inline sm:hidden">1-2 hrs</span>
+                    </>,
+                    d: <>
+                      <span className="hidden sm:inline">3 - 5 Days</span>
+                      <span className="inline sm:hidden">3-5 days</span>
+                    </>,
+                    s: <>
+                      <span className="hidden sm:inline">Under 30 Seconds</span>
+                      <span className="inline sm:hidden">&lt; 30s</span>
+                    </>
+                  },
+                  { f: <>
+                      <span className="hidden sm:inline">Project Pricing</span>
+                      <span className="inline sm:hidden">Price</span>
+                    </>,
+                    c: <>
+                      <span className="hidden sm:inline">$15 - $20 / mo</span>
+                      <span className="inline sm:hidden">$15-$20/mo</span>
+                    </>,
+                    d: <>
+                      <span className="hidden sm:inline">$150 - $400 / project</span>
+                      <span className="inline sm:hidden">$150-$400</span>
+                    </>,
+                    s: <>
+                      <span className="hidden sm:inline">Free / Starter plan</span>
+                      <span className="inline sm:hidden">Free / Pro</span>
+                    </>
+                  },
+                  { f: <>
+                      <span className="hidden sm:inline">Shopify Dimension Fitting</span>
+                      <span className="inline sm:hidden">Shopify Fit</span>
+                    </>,
+                    c: <>
+                      <span className="hidden sm:inline">Manual adjust</span>
+                      <span className="inline sm:hidden">Manual</span>
+                    </>,
+                    d: <>
+                      <span className="hidden sm:inline">Needs correction</span>
+                      <span className="inline sm:hidden">Needs edit</span>
+                    </>,
+                    s: <>
+                      <span className="hidden sm:inline">Exact 1600x900 default</span>
+                      <span className="inline sm:hidden">1600x900</span>
+                    </>
+                  },
+                  { f: <>
+                      <span className="hidden sm:inline">Brand Color Extraction</span>
+                      <span className="inline sm:hidden">Color Match</span>
+                    </>,
+                    c: <>
+                      <span className="hidden sm:inline">Manual eye-drop</span>
+                      <span className="inline sm:hidden">Manual</span>
+                    </>,
+                    d: <>
+                      <span className="hidden sm:inline">Required guidelines</span>
+                      <span className="inline sm:hidden">Manual</span>
+                    </>,
+                    s: <>
+                      <span className="hidden sm:inline">Automatic (1-Click)</span>
+                      <span className="inline sm:hidden">Auto</span>
+                    </>
+                  },
+                  { f: <>
+                      <span className="hidden sm:inline">Contextual Copywriting</span>
+                      <span className="inline sm:hidden">AI Copy</span>
+                    </>,
+                    c: <>
+                      <span className="hidden sm:inline">Manual brainstorm</span>
+                      <span className="inline sm:hidden">Manual</span>
+                    </>,
+                    d: <>
+                      <span className="hidden sm:inline">Requires copywriter</span>
+                      <span className="inline sm:hidden">Manual</span>
+                    </>,
+                    s: <>
+                      <span className="hidden sm:inline">Built-in AI Generation</span>
+                      <span className="inline sm:hidden">AI Built-in</span>
+                    </>
+                  },
+                  { f: <>
+                      <span className="hidden sm:inline">Batch Style Sync</span>
+                      <span className="inline sm:hidden">Style Sync</span>
+                    </>,
+                    c: <>
+                      <span className="hidden sm:inline">Duplicate & adjust</span>
+                      <span className="inline sm:hidden">Manual</span>
+                    </>,
+                    d: <>
+                      <span className="hidden sm:inline">N/A</span>
+                      <span className="inline sm:hidden">N/A</span>
+                    </>,
+                    s: <>
+                      <span className="hidden sm:inline">Apply to All (1-Click)</span>
+                      <span className="inline sm:hidden">1-Click Sync</span>
+                    </>
+                  }
+                ].map((row, idx, arr) => (
+                  <div key={idx} className="col-span-4 grid grid-cols-4 items-center gap-x-2 md:gap-x-4 hover:bg-white/5 dark:hover:bg-white/2.5 -mx-2 md:-mx-4 px-2 md:px-4 rounded-lg transition-colors group">
+                    {/* Feature Cell */}
+                    <div className="py-2.5 md:py-4 font-semibold text-foreground/90 border-b border-border/20 text-left">{row.f}</div>
+                    
+                    {/* Canva Cell */}
+                    <div className="py-2.5 md:py-4 text-muted-foreground text-center border-b border-border/20 font-medium">{row.c}</div>
+                    
+                    {/* Designer Cell */}
+                    <div className="py-2.5 md:py-4 text-muted-foreground text-center border-b border-border/20 font-medium">{row.d}</div>
+                    
+                    {/* Screenify Cell - Highlighted 3D Pop-out */}
+                    <div className={`py-2.5 md:py-4 font-bold text-center bg-[#3ECFB2]/4 border-x border-[#3ECFB2]/15 relative group-hover:bg-[#3ECFB2]/8 transition-colors ${
+                      idx === arr.length - 1 ? "rounded-b-xl border-b border-[#3ECFB2]/25 shadow-lg shadow-[#3ECFB2]/3" : "border-b border-border/20"
+                    }`}>
+                      <span className="flex items-center justify-center gap-1 text-emerald-400 dark:text-[#3ECFB2]">
+                        <Check className="size-3 md:size-3.5 shrink-0 text-emerald-500 dark:text-[#3ECFB2]" />
+                        <span>{row.s}</span>
                       </span>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+
+              </div>
+            </div>
           </div>
 
         </div>
       </section>
 
-      {/* TEMPLATE SHOWCASE CAROUSEL */}
-      <section className="py-24 max-w-5xl mx-auto px-6 overflow-hidden">
-        <div className="grid lg:grid-cols-12 gap-12 items-center">
-          
-          {/* Carousel Left Text */}
-          <div className="lg:col-span-4 text-left space-y-6">
-            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight leading-tight">
-              Designed For High Conversion
-            </h2>
-            <p className="text-base text-muted-foreground leading-relaxed">
-              We analyzed the top 100 most successful Shopify App Store listings. Screenify incorporates their exact design hierarchies, margins, and presentation structures.
-            </p>
-            
-            {/* Slide list indicators */}
-            <div className="flex flex-col gap-2 pt-2">
-              {templates.map((tpl, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveTemplate(i)}
-                  className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
-                    activeTemplate === i 
-                      ? "bg-card border-border/80 text-foreground shadow-md font-semibold font-sans" 
-                      : "border-transparent text-muted-foreground hover:text-foreground font-sans"
-                  }`}
-                >
-                  <span>{tpl.name}</span>
-                  {activeTemplate === i && <ChevronRight className="size-4 text-[#3ECFB2]" />}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* Carousel Right Visual Preview */}
-          <div className="lg:col-span-8 flex flex-col items-center">
-            
-            {/* Template Container Card */}
-            <div className={`w-full aspect-[16/9] rounded-2xl ${templates[activeTemplate].bg} border ${templates[activeTemplate].borderColor} p-6 md:p-8 flex flex-col justify-between relative shadow-2xl overflow-hidden transition-all duration-500`}>
-              <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-              
-              {/* Copy Area */}
-              <div className="space-y-1.5 text-left max-w-lg z-10">
-                <span className={`text-[10px] md:text-xs font-mono font-bold ${templates[activeTemplate].accent} uppercase tracking-widest`}>
-                  02. Real-Time Tracking
-                </span>
-                <h3 className={`text-xl md:text-3xl font-bold font-display ${templates[activeTemplate].textColor}`}>
-                  {templates[activeTemplate].headline}
-                </h3>
-                <p className="text-xs md:text-sm text-slate-400">
-                  {templates[activeTemplate].subheadline}
-                </p>
-              </div>
 
-              {/* Mock Dashboard Screenshot Container */}
-              <div className="w-[85%] mx-auto mt-4 bg-slate-950 border border-slate-700/60 rounded-t-lg overflow-hidden p-1 shadow-2xl flex flex-col transform translate-y-4">
-                <div className="h-4 bg-slate-900 flex items-center px-3 gap-1 border-b border-slate-800">
-                  <div className="size-1.5 rounded-full bg-slate-700" /><div className="size-1.5 rounded-full bg-slate-700" />
-                  <span className="text-[8px] text-slate-500 ml-1 font-mono">orderly-tracking-hub</span>
-                </div>
-                
-                {/* Simulated charts inside screenshot */}
-                <div className="bg-slate-950 p-2.5 flex flex-col gap-2">
-                  <div className="h-3 w-16 bg-slate-800 rounded" />
-                  <div className="flex gap-2">
-                    <div className="bg-indigo-950/20 border border-indigo-900/10 rounded flex-1 p-2 flex flex-col justify-between">
-                      <div className="h-1 w-6 bg-slate-700 rounded" />
-                      <div className="text-[10px] font-bold text-slate-300 font-mono mt-1">$42,910</div>
-                    </div>
-                    <div className="bg-indigo-950/20 border border-indigo-900/10 rounded flex-1 p-2 flex flex-col justify-between">
-                      <div className="h-1 w-6 bg-slate-700 rounded" />
-                      <div className="text-[10px] font-bold text-slate-300 font-mono mt-1">+8.5%</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-            </div>
-
-            {/* Template description */}
-            <p className="text-xs font-mono text-muted-foreground mt-4">
-              Preset style: <strong className="text-emerald-600 dark:text-[#3ECFB2]">{templates[activeTemplate].name}</strong> · {templates[activeTemplate].desc}
-            </p>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* SHOPIFY DEVELOPER FOCUS SECTION */}
-      <section className="py-20 border-t border-border/40 bg-muted/30 dark:bg-[#0c0f0d] relative overflow-hidden">
-        
-        {/* Subtle green ambient circle glow */}
-        <div className="absolute bottom-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-emerald-950/10 dark:bg-emerald-950/20 blur-[150px] pointer-events-none -z-10" />
-
-        <div className="max-w-5xl mx-auto px-6 text-center space-y-12">
-          
-          <div className="space-y-4">
-            <span className="text-xs font-mono text-emerald-600 dark:text-[#3ECFB2] uppercase tracking-[0.2em] font-semibold">Listing Simulator</span>
-            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight text-foreground">Built Specifically for the Shopify App Store</h2>
-            <p className="max-w-2xl mx-auto text-base text-muted-foreground">
-              Merchant install rates are heavily driven by visual trust. Screenify formats your uploads to fit perfectly inside the App Store screenshot carousel.
-            </p>
-          </div>
-
-          {/* Shopify App Store UI Simulator */}
-          <div className="border border-border/80 rounded-2xl bg-card dark:bg-zinc-950/80 shadow-2xl p-4 md:p-6 text-left max-w-4xl mx-auto font-sans">
-            
-            {/* Mock Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/40 pb-6">
-              <div className="flex items-center gap-4">
-                {/* Mock Logo */}
-                <div className="size-16 rounded-xl bg-gradient-to-br from-emerald-500 to-indigo-600 flex items-center justify-center font-bold text-xl text-white shadow-md">
-                  O
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-foreground font-display">Orderly · Shipment Tracking</h3>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">By Screenify Labs</span>
-                    <span>·</span>
-                    <span className="flex items-center gap-0.5 text-yellow-500"><Star className="size-3 fill-yellow-400" /> 4.9 (182 reviews)</span>
-                  </div>
-                </div>
-              </div>
-              <Button size="sm" className="bg-[#008060] hover:bg-[#006e52] text-white font-semibold rounded-lg px-5 py-2 pointer-events-none border-0">
-                Install App
-              </Button>
-            </div>
-
-            {/* Mock Screenshot Slider Container */}
-            <div className="pt-6 space-y-4">
-              <h4 className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Storefront Screenshot Carousel Preview</h4>
-              
-              {/* Flex Slider Track */}
-              <div className="flex gap-4 overflow-x-auto pb-4 w-full scrollbar-thin">
-                
-                {/* Generated Slide 1 */}
-                <div className="w-[300px] shrink-0 aspect-[16/9] rounded-lg bg-gradient-to-tr from-slate-900 to-indigo-950 border border-slate-800/80 p-3 flex flex-col justify-between shadow">
-                  <div className="space-y-0.5 text-left">
-                    <span className="text-[6px] font-bold text-indigo-400 font-mono">01. HOOK</span>
-                    <h5 className="text-[9px] font-bold text-white font-display">Reduce Support Tickets & Chargebacks</h5>
-                  </div>
-                  <div className="w-[80%] mx-auto bg-slate-950 border border-slate-800 rounded-t-md p-0.5 flex flex-col transform translate-y-1 h-14 overflow-hidden">
-                    <div className="h-1 bg-slate-900" />
-                    <div className="flex-1 bg-slate-950 p-1 flex items-center justify-center text-[5px] text-[#3ECFB2] font-mono">
-                      Order analytics mockup
-                    </div>
-                  </div>
-                </div>
-
-                {/* Generated Slide 2 */}
-                <div className="w-[300px] shrink-0 aspect-[16/9] rounded-lg bg-gradient-to-tr from-slate-900 to-indigo-950 border border-slate-800/80 p-3 flex flex-col justify-between shadow">
-                  <div className="space-y-0.5 text-left">
-                    <span className="text-[6px] font-bold text-indigo-400 font-mono">02. VALUE</span>
-                    <h5 className="text-[9px] font-bold text-white font-display">Provide Branded Post-Purchase Tracking</h5>
-                  </div>
-                  <div className="w-[80%] mx-auto bg-slate-950 border border-slate-800 rounded-t-md p-0.5 flex flex-col transform translate-y-1 h-14 overflow-hidden">
-                    <div className="h-1 bg-slate-900" />
-                    <div className="flex-1 bg-slate-950 p-1 flex items-center justify-center text-[5px] text-[#3ECFB2] font-mono">
-                      Interactive track details mockup
-                    </div>
-                  </div>
-                </div>
-
-                {/* Generated Slide 3 */}
-                <div className="w-[300px] shrink-0 aspect-[16/9] rounded-lg bg-gradient-to-tr from-slate-900 to-indigo-950 border border-slate-800/80 p-3 flex flex-col justify-between shadow">
-                  <div className="space-y-0.5 text-left">
-                    <span className="text-[6px] font-bold text-indigo-400 font-mono">03. DETAILS</span>
-                    <h5 className="text-[9px] font-bold text-white font-display">Automate Shipment Notification Alerts</h5>
-                  </div>
-                  <div className="w-[80%] mx-auto bg-slate-950 border border-slate-800 rounded-t-md p-0.5 flex flex-col transform translate-y-1 h-14 overflow-hidden">
-                    <div className="h-1 bg-slate-900" />
-                    <div className="flex-1 bg-slate-950 p-1 flex items-center justify-center text-[5px] text-[#3ECFB2] font-mono">
-                      SMS and Email template mockup
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Slider footer bar */}
-              <div className="flex justify-between items-center text-xs text-muted-foreground border-t border-border pt-4 font-mono">
-                <span>← Swipe to explore sequences</span>
-                <span className="text-emerald-600 dark:text-[#3ECFB2] font-semibold">Recommended sequence format compliant</span>
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-      </section>
 
       {/* FEATURE HIGHLIGHTS BENTO GRID */}
       <section className="py-24 max-w-5xl mx-auto px-6">
-        
+
         <div className="text-center space-y-4 mb-16">
           <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Everything You Need to Convert</h2>
           <p className="max-w-xl mx-auto text-base text-muted-foreground">
@@ -848,7 +584,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
 
         {/* Bento Grid */}
         <div className="grid md:grid-cols-3 gap-6">
-          
+
           {/* Card 1: One Screenshot */}
           <div className="md:col-span-2 bg-card/45 border border-border/80 rounded-2xl p-6 md:p-8 flex flex-col justify-between hover:bg-card/75 transition-colors group">
             <div className="space-y-4">
@@ -983,79 +719,11 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
         </div>
       </section>
 
-      {/* TRUST & SOCIAL PROOF */}
-      <section className="py-20 border-y border-border/40 bg-card/15">
-        <div className="max-w-5xl mx-auto px-6 text-center space-y-12">
-          
-          <div className="space-y-4">
-            <h2 className="font-display text-2xl font-bold tracking-tight text-muted-foreground uppercase text-xs tracking-[0.25em]">Loved by indie hackers & agencies</h2>
-            <p className="max-w-xl mx-auto text-2xl md:text-3xl font-display font-medium text-foreground">
-              "Finally, a tool built specifically for Shopify app store design guidelines."
-            </p>
-          </div>
 
-          {/* Testimonial Cards Grid */}
-          <div className="grid md:grid-cols-3 gap-6 text-left">
-            
-            {[
-              {
-                text: "I spent hours adjusting shadows and copywriting in Figma for our order-tracking app listing. Screenify did the entire sequence in 30 seconds. The brand color matching is eerily accurate.",
-                author: "Dan L.",
-                role: "Founder, Orderly App",
-                stars: 5
-              },
-              {
-                text: "As a Shopify App Agency, we launch 3-4 apps a month for clients. Screenify has saved our designer hours of work per project. The layouts fit the App Store specifications perfectly.",
-                author: "Samantha K.",
-                role: "Creative Director, Shopify Launch Lab",
-                stars: 5
-              },
-              {
-                text: "Indie hackers don't have time to master design. Screenify took my raw screenshot, wrote stellar hook copy, and generated a premium layout that got approved by Shopify on the first try.",
-                author: "Marc-Andre F.",
-                role: "Solo Creator, Bundler Express",
-                stars: 5
-              }
-            ].map((t, idx) => (
-              <div key={idx} className="bg-card border border-border/60 rounded-2xl p-6 space-y-4 flex flex-col justify-between shadow-md hover:border-border transition-colors">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-0.5 text-yellow-400">
-                    {Array.from({ length: t.stars }).map((_, i) => (
-                      <Star key={i} className="size-4 fill-yellow-400 shrink-0" />
-                    ))}
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed italic">
-                    "{t.text}"
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 border-t border-border/40 pt-4 mt-2">
-                  <div className="size-8 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-xs text-[#3ECFB2] border border-border">
-                    {t.author.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-foreground">{t.author}</h4>
-                    <p className="text-[10px] text-muted-foreground">{t.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-          </div>
-
-          {/* Client Logos / Tech details */}
-          <div className="pt-6 flex flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-40 grayscale contrast-150">
-            <span className="font-display font-extrabold text-lg text-foreground/45 dark:text-slate-100/45 tracking-wider">SHOPIFY AGENCIES</span>
-            <span className="font-display font-extrabold text-lg text-foreground/45 dark:text-slate-100/45 tracking-wider">INDIE HACKERS CORP</span>
-            <span className="font-display font-extrabold text-lg text-foreground/45 dark:text-slate-100/45 tracking-wider">APP GROWTH CO</span>
-            <span className="font-display font-extrabold text-lg text-foreground/45 dark:text-slate-100/45 tracking-wider">SAAS LAUNCH</span>
-          </div>
-
-        </div>
-      </section>
 
       {/* PRICING SECTION */}
-      <section className="py-24 max-w-4xl mx-auto px-6 text-center space-y-16">
-        
+      <section id="pricing" className="py-24 max-w-4xl mx-auto px-6 text-center space-y-16">
+
         <div className="space-y-4">
           <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Simple, Transparent Pricing</h2>
           <p className="max-w-xl mx-auto text-base text-muted-foreground">
@@ -1065,7 +733,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-2 gap-8 items-stretch max-w-2xl mx-auto">
-          
+
           {/* Free Tier */}
           <div className="border border-border bg-card/35 rounded-2xl p-8 flex flex-col justify-between text-left space-y-8 hover:border-border/80 transition-colors">
             <div className="space-y-4">
@@ -1091,7 +759,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
 
           {/* Pro Tier */}
           <div className="border-2 border-[#3ECFB2] bg-gradient-to-b from-card to-background/40 dark:to-zinc-950/40 rounded-2xl p-8 flex flex-col justify-between text-left space-y-8 relative shadow-xl shadow-emerald-500/5 group hover:-translate-y-1 transition-transform">
-            
+
             {/* Recommended Badge */}
             <div className="absolute top-0 right-6 -translate-y-1/2 bg-[#C8E84A] text-ink font-mono text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow">
               Most Popular
@@ -1103,7 +771,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
                 <p className="text-xs text-muted-foreground">For serious Shopify builders & agencies.</p>
               </div>
               <div className="flex items-baseline gap-1 pt-2">
-                <span className="text-4xl font-extrabold text-foreground">$29</span>
+                <span className="text-4xl font-extrabold text-foreground">$9</span>
                 <span className="text-xs text-muted-foreground">/ one-time fee</span>
               </div>
               <div className="space-y-2.5 pt-4 text-sm text-muted-foreground">
@@ -1114,7 +782,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
                 <div className="flex items-center gap-2"><Check className="size-4 text-emerald-600 dark:text-[#C8E84A] shrink-0" /> Support for Mockup Shells</div>
               </div>
             </div>
-            
+
             <Button onClick={onPick} className="w-full bg-[#3ECFB2] hover:bg-[#059669] text-ink font-semibold py-5 rounded-xl cursor-pointer shadow-lg shadow-emerald-500/10">
               Upgrade to Pro
             </Button>
@@ -1124,9 +792,9 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
       </section>
 
       {/* FAQ SECTION (ACCORDION) */}
-      <section className="py-20 border-t border-border/40 bg-card/5">
+      <section id="faq" className="py-20 border-t border-border/40 bg-card/5">
         <div className="max-w-3xl mx-auto px-6">
-          
+
           <div className="text-center space-y-4 mb-16">
             <span className="text-xs font-mono text-[#C8E84A] uppercase tracking-wider">Common Questions</span>
             <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight text-foreground">Frequently Asked</h2>
@@ -1141,9 +809,8 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
                   className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left transition-colors cursor-pointer"
                 >
                   <span className="font-semibold text-foreground text-sm md:text-base">{faq.q}</span>
-                  <span className={`w-6 h-6 rounded-full border border-border/85 flex items-center justify-center shrink-0 transition-transform duration-200 ${
-                    openFaq === i ? "rotate-45 border-[#3ECFB2] text-[#3ECFB2]" : "rotate-0 text-muted-foreground"
-                  }`}>
+                  <span className={`w-6 h-6 rounded-full border border-border/85 flex items-center justify-center shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-45 border-[#3ECFB2] text-[#3ECFB2]" : "rotate-0 text-muted-foreground"
+                    }`}>
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="stroke-current">
                       <path d="M6 1v10M1 6h10" strokeWidth="2" strokeLinecap="round" />
                     </svg>
@@ -1164,23 +831,23 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
       {/* FINAL CALL TO ACTION (CTA) */}
       <section className="py-24 max-w-5xl mx-auto px-6 text-center">
         <div className="relative rounded-3xl border-2 border-emerald-500/20 bg-gradient-to-b from-card to-background/60 dark:to-zinc-950 p-8 md:p-16 overflow-hidden shadow-2xl flex flex-col items-center space-y-6">
-          
+
           {/* Glowing dot grid background */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] rounded-full bg-emerald-500/5 blur-[80px] pointer-events-none" />
 
           <span className="text-xs font-mono text-[#3ECFB2] uppercase tracking-[0.2em] font-semibold z-10">Instant Generation</span>
-          
+
           <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight leading-none text-foreground max-w-2xl text-balance z-10">
             Create Your First Shopify App Store Creative Today
           </h2>
-          
+
           <p className="max-w-lg mx-auto text-base text-muted-foreground z-10">
             Stop spending hours manually resizing templates. Upload one screenshot and let Screenify build your marketing sequence in seconds.
           </p>
 
           <div className="pt-4 z-10">
-            <Button 
+            <Button
               onClick={onPick}
               className="bg-[#3ECFB2] hover:bg-[#059669] text-ink font-bold text-base py-6 px-10 rounded-xl cursor-pointer shadow-lg shadow-emerald-500/20 active:scale-98 transition-all flex items-center gap-2 border-0"
             >
