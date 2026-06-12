@@ -3175,7 +3175,9 @@ function ShopifyStoreListingPreview({
         {/* Shopify App Store Mobile Header */}
         <div className="bg-white px-5 py-4 flex items-center justify-between border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <div className="size-8 bg-[#008060] rounded-lg flex items-center justify-center text-white font-extrabold text-sm">s</div>
+            <div className="size-8 bg-[#008060] rounded-lg flex items-center justify-center shrink-0">
+              <img src="/shopify-bag-icon.png" alt="Shopify App Store Logo" className="size-5 object-contain invert" />
+            </div>
             <span className="font-semibold text-sm text-gray-800">App Store</span>
           </div>
           <svg className="size-5 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -3242,7 +3244,9 @@ function ShopifyStoreListingPreview({
       {/* Shopify App Store Top Header */}
       <div className="bg-white px-8 py-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="size-9 bg-[#008060] rounded-lg flex items-center justify-center text-white font-extrabold text-lg">s</div>
+          <div className="size-9 bg-[#008060] rounded-lg flex items-center justify-center shrink-0">
+            <img src="/shopify-bag-icon.png" alt="Shopify App Store Logo" className="size-6 object-contain invert" />
+          </div>
           <span className="font-semibold text-lg text-gray-800">Shopify App Store</span>
         </div>
         <div className="flex items-center gap-6 text-sm text-gray-600 font-medium">
@@ -4155,8 +4159,12 @@ function Results({
           {!paid && (
             <button
               onClick={() => setPayOpen(true)}
-              className="w-full text-center text-xs text-muted-foreground underline hover:text-white transition py-1"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#3ECFB2]/20 bg-[#3ECFB2]/5 hover:bg-[#3ECFB2]/10 active:scale-98 text-xs font-semibold text-[#3ECFB2] transition-all cursor-pointer shadow-sm shadow-[#3ECFB2]/5"
             >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
               Unlock Watermark-Free High-Res Exports
             </button>
           )}
