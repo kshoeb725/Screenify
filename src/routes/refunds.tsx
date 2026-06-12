@@ -1,47 +1,66 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { renderLegalContent } from "@/lib/legal-formatter";
 
 export const Route = createFileRoute("/refunds")({
   component: RefundsPage,
 });
 
 function RefundsPage() {
+  const lastUpdated = "June 12, 2026";
+
   const sections = [
     {
-      title: "1. Overview",
-      content: `This Refund Policy explains the terms under which Screenify ("we", "our", or "us") offers refunds for purchases made through our website and services (the "Service"). By making a purchase, you agree to this Refund Policy.`,
+      title: "1. Overview & Merchant of Record",
+      content: `This Refund Policy explains the terms, conditions, and processes for requesting refunds on digital packages and software subscriptions purchased through Screenify.
+      
+      All transactions, billing cycles, checkouts, and customer invoices are handled securely by **Lemon Squeezy, LLC**, our primary Merchant of Record and payment gateway. As such, billing and refund executions are processed in alignment with Lemon Squeezy's customer compliance policies and terms.`
     },
     {
-      title: "2. Nature of the Product",
-      content: `Screenify provides AI-generated digital promo images. Because the product is delivered digitally and generated on demand, purchases are generally considered final once the images have been generated and unlocked.`,
+      title: "2. Digital Product Nature",
+      content: `Screenify provides high-resolution, custom marketing storefront creatives generated through AI-assisted models. Because these files are generated on demand and delivered digitally, purchases are generally considered final once the high-resolution files have been downloaded or unlocked.`
     },
     {
-      title: "3. Eligibility for Refunds",
-      content: `We may issue a refund in the following circumstances: (a) you were charged but did not receive your generated images due to a technical error on our side; (b) you were charged multiple times for the same order; or (c) the Service failed to deliver the product as described.`,
+      title: "3. Subscription Billing & Cancellations",
+      content: `- **Cancellation**: You can cancel your Screenify subscription at any time via your Billing settings panel or customer portal page. Upon cancellation, you will continue to have full Pro access to the Service until the end of your current active billing cycle, and no further automatic renewals will occur.
+      - **Partial Months**: We do not provide prorated refunds or credits for partial billing periods or unused credits during a billing cycle.`
     },
     {
-      title: "4. Non-Refundable Situations",
-      content: `Refunds will generally not be granted for: (a) dissatisfaction with the creative style or output once images have been successfully generated; (b) change of mind after the images have been unlocked and downloaded; or (c) errors caused by incorrect information or low-quality screenshots provided by you.`,
+      title: "4. One-Time Creative Purchases",
+      content: `For one-time generation packages or credit packs, sales are considered final once the assets have been generated and unlocked. If you choose not to download the generated assets due to a change of mind, you are not eligible for a refund.`
     },
     {
-      title: "5. How to Request a Refund",
-      content: `To request a refund, please email us at Screenify786@gmail.com within 7 days of your purchase. Include your order details, the email used for the purchase, and a description of the issue. We will review your request and respond as soon as possible.`,
+      title: "5. Technical Failures & Processing Issues",
+      content: `We are committed to delivering the product as described. We will issue refunds or credit reinstatements in the following technical scenarios:
+      - **Failed Generations**: A system error on our server or the AI API fails to output the slide sequence, and you do not receive the digital files.
+      - **Image Delivery Glitches**: You are unable to download the final high-resolution zip or images due to persistent database or server-side download issues that we cannot resolve within 48 hours of notification.`
     },
     {
-      title: "6. Processing of Refunds",
-      content: `Approved refunds will be processed to your original payment method. Depending on your payment provider, it may take several business days for the refund to appear in your account.`,
+      title: "6. Duplicate Charges & Billing Errors",
+      content: `In the event that our billing system charges you multiple times for the same transaction or subscription due to a connection drop or software anomaly, we will issue a full refund for the duplicate transaction(s) immediately upon verification.`
     },
     {
-      title: "7. Chargebacks",
-      content: `If you believe a charge is incorrect, please contact us first so we can resolve the issue. Initiating a chargeback without contacting us may result in suspension of access to the Service.`,
+      title: "7. Non-Refundable Situations",
+      content: `Refunds will not be granted under the following circumstances:
+      - Dissatisfaction with the creative styling, copy choices, template design, or copywriting variations generated by the AI (you retain full capability to edit text, adjust presets, change layouts, and choose templates manually inside the design studio before downloading).
+      - Rejection of your app storefront assets by the Shopify App Store review team.
+      - Poor performance, lack of app installs, or failure of the marketing assets to increase your conversions (Screenify provides design utilities but does not guarantee specific commercial outcomes).
+      - Account terminations resulting from violations of our Terms and Conditions or Acceptable Use Policy.`
     },
     {
-      title: "8. Changes to This Policy",
-      content: `We reserve the right to modify this Refund Policy at any time. Any changes will be posted on this page with an updated "Last updated" date.`,
+      title: "8. How to Request a Refund",
+      content: `To request a refund, please send an email to Screenify786@gmail.com within seven (7) days of the transaction date. Your request must include:
+      1. Your account email address.
+      2. The transaction ID or Lemon Squeezy invoice receipt number.
+      3. A detailed explanation of the technical issue, duplicate charge, or reason for the request.
+      
+      We will review your request within three (3) business days and notify you of our decision.`
     },
     {
-      title: "9. Contact Us",
-      content: `If you have any questions about this Refund Policy, please contact us at Screenify786@gmail.com.`,
-    },
+      title: "9. Chargeback and Dispute Policy",
+      content: `We encourage you to contact our support team directly to resolve any billing errors, duplicate charges, or technical failures. 
+      
+      If you initiate a chargeback or payment dispute with your bank, credit card company, or PayPal without contacting us first, we reserve the right to immediately suspend your Screenify account, terminate your active subscriptions, and delete all generated and stored design sets associated with your credentials.`
+    }
   ];
 
   return (
@@ -69,26 +88,26 @@ function RefundsPage() {
         <h1 className="font-display text-4xl sm:text-5xl mb-4">
           Refund <span className="italic text-lime">Policy</span>
         </h1>
-        <p className="mb-10 text-sm text-muted-foreground">
-          Last updated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+        <p className="mb-10 text-sm text-muted-foreground font-mono">
+          Last updated: {lastUpdated}
         </p>
 
         <div className="space-y-10">
           {sections.map((section) => (
-            <section key={section.title}>
-              <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-lime">
+            <section key={section.title} className="border-b border-border/40 pb-8 last:border-0 last:pb-0">
+              <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-lime font-bold">
                 {section.title}
               </h2>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {section.content}
-              </p>
+              <div className="text-sm leading-relaxed space-y-2">
+                {renderLegalContent(section.content)}
+              </div>
             </section>
           ))}
         </div>
 
         <div className="mt-14 border-t border-border pt-8">
           <p className="text-sm text-muted-foreground">
-            Questions about refunds? Reach out at{" "}
+            Questions about refunds? Reach out to us at{" "}
             <a
               href="mailto:Screenify786@gmail.com"
               className="text-foreground underline underline-offset-4 transition hover:text-lime"

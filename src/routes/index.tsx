@@ -1506,29 +1506,13 @@ function TemplateCanvas({
   };
 
   const getReadableColor = (bgColor: string, desiredColor: string, isSecondary: boolean, minRatio: number): string => {
-    const repBg = getRepresentativeBgColor(bgColor);
-    const ratio = getContrastRatio(repBg, desiredColor);
-    if (ratio >= minRatio) {
-      return desiredColor;
-    }
-    const bgLum = getBgLuminance(repBg);
-    const isDarkBg = bgLum < 140;
-    if (isSecondary) {
-      return isDarkBg ? "#D1D5DB" : "#4B5563";
-    } else {
-      return isDarkBg ? "#FFFFFF" : "#0F172A";
-    }
+    // Return the user-selected color directly to ensure every color change is respected
+    return desiredColor;
   };
 
   const getReadableAccentColor = (bgColor: string, desiredAccent: string, minRatio: number): string => {
-    const repBg = getRepresentativeBgColor(bgColor);
-    const ratio = getContrastRatio(repBg, desiredAccent);
-    if (ratio >= minRatio) {
-      return desiredAccent;
-    }
-    const bgLum = getBgLuminance(repBg);
-    const isDarkBg = bgLum < 140;
-    return isDarkBg ? "#C8E84A" : "#4F46E5";
+    // Return the user-selected accent color directly to ensure every color change is respected
+    return desiredAccent;
   };
 
   const resolveBgAndText = () => {
@@ -3936,7 +3920,7 @@ function Results({
               features={activeConfig.features}
               colors={activeConfig.colors}
               screenshot={previews[activeSlideIdx] || ""}
-              watermark={false}
+              watermark={!paid}
               appName={result?.appName || ""}
               logo={logo}
               featureTextSize={activeConfig.featureTextSize}
@@ -3961,7 +3945,7 @@ function Results({
                   features={cfg.features}
                   colors={cfg.colors}
                   screenshot={previews[i] || ""}
-                  watermark={false}
+                  watermark={!paid}
                   appName={result?.appName || ""}
                   logo={logo}
                   featureTextSize={cfg.featureTextSize}

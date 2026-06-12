@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,6 @@ export function PaymentDialog({
   onSuccess: () => void;
   email: string;
 }) {
-  const [selectedPlan, setSelectedPlan] = useState<"lifetime" | "agency">("lifetime");
   const [processing, setProcessing] = useState(false);
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -28,95 +28,83 @@ export function PaymentDialog({
     // Simulate payment gateway delay
     await new Promise((r) => setTimeout(r, 1200));
     setProcessing(false);
-    toast.success(`Subscribed to Screenify ${selectedPlan === "lifetime" ? "Pro Lifetime" : "Agency License"} successfully!`);
+    toast.success("Subscribed to Screenify Pro successfully!");
     onSuccess();
     onOpenChange(false);
   };
 
+  const features = [
+    "Unlimited screenshot renders & designs",
+    "High-resolution watermark-free exports (4000x2250)",
+    "Apply all styling configurations in 1-click",
+    "Access to premium desktop & mobile mockup shells",
+    "Priority support & updates",
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-background border-border max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-display text-3xl">
+      <DialogContent className="bg-background border-border max-w-md p-4 rounded-2xl">
+        <DialogHeader className="space-y-0.5">
+          <DialogTitle className="font-display text-lg font-bold tracking-tight text-foreground">
             Upgrade to Screenify Pro
           </DialogTitle>
-          <DialogDescription>
-            Unlock unlimited screenshots, high-resolution watermark-free exports, and apply styles in 1-click.
+          <DialogDescription className="text-[11px] text-muted-foreground leading-normal">
+            Unlock premium storefront screenshot generation, clean exports, and seamless 1-click custom templates.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubscribe} className="space-y-6">
-          <div className="rounded-lg border border-[#3ECFB2]/30 bg-[#3ECFB2]/5 px-4 py-3 text-xs font-mono text-[#3ECFB2]">
-            💡 DEMO SUBSCRIPTION MODE · Complete mock checkout to unlock exports.
+        <form onSubmit={handleSubscribe} className="space-y-3 mt-2">
+          <div className="rounded-xl border border-[#3ECFB2]/20 bg-[#3ECFB2]/5 px-3 py-1.5 text-[10.5px] font-mono text-[#3ECFB2] flex items-center gap-1.5">
+            <span className="size-1 rounded-full bg-[#3ECFB2] animate-pulse shrink-0" />
+            <span>DEMO MODE · Click below to simulate checkout & unlock Pro.</span>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            {/* Pro Lifetime Card */}
-            <div
-              onClick={() => setSelectedPlan("lifetime")}
-              className={`p-5 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between ${
-                selectedPlan === "lifetime"
-                  ? "border-[#3ECFB2] bg-[#3ECFB2]/5"
-                  : "border-border hover:bg-card/45"
-              }`}
-            >
-              <div>
-                <h3 className="font-display text-xl leading-tight text-white">Pro Lifetime</h3>
-                <p className="font-mono text-xs text-muted-foreground mt-1">Solo Shopify Devs</p>
-                <ul className="text-[11px] text-muted-foreground mt-4 space-y-2">
-                  <li>✓ Unlimited screenshots</li>
-                  <li>✓ High-resolution exports</li>
-                  <li>✓ No Watermarks (Clean PNGs)</li>
-                  <li>✓ Apply Style to All Slides</li>
-                  <li>✓ Support for Mockup Shells</li>
-                </ul>
+          {/* Screenify Pro Card */}
+          <div className="relative rounded-xl border border-border/80 bg-card/45 p-3 shadow-sm overflow-hidden flex flex-col justify-between space-y-3">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#3ECFB2]/20 to-transparent" />
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-display text-base font-bold text-foreground">Screenify Pro</h3>
+                  <p className="font-mono text-[9px] text-muted-foreground tracking-wider uppercase mt-0.5">Solo Shopify Developers</p>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="font-display text-xl font-extrabold text-foreground">$9</span>
+                  <span className="text-[9px] text-muted-foreground font-mono">/ month</span>
+                </div>
               </div>
-              <div className="border-t border-border/60 mt-5 pt-3 flex justify-between items-baseline">
-                <span className="font-display text-2xl font-bold text-white">$9</span>
-                <span className="text-[10px] text-muted-foreground font-mono">one-time</span>
-              </div>
+              
+              <ul className="text-xs text-muted-foreground space-y-1 pt-0.5">
+                {features.map((feat, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    <Check className="size-3 text-[#3ECFB2] shrink-0 mt-0.5" />
+                    <span className="leading-tight text-[10.5px]">{feat}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-
-            {/* Agency Tier Card */}
-            <div
-              onClick={() => setSelectedPlan("agency")}
-              className={`p-5 rounded-2xl border-2 transition cursor-pointer flex flex-col justify-between ${
-                selectedPlan === "agency"
-                  ? "border-[#3ECFB2] bg-[#3ECFB2]/5"
-                  : "border-border hover:bg-card/45"
-              }`}
-            >
-              <div>
-                <h3 className="font-display text-xl leading-tight text-white">Agency License</h3>
-                <p className="font-mono text-xs text-muted-foreground mt-1">Studios & teams (unlimited apps)</p>
-                <ul className="text-[11px] text-muted-foreground mt-4 space-y-2">
-                  <li>✓ Everything in Pro Lifetime</li>
-                  <li>✓ Multi-developer license</li>
-                  <li>✓ Priority white-glove setup</li>
-                  <li>✓ Premium lifetime updates</li>
-                </ul>
-              </div>
-              <div className="border-t border-border/60 mt-5 pt-3 flex justify-between items-baseline">
-                <span className="font-display text-2xl font-bold text-white">$29</span>
-                <span className="text-[10px] text-muted-foreground font-mono">one-time</span>
-              </div>
+            
+            <div className="border-t border-border/40 pt-2 flex justify-between items-center text-[10px] font-mono">
+              <span className="text-muted-foreground">Billed Monthly:</span>
+              <span className="text-foreground font-semibold">Cancel anytime</span>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center text-xs font-mono border-t border-border pt-4">
-              <span className="text-muted-foreground">Subscribed Account:</span>
-              <span className="text-white truncate max-w-[200px]">{email || "you@company.com"}</span>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-[11px] font-mono border-t border-border pt-2">
+              <span className="text-muted-foreground">Account:</span>
+              <span className="text-foreground truncate max-w-[240px] font-semibold">{email || "you@company.com"}</span>
             </div>
 
             <button
               type="submit"
               disabled={processing}
-              className="w-full rounded-full bg-[#3ECFB2] text-ink font-semibold py-3.5 text-base hover:opacity-90 transition disabled:opacity-50 cursor-pointer text-center"
+              className="w-full rounded-xl bg-[#3ECFB2] text-slate-950 font-bold py-2 text-xs hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 cursor-pointer text-center shadow-sm"
             >
               {processing
                 ? "Processing subscription..."
-                : `Activate ${selectedPlan === "lifetime" ? "Pro Lifetime" : "Agency"} License (Demo)`}
+                : "Subscribe to Screenify Pro ($9/mo)"}
             </button>
           </div>
         </form>

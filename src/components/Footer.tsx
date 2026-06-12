@@ -164,6 +164,18 @@ export function Footer({ onHomeClick }: FooterProps) {
             <Link to="/refunds" className="transition-colors hover:text-foreground">
               Refunds
             </Link>
+            <span className="text-border">|</span>
+            <Link to="/cookies" className="transition-colors hover:text-foreground">
+              Cookies
+            </Link>
+            <span className="text-border">|</span>
+            <Link to="/acceptable-use" className="transition-colors hover:text-foreground">
+              Acceptable Use
+            </Link>
+            <span className="text-border">|</span>
+            <Link to="/disclaimer" className="transition-colors hover:text-foreground">
+              Disclaimer
+            </Link>
           </div>
         </div>
       </div>

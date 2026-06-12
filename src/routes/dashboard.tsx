@@ -16,7 +16,8 @@ import {
   Calendar,
   Sparkles,
   CheckCircle2,
-  FileText
+  FileText,
+  UploadCloud
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -533,21 +534,25 @@ function DashboardPage() {
                 })}
               </div>
             ) : (
-              <Card className="border border-dashed border-border/80 bg-card/10 py-16 text-center max-w-xl mx-auto flex flex-col items-center justify-center p-6 space-y-6 rounded-2xl">
-                <div className="size-16 rounded-2xl bg-card border flex items-center justify-center text-muted-foreground shadow-inner shadow-black/40">
-                  <ImageIcon className="size-8" />
+              <Card className="border border-border/80 bg-card/25 py-16 text-center max-w-xl mx-auto flex flex-col items-center justify-center p-8 space-y-6 rounded-2xl shadow-sm">
+                <div className="size-14 rounded-xl bg-[#3ECFB2]/10 flex items-center justify-center text-[#3ECFB2]">
+                  <UploadCloud className="size-7" />
                 </div>
+                
                 <div className="space-y-1.5 max-w-sm">
-                  <h3 className="text-lg font-bold text-foreground">No generated screenshots yet</h3>
+                  <h3 className="text-lg font-bold text-foreground">
+                    Start Generating premium storefront here
+                  </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Upload a raw merchant screenshot, pick style colors, and let our AI generate a high-converting graphic sequence.
                   </p>
                 </div>
+                
                 <button
                   onClick={() => fileRef.current?.click()}
-                  className="bg-[#3ECFB2]/15 hover:bg-[#3ECFB2]/25 text-[#3ECFB2] font-semibold py-5 px-6 rounded-xl border border-[#3ECFB2]/30 cursor-pointer shadow-md text-xs active:scale-98 transition"
+                  className="bg-[#3ECFB2] hover:bg-[#3ECFB2]/95 text-slate-950 font-semibold py-2.5 px-6 rounded-xl cursor-pointer text-xs transition active:scale-98 shadow-sm"
                 >
-                  Upload Your First Screenshot
+                  Upload your Screenshot
                 </button>
               </Card>
             )}
