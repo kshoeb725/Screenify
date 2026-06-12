@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -46,6 +46,84 @@ function DashboardPage() {
   const [loadingData, setLoadingData] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [hasPaid, setHasPaid] = useState(false);
+
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const toastId = toast.loading("Processing screenshot(s)...");
+    const fileArray = Array.from(files);
+    const processedDataUrls: string[] = [];
+    let loadedCount = 0;
+
+    fileArray.forEach((file) => {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`"${file.name}" is not an image.`);
+        loadedCount++;
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`"${file.name}" is too large (>10MB).`);
+        loadedCount++;
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          processedDataUrls.push(event.target.result as string);
+        }
+        loadedCount++;
+        if (loadedCount === fileArray.length) {
+          if (processedDataUrls.length === 0) {
+            toast.dismiss(toastId);
+            toast.error("No valid images selected.");
+            return;
+          }
+
+          // Build a clean 6-slot array matching the landing page expectation
+          const nextPreviews = Array(6).fill(null);
+          processedDataUrls.forEach((url, idx) => {
+            if (idx < 6) nextPreviews[idx] = url;
+          });
+
+          // Reset all other editor states
+          localStorage.removeItem("screenmint_result");
+          localStorage.removeItem("screenmint_paid");
+          localStorage.removeItem("screenmint_logo");
+          localStorage.removeItem("screenmint_is_new_session");
+          
+          localStorage.removeItem("screenmint_slide_configs");
+          localStorage.removeItem("screenmint_template");
+          localStorage.removeItem("screenmint_stylePreset");
+          localStorage.removeItem("screenmint_variant");
+          localStorage.removeItem("screenmint_headline");
+          localStorage.removeItem("screenmint_subheadline");
+          localStorage.removeItem("screenmint_features");
+          localStorage.removeItem("screenmint_colors");
+          localStorage.removeItem("screenmint_featureTextSize");
+          localStorage.removeItem("screenmint_featureSpacing");
+          localStorage.removeItem("screenmint_featureIconSize");
+
+          // Save screenshots
+          localStorage.setItem("screenmint_previews", JSON.stringify(nextPreviews));
+          localStorage.setItem("screenmint_status", "preview");
+
+          toast.dismiss(toastId);
+          toast.success("Screenshots loaded! Opening design editor.");
+          
+          navigate({ to: "/" });
+        }
+      };
+      reader.onerror = () => {
+        loadedCount++;
+        toast.error(`Failed to read "${file.name}".`);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   // Protected Route: Redirect if not logged in
   useEffect(() => {
@@ -396,11 +474,12 @@ function DashboardPage() {
                     Upload a raw merchant screenshot, pick style colors, and let our AI generate a high-converting graphic sequence.
                   </p>
                 </div>
-                <Link to="/" search={{ new: "true" }}>
-                  <Button className="bg-[#3ECFB2]/15 hover:bg-[#3ECFB2]/25 text-[#3ECFB2] font-semibold py-5 px-6 rounded-xl border border-[#3ECFB2]/30 cursor-pointer shadow-md">
-                    Upload Your First Screenshot
-                  </Button>
-                </Link>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="bg-[#3ECFB2]/15 hover:bg-[#3ECFB2]/25 text-[#3ECFB2] font-semibold py-5 px-6 rounded-xl border border-[#3ECFB2]/30 cursor-pointer shadow-md text-xs active:scale-98 transition"
+                >
+                  Upload Your First Screenshot
+                </button>
               </Card>
             )}
           </TabsContent>
@@ -554,6 +633,15 @@ function DashboardPage() {
         onOpenChange={setPayOpen}
         onSuccess={handlePaidSuccess}
         email={user?.email || ""}
+      />
+
+      <input
+        ref={fileRef}
+        type="file"
+        multiple
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={handleUpload}
       />
     </main>
   );
