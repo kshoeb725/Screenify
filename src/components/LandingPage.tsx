@@ -231,11 +231,11 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
           </div>
 
           <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] text-balance animate-float-3d">
-            Turn Raw Screenshots Into <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-[#3ECFB2] to-emerald-500 dark:from-[#3ECFB2] dark:via-[#5EEAD4] dark:to-[#C8E84A]">Professional App Store Images</span>
+            From Raw Screenshots to <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-[#3ECFB2] to-emerald-500 dark:from-[#3ECFB2] dark:via-[#5EEAD4] dark:to-[#C8E84A]">Premium App Store Assets</span>
           </h1>
 
           <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed text-balance animate-float-sub">
-            Turn raw screenshots into professional, brand-aligned marketing images. Screenify matches your colors, writes engaging copy, and builds ready-to-publish listing graphics instantly—no design experience required.
+            Upload your screenshots and let Screenify create professional Shopify App Store graphics with smart copy, beautiful layouts, and brand-matched designs—all in minutes.
           </p>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 w-full sm:w-auto pt-2">
