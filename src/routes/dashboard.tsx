@@ -430,8 +430,16 @@ function DashboardPage() {
                                       <div className="size-0.5 rounded-full bg-white/30" />
                                       <div className="size-0.5 rounded-full bg-white/20" />
                                     </div>
-                                    <div className="w-full h-full bg-black/40 rounded flex flex-col items-center justify-center p-0.5 gap-0.5">
-                                      <div className="w-5 h-0.5 bg-white/10 rounded-full" />
+                                    <div className="w-full h-full bg-black/40 rounded flex flex-col items-center justify-center p-0.5 gap-0.5 overflow-hidden">
+                                      {sub.screenshot_ref && sub.screenshot_ref.startsWith("data:image/") && sub.screenshot_ref.length > 500 ? (
+                                        <img 
+                                          src={sub.screenshot_ref} 
+                                          alt="Screenshot Preview" 
+                                          className="w-full h-full object-cover object-top rounded-sm"
+                                        />
+                                      ) : (
+                                        <div className="w-5 h-0.5 bg-white/10 rounded-full" />
+                                      )}
                                     </div>
                                   </div>
                                   
@@ -451,8 +459,69 @@ function DashboardPage() {
                         <Button
                           variant="ghost"
                           onClick={() => {
-                            toast.info("Opening screenshot templates...");
-                            navigate({ to: "/" });
+                            try {
+                              // Reset active layout and customization overrides to avoid carrying over from other designs
+                              localStorage.removeItem("screenmint_template");
+                              localStorage.removeItem("screenmint_stylePreset");
+                              localStorage.removeItem("screenmint_variant");
+                              localStorage.removeItem("screenmint_headline");
+                              localStorage.removeItem("screenmint_subheadline");
+                              localStorage.removeItem("screenmint_features");
+                              localStorage.removeItem("screenmint_colors");
+                              localStorage.removeItem("screenmint_featureTextSize");
+                              localStorage.removeItem("screenmint_featureSpacing");
+                              localStorage.removeItem("screenmint_featureIconSize");
+                              localStorage.removeItem("screenmint_logo");
+
+                              // Prepare previews array: 6-element array with first element as the screenshot ref
+                              const previewsArr = Array(6).fill(null);
+                              if (sub.screenshot_ref && sub.screenshot_ref.startsWith("data:image/") && sub.screenshot_ref.length > 500) {
+                                previewsArr[0] = sub.screenshot_ref;
+                              }
+                              localStorage.setItem("screenmint_previews", JSON.stringify(previewsArr));
+
+                              // Reconstruct the result object
+                              const resultObj = {
+                                appName: sub.app_name || "",
+                                category: "Optimized",
+                                auditScore: 85,
+                                auditFeedback: "Optimized historical submission",
+                                slides: slidesList,
+                              };
+                              localStorage.setItem("screenmint_result", JSON.stringify(resultObj));
+
+                              // Reconstruct the form object
+                              const formObj = {
+                                email: sub.email || "",
+                                appName: sub.app_name || "",
+                                targetAudience: sub.target_audience || "",
+                                objective: sub.objective || "",
+                              };
+                              localStorage.setItem("screenmint_form", JSON.stringify(formObj));
+
+                              // Reconstruct extracted colors
+                              const extractedColorsObj = {
+                                bg: paletteList[1] ?? "#F5F1E8",
+                                primary: paletteList[0] ?? "#121212",
+                                secondary: paletteList[3] ?? paletteList[1] ?? "#6B7280",
+                                accent: paletteList[2] ?? "#C8E84A",
+                              };
+                              localStorage.setItem("screenmint_extractedColors", JSON.stringify(extractedColorsObj));
+
+                              // Set operational statuses
+                              localStorage.setItem("screenmint_status", "done");
+                              localStorage.setItem("screenmint_paid", String(hasPaid));
+                              localStorage.setItem("screenmint_is_new_session", "true");
+
+                              // Rebuild the slide configurations on next mount
+                              localStorage.removeItem("screenmint_slide_configs");
+
+                              toast.success("Historical design set loaded successfully!");
+                              navigate({ to: "/" });
+                            } catch (error) {
+                              console.error("Failed to restore design set:", error);
+                              toast.error("Failed to load historical design set.");
+                            }
                           }}
                           className="text-xs font-semibold text-[#3ECFB2] hover:opacity-85 cursor-pointer hover:bg-transparent p-0 flex items-center gap-1"
                         >
