@@ -146,13 +146,6 @@ function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6">
-            <Link 
-              to="/" 
-              search={{ new: "true" }}
-              className="text-xs font-semibold text-muted-foreground hover:text-foreground transition flex items-center gap-1.5"
-            >
-              <Plus className="size-3.5" /> New Design
-            </Link>
 
             {/* Theme Toggle Button */}
             <button
@@ -226,11 +219,6 @@ function DashboardPage() {
             </div>
             <p className="text-sm text-muted-foreground">Manage your generated creatives, billing info, and account settings.</p>
           </div>
-          <Link to="/" search={{ new: "true" }}>
-            <Button className="bg-[#3ECFB2] hover:bg-[#059669] text-ink font-semibold py-5 px-6 rounded-xl cursor-pointer flex items-center gap-2 active:scale-98 shadow-md">
-              <Plus className="size-4" /> Create New Graphic
-            </Button>
-          </Link>
         </section>
 
         {/* Core Tabbed Layout */}
