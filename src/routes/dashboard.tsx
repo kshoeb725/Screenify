@@ -131,9 +131,8 @@ function DashboardPage() {
         <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[70%] rounded-full bg-gradient-to-bl from-[#C8E84A] to-transparent blur-[130px]" />
       </div>
 
-      {/* Dashboard Top Header Navigation */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/85 backdrop-blur-md">
-        <div className="mx-auto max-w-6xl px-6 h-20 flex items-center justify-between">
+        <div className="mx-auto max-w-6xl px-6 h-20 flex items-center justify-between relative">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2 hover:opacity-85 transition">
               <img src="/screenmint-icon.png" alt="Screenify Logo" className="h-8 w-8 rounded-lg object-cover" />
@@ -141,11 +140,16 @@ function DashboardPage() {
                 Screen<span className="text-[#3ECFB2]">ify</span>
               </span>
             </Link>
-            <span className="text-border/40 text-sm">/</span>
-            <span className="font-mono text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Dashboard</span>
           </div>
 
-          <div className="flex items-center gap-4 sm:gap-6">
+          {/* Centered 3D Dashboard Title */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none">
+            <span className="text-lg md:text-xl font-black uppercase tracking-widest text-3d font-sans">
+              Dashboard
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4 sm:gap-6 z-10">
 
             {/* Theme Toggle Button */}
             <button
@@ -206,14 +210,6 @@ function DashboardPage() {
       {/* Main Container */}
       <div className="flex-1 mx-auto w-full max-w-6xl px-6 py-12 space-y-10">
         
-        {/* Page Title */}
-        <div className="text-center py-4 select-none">
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-widest uppercase text-3d mb-3 font-sans">
-            Dashboard
-          </h2>
-          <div className="h-1 w-20 bg-gradient-to-r from-[#3ECFB2] to-[#C8E84A] mx-auto rounded-full shadow-lg shadow-[#3ECFB2]/20" />
-        </div>
-
         {/* Welcome Section */}
         <section className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-border/40">
           <div className="space-y-1.5 text-left">
