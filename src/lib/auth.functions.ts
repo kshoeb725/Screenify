@@ -15,22 +15,27 @@ export const adminSignUpUser = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { email, password, fullName } = data;
 
-    // Create user using Supabase Admin Auth API with email_confirm set to true
-    const { data: authData, error } = await supabaseAdmin.auth.admin.createUser({
-      email: email.trim(),
-      password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName.trim(),
-      },
-    });
+    try {
+      // Create user using Supabase Admin Auth API with email_confirm set to true
+      const { data: authData, error } = await supabaseAdmin.auth.admin.createUser({
+        email: email.trim(),
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName.trim(),
+        },
+      });
 
-    if (error) {
-      console.error("Error creating user via admin:", error);
-      throw new Error(error.message || "Failed to create account.");
+      if (error) {
+        console.error("Error creating user via admin:", error);
+        return { success: false, error: error.message || "Failed to create account." };
+      }
+
+      return { success: true, userId: authData.user?.id };
+    } catch (err: any) {
+      console.error("Unexpected adminSignUpUser error:", err);
+      return { success: false, error: err.message || "Failed to create account." };
     }
-
-    return { success: true, userId: authData.user?.id };
   });
 
 // Server function to reset a user's password directly without email validation.
@@ -44,33 +49,38 @@ export const adminResetPassword = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { email, password } = data;
 
-    // 1. Find the user by email
-    const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    if (listError) {
-      console.error("Error listing users:", listError);
-      throw new Error(listError.message || "Failed to fetch user list.");
+    try {
+      // 1. Find the user by email
+      const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) {
+        console.error("Error listing users:", listError);
+        return { success: false, error: listError.message || "Failed to fetch user list." };
+      }
+
+      const user = listData.users.find(
+        (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
+      );
+
+      if (!user) {
+        return { success: false, error: "No user found with this email address." };
+      }
+
+      // 2. Update their password directly using admin API
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        user.id,
+        { password }
+      );
+
+      if (updateError) {
+        console.error("Error updating user password:", updateError);
+        return { success: false, error: updateError.message || "Failed to reset password." };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error("Unexpected adminResetPassword error:", err);
+      return { success: false, error: err.message || "Failed to reset password." };
     }
-
-    const user = listData.users.find(
-      (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
-    );
-
-    if (!user) {
-      throw new Error("No user found with this email address.");
-    }
-
-    // 2. Update their password directly using admin API
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      user.id,
-      { password }
-    );
-
-    if (updateError) {
-      console.error("Error updating user password:", updateError);
-      throw new Error(updateError.message || "Failed to reset password.");
-    }
-
-    return { success: true };
   });
 
 // Server function to verify login credentials and return precise error messages.
@@ -88,40 +98,45 @@ export const verifyLoginCredentials = createServerFn({ method: "POST" })
     const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      throw new Error("Supabase URL or Publishable key not configured on server.");
+      return { success: false, error: "Supabase URL or Publishable key not configured on server." };
     }
 
-    // 1. Check if user exists by email
-    const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    if (listError) {
-      console.error("Error listing users for verification:", listError);
-      throw new Error("Failed to search user database.");
+    try {
+      // 1. Check if user exists by email
+      const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) {
+        console.error("Error listing users for verification:", listError);
+        return { success: false, error: "Failed to search user database." };
+      }
+
+      const user = listData.users.find(
+        (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
+      );
+
+      if (!user) {
+        return { success: false, error: "Email does not exist. Sign up" };
+      }
+
+      // 2. Authenticate the user to verify password
+      const client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      });
+
+      const { error: authError } = await client.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (authError) {
+        return { success: false, error: "Invalid or wrong password" };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error("Unexpected verifyLoginCredentials error:", err);
+      return { success: false, error: err.message || "An unexpected error occurred during verification." };
     }
-
-    const user = listData.users.find(
-      (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
-    );
-
-    if (!user) {
-      throw new Error("Email does not exist. Sign up");
-    }
-
-    // 2. Authenticate the user to verify password
-    const client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
-
-    const { error: authError } = await client.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-
-    if (authError) {
-      throw new Error("Invalid or wrong password");
-    }
-
-    return { success: true };
   });

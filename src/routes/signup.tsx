@@ -57,11 +57,19 @@ function SignUpPage() {
     setSubmitting(true);
     try {
       // Create user via server function to auto-confirm email
-      await adminSignUpUser({
-        email: email.trim(),
-        password,
-        fullName: fullName.trim(),
+      const signUpRes = await adminSignUpUser({
+        data: {
+          email: email.trim(),
+          password,
+          fullName: fullName.trim(),
+        }
       });
+
+      if (!signUpRes.success) {
+        toast.error(signUpRes.error || "Failed to create account.");
+        setSubmitting(false);
+        return;
+      }
 
       // Sign in immediately to establish session
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -74,7 +82,11 @@ function SignUpPage() {
       toast.success("Account created successfully! Welcome to Screenify.");
       navigate({ to: "/dashboard" });
     } catch (err: any) {
-      toast.error(err.message || "Failed to create account.");
+      console.error("Signup error details:", err);
+      const cleanMessage = err.message
+        ? err.message.replace(/^Error:\s*/i, "")
+        : "Failed to create account.";
+      toast.error(cleanMessage);
     } finally {
       setSubmitting(false);
     }

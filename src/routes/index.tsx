@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useRef, useState, useEffect, cloneElement } from "react";
 import { createPortal } from "react-dom";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { generatePromos } from "@/lib/generate.functions";
 import { useTheme } from "@/hooks/use-theme";
 import { PaymentDialog } from "@/components/PaymentDialog";
@@ -492,7 +492,7 @@ function Index() {
           </filter>
         </defs>
       </svg>
-      <Toaster theme={theme} position="top-center" />
+
       <Nav 
         status={status} 
         onReset={onReset} 

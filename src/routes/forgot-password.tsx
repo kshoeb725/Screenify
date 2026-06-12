@@ -45,15 +45,27 @@ function ForgotPasswordPage() {
     setSubmitting(true);
     try {
       // Call server function to directly update user password
-      await adminResetPassword({
-        email: email.trim(),
-        password,
+      const resetRes = await adminResetPassword({
+        data: {
+          email: email.trim(),
+          password,
+        }
       });
+
+      if (!resetRes.success) {
+        toast.error(resetRes.error || "Failed to reset password.");
+        setSubmitting(false);
+        return;
+      }
 
       setSuccess(true);
       toast.success("Password reset successfully!");
     } catch (err: any) {
-      toast.error(err.message || "Failed to reset password.");
+      console.error("Password reset error details:", err);
+      const cleanMessage = err.message
+        ? err.message.replace(/^Error:\s*/i, "")
+        : "Failed to reset password.";
+      toast.error(cleanMessage);
     } finally {
       setSubmitting(false);
     }

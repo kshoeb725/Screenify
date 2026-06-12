@@ -37,10 +37,18 @@ function LoginPage() {
     setSubmitting(true);
     try {
       // 1. Verify credentials on the server first to get detailed error messages
-      await verifyLoginCredentials({
-        email: email.trim(),
-        password,
+      const check = await verifyLoginCredentials({
+        data: {
+          email: email.trim(),
+          password,
+        }
       });
+
+      if (!check.success) {
+        toast.error(check.error || "Invalid credentials.");
+        setSubmitting(false);
+        return;
+      }
 
       // 2. Log in on the client to establish the session
       const { error } = await supabase.auth.signInWithPassword({
@@ -53,7 +61,12 @@ function LoginPage() {
       toast.success("Welcome back to Screenify!");
       navigate({ to: "/dashboard" });
     } catch (err: any) {
-      toast.error(err.message || "Invalid credentials.");
+      console.error("Login error details:", err);
+      // Clean up Error prefix if present
+      const cleanMessage = err.message
+        ? err.message.replace(/^Error:\s*/i, "")
+        : "Invalid credentials.";
+      toast.error(cleanMessage);
     } finally {
       setSubmitting(false);
     }
