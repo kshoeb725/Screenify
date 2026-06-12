@@ -121,7 +121,7 @@ function SettingsPage() {
   const isEmailUser = loginProvider === "email";
 
   return (
-    <main className="min-h-screen bg-[#070708] text-foreground font-sans relative overflow-hidden flex flex-col grain">
+    <main className="min-h-screen bg-background text-foreground font-sans relative overflow-hidden flex flex-col grain">
       
       {/* Decorative blurs */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] pointer-events-none overflow-hidden -z-10 opacity-15">
@@ -129,14 +129,14 @@ function SettingsPage() {
       </div>
 
       {/* Header */}
-      <header className="border-b border-border/40 bg-[#070708]/80 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="mx-auto max-w-4xl px-6 h-20 flex items-center justify-between">
-          <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-white transition">
+          <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition">
             <ArrowLeft className="size-4" /> Back to Dashboard
           </Link>
           <div className="flex items-center gap-2">
             <Settings className="size-4 text-[#3ECFB2]" />
-            <span className="font-mono text-xs font-bold text-white uppercase tracking-wider">Account Settings</span>
+            <span className="font-mono text-xs font-bold text-foreground uppercase tracking-wider">Account Settings</span>
           </div>
         </div>
       </header>
@@ -145,7 +145,7 @@ function SettingsPage() {
       <div className="flex-1 mx-auto w-full max-w-4xl px-6 py-12 space-y-8 text-left">
         
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-white">Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
           <p className="text-sm text-muted-foreground">Manage your personal settings, security, and theme preferences.</p>
         </div>
 
@@ -156,7 +156,7 @@ function SettingsPage() {
             {/* Profile Info Form */}
             <Card className="border border-border/80 bg-card/25 rounded-2xl">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
                   <User className="size-4.5 text-[#3ECFB2]" /> Public Profile
                 </CardTitle>
                 <CardDescription>Update your display name.</CardDescription>
@@ -171,7 +171,7 @@ function SettingsPage() {
                       placeholder="Your name"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="py-5 rounded-xl border-border bg-[#101012]/50 text-sm focus:border-[#3ECFB2]"
+                      className="py-5 rounded-xl border-border bg-input/40 text-sm focus:border-[#3ECFB2]"
                       required
                     />
                   </div>
@@ -197,7 +197,7 @@ function SettingsPage() {
             {isEmailUser && (
               <Card className="border border-border/80 bg-card/25 rounded-2xl">
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
                     <Lock className="size-4.5 text-[#3ECFB2]" /> Change Password
                   </CardTitle>
                   <CardDescription>Configure a new secure password for your account login.</CardDescription>
@@ -212,7 +212,7 @@ function SettingsPage() {
                         placeholder="Min 8 characters"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="py-5 rounded-xl border-border bg-[#101012]/50 text-sm focus:border-[#3ECFB2]"
+                        className="py-5 rounded-xl border-border bg-input/40 text-sm focus:border-[#3ECFB2]"
                         required
                       />
                     </div>
@@ -224,7 +224,7 @@ function SettingsPage() {
                         placeholder="Confirm password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="py-5 rounded-xl border-border bg-[#101012]/50 text-sm focus:border-[#3ECFB2]"
+                        className="py-5 rounded-xl border-border bg-input/40 text-sm focus:border-[#3ECFB2]"
                         required
                       />
                     </div>
@@ -252,7 +252,7 @@ function SettingsPage() {
           <div className="md:col-span-4 space-y-6">
             <Card className="border border-border/80 bg-card/25 rounded-2xl">
               <CardHeader>
-                <CardTitle className="text-base font-bold text-white">Appearance</CardTitle>
+                <CardTitle className="text-base font-bold text-foreground">Appearance</CardTitle>
                 <CardDescription>Select website styling mode.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

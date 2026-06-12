@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/hooks/use-theme";
 import { toast } from "sonner";
 import { 
   Loader2, 
@@ -21,6 +22,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PaymentDialog } from "@/components/PaymentDialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
@@ -29,6 +38,7 @@ export const Route = createFileRoute("/dashboard")({
 function DashboardPage() {
   const navigate = useNavigate();
   const { user, profile, loading, logout } = useAuth();
+  const { theme, toggle } = useTheme();
   
   const [activeTab, setActiveTab] = useState("screenshots");
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -113,7 +123,7 @@ function DashboardPage() {
   const loginProvider = user?.app_metadata?.provider || "email";
 
   return (
-    <main className="min-h-screen bg-[#070708] text-foreground font-sans relative overflow-hidden flex flex-col grain">
+    <main className="min-h-screen bg-background text-foreground font-sans relative overflow-hidden flex flex-col grain">
       
       {/* Background radial blurs */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[500px] pointer-events-none overflow-hidden -z-10 opacity-20">
@@ -122,26 +132,79 @@ function DashboardPage() {
       </div>
 
       {/* Dashboard Top Header Navigation */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-[#070708]/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/85 backdrop-blur-md">
         <div className="mx-auto max-w-6xl px-6 h-20 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5 hover:opacity-85 transition">
-            <img src="/screenmint-icon.png" alt="Screenify Logo" className="h-9 w-9 rounded-lg" />
-            <span className="font-display text-xl font-bold tracking-tight text-white">
-              Screen<span className="text-[#3ECFB2]">ify</span>
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-4">
-            <Link to="/settings" className="p-2.5 rounded-full border border-border bg-card/45 hover:bg-card transition text-muted-foreground hover:text-white" title="Settings">
-              <SettingsIcon className="size-4" />
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-2 hover:opacity-85 transition">
+              <img src="/screenmint-icon.png" alt="Screenify Logo" className="h-8 w-8 rounded-lg object-cover" />
+              <span className="font-display text-lg font-bold tracking-tight text-foreground">
+                Screen<span className="text-[#3ECFB2]">ify</span>
+              </span>
             </Link>
-            <Button
-              onClick={logout}
-              variant="outline"
-              className="py-5 px-4 rounded-xl border-border hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400 cursor-pointer flex items-center gap-2"
+            <span className="text-border/40 text-sm">/</span>
+            <span className="font-mono text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Dashboard</span>
+          </div>
+
+          <div className="flex items-center gap-4 sm:gap-6">
+            <Link 
+              to="/" 
+              className="text-xs font-semibold text-muted-foreground hover:text-foreground transition flex items-center gap-1.5"
             >
-              <LogOut className="size-4" /> Sign Out
-            </Button>
+              <Plus className="size-3.5" /> New Design
+            </Link>
+
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggle}
+              className="inline-flex items-center justify-center rounded-full border border-border p-2.5 hover:bg-card transition cursor-pointer text-foreground"
+              aria-label="Toggle theme"
+              title="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5" />
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger className="rounded-full border border-border/80 p-0.5 focus:outline-none cursor-pointer hover:border-[#3ECFB2]/50 transition">
+                {userAvatar ? (
+                  <Avatar className="size-8">
+                    <AvatarImage src={userAvatar} />
+                    <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="size-8 rounded-full bg-[#3ECFB2]/15 text-[#3ECFB2] flex items-center justify-center text-xs font-bold font-mono">
+                    {displayName.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover border border-border/60 text-popover-foreground min-w-[160px] rounded-xl p-1.5 space-y-1">
+                <DropdownMenuItem className="rounded-lg text-xs hover:bg-[#3ECFB2]/15 hover:text-[#3ECFB2] cursor-pointer py-2 px-3">
+                  <Link to="/" className="w-full h-full flex items-center gap-2">
+                    <Plus className="size-3.5" /> Editor View
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="rounded-lg text-xs hover:bg-[#3ECFB2]/15 hover:text-[#3ECFB2] cursor-pointer py-2 px-3">
+                  <Link to="/settings" className="w-full h-full flex items-center gap-2">
+                    <SettingsIcon className="size-3.5" /> Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-border/40 my-1" />
+                <DropdownMenuItem 
+                  onClick={logout}
+                  className="rounded-lg text-xs hover:bg-red-500/10 hover:text-red-400 text-red-500 cursor-pointer py-2 px-3 flex items-center gap-2"
+                >
+                  <LogOut className="size-3.5" /> Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -152,8 +215,8 @@ function DashboardPage() {
         {/* Welcome Section */}
         <section className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-border/40">
           <div className="space-y-1.5 text-left">
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">Hello, {displayName}</h1>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">Hello, {displayName}</h1>
               {hasPaid && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3ECFB2]/15 text-[#3ECFB2] text-[10px] font-mono font-bold tracking-wide uppercase border border-[#3ECFB2]/20">
                   <Sparkles className="size-3" /> Pro Lifetime
@@ -171,15 +234,24 @@ function DashboardPage() {
 
         {/* Core Tabbed Layout */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
-          <TabsList className="bg-[#101012] border border-border p-1 rounded-xl w-full sm:w-auto grid sm:flex">
-            <TabsTrigger value="screenshots" className="rounded-lg font-medium text-xs py-2.5 px-6 cursor-pointer flex items-center gap-2">
-              <ImageIcon className="size-3.5" /> Generated Screenshots
+          <TabsList className="flex items-center gap-6 border-b border-border/40 bg-transparent rounded-none p-0 w-full justify-start h-auto">
+            <TabsTrigger 
+              value="screenshots" 
+              className="relative pb-4 rounded-none border-b-2 border-transparent data-[state=active]:border-[#3ECFB2] data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition font-semibold text-xs px-1 flex items-center gap-2 cursor-pointer"
+            >
+              <ImageIcon className="size-4" /> Generated Screenshots
             </TabsTrigger>
-            <TabsTrigger value="billing" className="rounded-lg font-medium text-xs py-2.5 px-6 cursor-pointer flex items-center gap-2">
-              <CreditCard className="size-3.5" /> Billing & License
+            <TabsTrigger 
+              value="billing" 
+              className="relative pb-4 rounded-none border-b-2 border-transparent data-[state=active]:border-[#3ECFB2] data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition font-semibold text-xs px-1 flex items-center gap-2 cursor-pointer"
+            >
+              <CreditCard className="size-4" /> Billing & License
             </TabsTrigger>
-            <TabsTrigger value="profile" className="rounded-lg font-medium text-xs py-2.5 px-6 cursor-pointer flex items-center gap-2">
-              <UserIcon className="size-3.5" /> Account Profile
+            <TabsTrigger 
+              value="profile" 
+              className="relative pb-4 rounded-none border-b-2 border-transparent data-[state=active]:border-[#3ECFB2] data-[state=active]:bg-transparent data-[state=active]:text-foreground text-muted-foreground hover:text-foreground transition font-semibold text-xs px-1 flex items-center gap-2 cursor-pointer"
+            >
+              <UserIcon className="size-4" /> Account Profile
             </TabsTrigger>
           </TabsList>
 
@@ -197,23 +269,37 @@ function DashboardPage() {
                     day: "numeric",
                     year: "numeric"
                   });
-                  // Parse generated images array if stored as string/JSON
-                  let imagesList: string[] = [];
+                  // Parse generated slides array from public.submissions table
+                  let slidesList: any[] = [];
                   try {
                     if (sub.generated_images) {
-                      imagesList = Array.isArray(sub.generated_images) 
+                      slidesList = Array.isArray(sub.generated_images) 
                         ? sub.generated_images 
                         : JSON.parse(sub.generated_images as string);
                     }
                   } catch (e) {
-                    console.error("Failed to parse generated images:", e);
+                    console.error("Failed to parse generated slides:", e);
                   }
 
+                  // Parse color palette
+                  let paletteList: string[] = [];
+                  try {
+                    if (sub.palette) {
+                      paletteList = Array.isArray(sub.palette)
+                        ? sub.palette
+                        : JSON.parse(sub.palette as string);
+                    }
+                  } catch (e) {}
+
+                  const primaryColor = paletteList[0] || "#3ECFB2";
+                  const accentColor = paletteList[1] || "#8B5CF6";
+                  const bgColor = paletteList[2] || "#0F0F11";
+
                   return (
-                    <Card key={sub.id} className="border border-border/80 bg-card/25 hover:border-border transition-all flex flex-col justify-between overflow-hidden group">
-                      <div className="p-6 space-y-4">
+                    <Card key={sub.id} className="border border-border/40 bg-card/20 hover:bg-card/50 hover:border-border/80 transition-all duration-300 flex flex-col justify-between overflow-hidden group rounded-2xl shadow-lg hover:shadow-2xl">
+                      <div className="p-6 space-y-5 text-left">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-mono text-[#3ECFB2] font-semibold bg-[#3ECFB2]/10 px-2 py-0.5 rounded border border-[#3ECFB2]/15 capitalize">
+                          <span className="text-[9px] font-mono text-[#3ECFB2] font-semibold bg-[#3ECFB2]/5 px-2.5 py-1 rounded-full border border-[#3ECFB2]/15 capitalize">
                             {sub.objective || "Optimize"}
                           </span>
                           <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-1">
@@ -221,33 +307,83 @@ function DashboardPage() {
                           </span>
                         </div>
                         <div className="text-left space-y-1">
-                          <CardTitle className="text-lg font-bold text-white group-hover:text-[#3ECFB2] transition-colors">{sub.app_name}</CardTitle>
-                          <CardDescription className="text-xs line-clamp-2">{sub.target_audience}</CardDescription>
+                          <CardTitle className="text-lg font-bold text-foreground group-hover:text-[#3ECFB2] transition-colors">{sub.app_name}</CardTitle>
+                          <CardDescription className="text-xs line-clamp-1 text-muted-foreground">{sub.target_audience}</CardDescription>
                         </div>
 
-                        {/* Images preview array */}
-                        {imagesList.length > 0 && (
-                          <div className="grid grid-cols-3 gap-1.5 pt-2">
-                            {imagesList.slice(0, 3).map((img, idx) => (
-                              <div key={idx} className="aspect-[16/9] rounded overflow-hidden border border-white/5 bg-[#121214]">
-                                <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover select-none pointer-events-none" />
-                              </div>
-                            ))}
+                        {/* CSS-based simulated slides preview */}
+                        {slidesList.length > 0 && (
+                          <div className="grid grid-cols-3 gap-2 pt-1.5">
+                            {slidesList.slice(0, 3).map((slide, idx) => {
+                              const headline = slide.variants?.benefit?.headline || 
+                                               slide.variants?.feature?.headline || 
+                                               slide.variants?.outcome?.headline || 
+                                               "Feature Highlight";
+                              
+                              const template = slide.suggestedTemplate || "showcase";
+                              const preset = slide.suggestedPreset || "gradient";
+                              
+                              // Setup dynamic background style based on preset/palette
+                              let bgStyle: React.CSSProperties = {};
+                              if (preset === "gradient" || preset === "modern") {
+                                bgStyle = {
+                                  background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`
+                                };
+                              } else if (preset === "dark" || bgColor === "#000000" || bgColor === "#0C0C0E") {
+                                bgStyle = {
+                                  background: `linear-gradient(135deg, #151518 0%, #0C0C0E 100%)`
+                                };
+                              } else {
+                                bgStyle = {
+                                  background: `linear-gradient(135deg, ${bgColor} 0%, #1F2937 100%)`
+                                };
+                              }
+
+                              return (
+                                <div 
+                                  key={idx} 
+                                  style={bgStyle}
+                                  className="aspect-[16/9] rounded-xl overflow-hidden border border-white/10 relative p-2 flex flex-col justify-between shadow-inner select-none pointer-events-none group-hover:scale-[1.02] transition-all duration-300"
+                                >
+                                  {/* Slide text preview */}
+                                  <div className="space-y-0.5 text-left max-w-[90%]">
+                                    <p className="text-[6px] font-black leading-tight tracking-tight text-white line-clamp-1">
+                                      {headline}
+                                    </p>
+                                    <div className="w-4 h-[1px] bg-white/40 rounded-full" />
+                                  </div>
+
+                                  {/* Device mock simulation */}
+                                  <div className="h-6 w-[80%] mx-auto bg-white/5 backdrop-blur-[2px] border border-white/10 rounded-t-md flex flex-col p-0.5 gap-0.5 mt-auto overflow-hidden">
+                                    <div className="flex items-center gap-0.5 scale-75 origin-left mb-0.5">
+                                      <div className="size-0.5 rounded-full bg-white/30" />
+                                      <div className="size-0.5 rounded-full bg-white/20" />
+                                    </div>
+                                    <div className="w-full h-full bg-black/40 rounded flex flex-col items-center justify-center p-0.5 gap-0.5">
+                                      <div className="w-5 h-0.5 bg-white/10 rounded-full" />
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Template indicator badge */}
+                                  <span className="absolute bottom-1 right-1 text-[5px] font-mono text-white/50 bg-black/35 px-1 py-0.2 rounded uppercase tracking-wider scale-75 origin-bottom-right">
+                                    {template.slice(0, 4)}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
                       
-                      <div className="border-t border-border/50 bg-[#0C0C0E]/50 px-6 py-4 flex items-center justify-between">
-                        <span className="text-[10px] text-muted-foreground font-mono">{imagesList.length} slide creatives</span>
+                      <div className="border-t border-border/40 bg-muted/20 px-6 py-4 flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground font-mono">{slidesList.length} slide creatives</span>
                         <Button
                           variant="ghost"
                           onClick={() => {
-                            // Can pre-fill state or reload index page with loaded submissions
-                            // For simplicity, navigate back to editor view with submission ID if needed
                             toast.info("Opening screenshot templates...");
                             navigate({ to: "/" });
                           }}
-                          className="text-xs font-semibold text-[#3ECFB2] hover:text-white cursor-pointer hover:bg-transparent p-0 flex items-center gap-1"
+                          className="text-xs font-semibold text-[#3ECFB2] hover:opacity-85 cursor-pointer hover:bg-transparent p-0 flex items-center gap-1"
                         >
                           View set <Download className="size-3" />
                         </Button>
@@ -262,7 +398,7 @@ function DashboardPage() {
                   <ImageIcon className="size-8" />
                 </div>
                 <div className="space-y-1.5 max-w-sm">
-                  <h3 className="text-lg font-bold text-white">No generated screenshots yet</h3>
+                  <h3 className="text-lg font-bold text-foreground">No generated screenshots yet</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Upload a raw merchant screenshot, pick style colors, and let our AI generate a high-converting graphic sequence.
                   </p>
@@ -278,9 +414,9 @@ function DashboardPage() {
 
           {/* Billing & License Content */}
           <TabsContent value="billing" className="space-y-6 max-w-xl mx-auto text-left">
-            <Card className="border border-border/80 bg-card/20 rounded-2xl">
+            <Card className="border border-border/80 bg-card/25 rounded-2xl">
               <CardHeader className="border-b border-border/40 pb-6">
-                <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+                <CardTitle className="text-xl font-bold text-foreground flex items-center gap-2">
                   <CreditCard className="size-5 text-[#3ECFB2]" /> Current License Info
                 </CardTitle>
                 <CardDescription>View, manage, and upgrade your active billing license.</CardDescription>
@@ -288,10 +424,10 @@ function DashboardPage() {
               <CardContent className="pt-6 space-y-6">
                 
                 {/* Active Plan Detail Box */}
-                <div className="rounded-xl border border-white/5 bg-[#121214] p-5 flex items-center justify-between">
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-5 flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Active Tier</p>
-                    <p className="text-lg font-bold text-white">
+                    <p className="text-lg font-bold text-foreground">
                       {hasPaid ? "Pro Lifetime Plan" : "Free Trial Plan"}
                     </p>
                   </div>
@@ -311,7 +447,7 @@ function DashboardPage() {
 
                 {/* Features Checklist */}
                 <div className="space-y-3.5">
-                  <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wide">License features:</h4>
+                  <h4 className="text-xs font-mono font-bold text-foreground uppercase tracking-wide">License features:</h4>
                   <div className="grid gap-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="size-4 text-[#3ECFB2]" /> Unlimited AI copy sequences
@@ -331,7 +467,7 @@ function DashboardPage() {
                 {/* Purchase History */}
                 {payments.length > 0 && (
                   <div className="space-y-3 pt-4 border-t border-border/40">
-                    <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wide flex items-center gap-1.5">
+                    <h4 className="text-xs font-mono font-bold text-foreground uppercase tracking-wide flex items-center gap-1.5">
                       <FileText className="size-4 text-muted-foreground" /> Receipt Invoices
                     </h4>
                     <div className="space-y-2">
@@ -342,7 +478,7 @@ function DashboardPage() {
                         return (
                           <div key={pay.id} className="flex justify-between items-center text-xs font-mono bg-card/30 p-3 rounded-lg border border-border/50">
                             <div>
-                              <p className="text-white font-semibold capitalize">Order ID: {pay.lemon_squeezy_order_id || pay.id.slice(0, 8)}</p>
+                              <p className="text-foreground font-semibold capitalize">Order ID: {pay.lemon_squeezy_order_id || pay.id.slice(0, 8)}</p>
                               <p className="text-[10px] text-muted-foreground">{payDate}</p>
                             </div>
                             <span className="text-[#3ECFB2] font-semibold uppercase text-[10px] border border-[#3ECFB2]/20 bg-[#3ECFB2]/15 px-2 py-0.5 rounded">
@@ -360,9 +496,9 @@ function DashboardPage() {
 
           {/* Profile & Account Content */}
           <TabsContent value="profile" className="space-y-6 max-w-xl mx-auto text-left">
-            <Card className="border border-border/80 bg-card/20 rounded-2xl">
+            <Card className="border border-border/80 bg-card/25 rounded-2xl">
               <CardHeader className="border-b border-border/40 pb-6">
-                <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+                <CardTitle className="text-xl font-bold text-foreground flex items-center gap-2">
                   <UserIcon className="size-5 text-[#3ECFB2]" /> Account Credentials
                 </CardTitle>
                 <CardDescription>Your authenticated account profile credentials.</CardDescription>
@@ -379,7 +515,7 @@ function DashboardPage() {
                     </div>
                   )}
                   <div className="space-y-1">
-                    <h3 className="font-bold text-lg text-white">{displayName}</h3>
+                    <h3 className="font-bold text-lg text-foreground">{displayName}</h3>
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                 </div>
@@ -387,7 +523,7 @@ function DashboardPage() {
                 <div className="space-y-3 pt-4 border-t border-border/40 text-xs font-mono">
                   <div className="flex justify-between items-center py-2 border-b border-border/20">
                     <span className="text-muted-foreground">User ID:</span>
-                    <span className="text-white select-all">{user.id}</span>
+                    <span className="text-foreground select-all">{user.id}</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border/20">
                     <span className="text-muted-foreground">Login Provider:</span>
@@ -395,7 +531,7 @@ function DashboardPage() {
                   </div>
                   <div className="flex justify-between items-center py-2">
                     <span className="text-muted-foreground">Account Created:</span>
-                    <span className="text-white">
+                    <span className="text-foreground">
                       {new Date(user.created_at).toLocaleDateString("en-US", {
                         month: "long",
                         day: "numeric",

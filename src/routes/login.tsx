@@ -7,6 +7,7 @@ import { Mail, Lock, Sparkles, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { verifyLoginCredentials } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { user, loading, signInWithGoogle, signInWithApple } = useAuth();
+  const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +36,13 @@ function LoginPage() {
 
     setSubmitting(true);
     try {
+      // 1. Verify credentials on the server first to get detailed error messages
+      await verifyLoginCredentials({
+        email: email.trim(),
+        password,
+      });
+
+      // 2. Log in on the client to establish the session
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -69,7 +77,7 @@ function LoginPage() {
         <div className="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] rounded-full bg-emerald-500/5 blur-[140px] pointer-events-none" />
         
         {/* Top brand info */}
-        <Link to="/" className="flex items-center gap-2.5 z-10 hover:opacity-85 transition">
+        <Link to="/" className="flex items-center gap-2.5 z-10 hover:opacity-85 transition mb-8">
           <img
             src="/screenmint-icon.png"
             alt="Screenify logo"
@@ -81,8 +89,8 @@ function LoginPage() {
         </Link>
 
         {/* Center Pitch */}
-        <div className="my-auto space-y-6 max-w-lg z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/10 bg-emerald-500/5 text-[#3ECFB2] text-xs font-mono tracking-wider uppercase">
+        <div className="flex-1 flex flex-col justify-center py-12 space-y-6 max-w-lg z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/10 bg-emerald-500/5 text-[#3ECFB2] text-xs font-mono tracking-wider uppercase w-fit">
             <Sparkles className="size-3.5" /> High-converting App Store graphics
           </div>
           <h1 className="font-display text-5xl font-bold leading-tight tracking-tight text-white text-balance">
@@ -108,7 +116,7 @@ function LoginPage() {
         </div>
 
         {/* Bottom copyright */}
-        <div className="text-xs text-muted-foreground z-10">
+        <div className="text-xs text-muted-foreground/60 z-10 mt-8">
           &copy; {new Date().getFullYear()} Screenify. All rights reserved.
         </div>
       </div>

@@ -7,6 +7,7 @@ import { Mail, Lock, User, Sparkles, ArrowLeft, Check, X, Loader2 } from "lucide
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { adminSignUpUser } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/signup")({
   component: SignUpPage,
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/signup")({
 
 function SignUpPage() {
   const navigate = useNavigate();
-  const { user, loading, signInWithGoogle, signInWithApple } = useAuth();
+  const { user, loading } = useAuth();
   
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,26 +56,23 @@ function SignUpPage() {
 
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Create user via server function to auto-confirm email
+      await adminSignUpUser({
         email: email.trim(),
         password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-          },
-        },
+        fullName: fullName.trim(),
       });
 
-      if (error) throw error;
+      // Sign in immediately to establish session
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-      // Supabase returns a session if email confirmation is disabled, otherwise session is null
-      if (data?.session) {
-        toast.success("Account created successfully! Welcome to Screenify.");
-        navigate({ to: "/dashboard" });
-      } else {
-        toast.success("Registration successful! Please check your email to verify your account.");
-        navigate({ to: "/login" });
-      }
+      if (signInError) throw signInError;
+
+      toast.success("Account created successfully! Welcome to Screenify.");
+      navigate({ to: "/dashboard" });
     } catch (err: any) {
       toast.error(err.message || "Failed to create account.");
     } finally {
@@ -98,7 +96,7 @@ function SignUpPage() {
         <div className="absolute top-[10%] left-[10%] w-[350px] h-[350px] rounded-full bg-[#3ECFB2]/5 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] rounded-full bg-emerald-500/5 blur-[140px] pointer-events-none" />
         
-        <Link to="/" className="flex items-center gap-2.5 z-10 hover:opacity-85 transition">
+        <Link to="/" className="flex items-center gap-2.5 z-10 hover:opacity-85 transition mb-8">
           <img
             src="/screenmint-icon.png"
             alt="Screenify logo"
@@ -109,8 +107,8 @@ function SignUpPage() {
           </span>
         </Link>
 
-        <div className="my-auto space-y-6 max-w-lg z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/10 bg-emerald-500/5 text-[#3ECFB2] text-xs font-mono tracking-wider uppercase">
+        <div className="flex-1 flex flex-col justify-center py-12 space-y-6 max-w-lg z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/10 bg-emerald-500/5 text-[#3ECFB2] text-xs font-mono tracking-wider uppercase w-fit">
             <Sparkles className="size-3.5" /> Start for free
           </div>
           <h1 className="font-display text-5xl font-bold leading-tight tracking-tight text-white text-balance">
@@ -135,7 +133,7 @@ function SignUpPage() {
           </div>
         </div>
 
-        <div className="text-xs text-muted-foreground z-10">
+        <div className="text-xs text-muted-foreground/60 z-10 mt-8">
           &copy; {new Date().getFullYear()} Screenify. All rights reserved.
         </div>
       </div>
