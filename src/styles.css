@@ -152,4 +152,24 @@
     from { opacity: 0; transform: translateY(14px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+  .text-3d {
+    color: var(--color-foreground);
+    text-shadow: 
+      0 1px 0 oklch(0.75 0.24 128 / 0.15),
+      0 2px 0 oklch(0.75 0.24 128 / 0.12),
+      0 3px 0 oklch(0.75 0.24 128 / 0.09),
+      0 4px 0 oklch(0.75 0.24 128 / 0.06),
+      0 8px 12px oklch(0 0 0 / 0.15);
+  }
+
+  .dark .text-3d {
+    color: #ffffff;
+    text-shadow: 
+      0 1px 0 oklch(0.88 0.22 128 / 0.25),
+      0 2px 0 oklch(0.88 0.22 128 / 0.2),
+      0 3px 0 oklch(0.88 0.22 128 / 0.15),
+      0 4px 0 oklch(0.88 0.22 128 / 0.1),
+      0 8px 16px oklch(0 0 0 / 0.4);
+  }
 }

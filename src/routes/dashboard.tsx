@@ -206,6 +206,14 @@ function DashboardPage() {
       {/* Main Container */}
       <div className="flex-1 mx-auto w-full max-w-6xl px-6 py-12 space-y-10">
         
+        {/* Page Title */}
+        <div className="text-center py-4 select-none">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-widest uppercase text-3d mb-3 font-sans">
+            Dashboard
+          </h2>
+          <div className="h-1 w-20 bg-gradient-to-r from-[#3ECFB2] to-[#C8E84A] mx-auto rounded-full shadow-lg shadow-[#3ECFB2]/20" />
+        </div>
+
         {/* Welcome Section */}
         <section className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-border/40">
           <div className="space-y-1.5 text-left">
