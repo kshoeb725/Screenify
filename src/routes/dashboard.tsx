@@ -148,6 +148,7 @@ function DashboardPage() {
           <div className="flex items-center gap-4 sm:gap-6">
             <Link 
               to="/" 
+              search={{ new: "true" }}
               className="text-xs font-semibold text-muted-foreground hover:text-foreground transition flex items-center gap-1.5"
             >
               <Plus className="size-3.5" /> New Design
@@ -225,7 +226,7 @@ function DashboardPage() {
             </div>
             <p className="text-sm text-muted-foreground">Manage your generated creatives, billing info, and account settings.</p>
           </div>
-          <Link to="/">
+          <Link to="/" search={{ new: "true" }}>
             <Button className="bg-[#3ECFB2] hover:bg-[#059669] text-ink font-semibold py-5 px-6 rounded-xl cursor-pointer flex items-center gap-2 active:scale-98 shadow-md">
               <Plus className="size-4" /> Create New Graphic
             </Button>
@@ -403,7 +404,7 @@ function DashboardPage() {
                     Upload a raw merchant screenshot, pick style colors, and let our AI generate a high-converting graphic sequence.
                   </p>
                 </div>
-                <Link to="/">
+                <Link to="/" search={{ new: "true" }}>
                   <Button className="bg-[#3ECFB2]/15 hover:bg-[#3ECFB2]/25 text-[#3ECFB2] font-semibold py-5 px-6 rounded-xl border border-[#3ECFB2]/30 cursor-pointer shadow-md">
                     Upload Your First Screenshot
                   </Button>

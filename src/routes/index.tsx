@@ -28,7 +28,15 @@ type FormData = {
   objective: string;
 };
 
+import { z } from "zod";
+
+const homeSearchSchema = z.object({
+  new: z.string().optional().catch(""),
+  upload: z.string().optional().catch(""),
+});
+
 export const Route = createFileRoute("/")({
+  validateSearch: (search) => homeSearchSchema.parse(search),
   component: Index,
 });
 
@@ -178,6 +186,7 @@ function Index() {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const search = Route.useSearch();
 
   useEffect(() => {
     const email = user?.email;
@@ -266,6 +275,20 @@ function Index() {
       accent: "#C8E84A",
     };
   });
+
+  useEffect(() => {
+    if (search.new === "true" || search.upload === "true") {
+      onReset();
+      setTimeout(() => {
+        fileRef.current?.click();
+      }, 150);
+      navigate({
+        to: "/",
+        search: {},
+        replace: true,
+      });
+    }
+  }, [search.new, search.upload, onReset, navigate]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
