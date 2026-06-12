@@ -277,20 +277,6 @@ function Index() {
   });
 
   useEffect(() => {
-    if (search.new === "true" || search.upload === "true") {
-      onReset();
-      setTimeout(() => {
-        fileRef.current?.click();
-      }, 150);
-      navigate({
-        to: "/",
-        search: {},
-        replace: true,
-      });
-    }
-  }, [search.new, search.upload, onReset, navigate]);
-
-  useEffect(() => {
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("screenmint_previews", JSON.stringify(previews));
@@ -499,6 +485,19 @@ function Index() {
     }
   }, []);
 
+  useEffect(() => {
+    if (search.new === "true" || search.upload === "true") {
+      onReset();
+      setTimeout(() => {
+        fileRef.current?.click();
+      }, 150);
+      navigate({
+        to: "/",
+        search: {},
+        replace: true,
+      });
+    }
+  }, [search.new, search.upload, onReset, navigate]);
 
   const showLanding = status === "idle" && previews.filter(p => p !== null).length === 0;
 
