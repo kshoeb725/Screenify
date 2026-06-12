@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useRef, useState, useEffect, cloneElement } from "react";
 import { createPortal } from "react-dom";
@@ -10,6 +10,16 @@ import { Footer } from "@/components/Footer";
 import { LandingPage } from "@/components/LandingPage";
 import { extractFromDataUrl } from "@/lib/extract-palette";
 import * as htmlToImage from "html-to-image";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Image as ImageIcon, Settings as SettingsIcon, LogOut } from "lucide-react";
 
 type FormData = {
   email: string;
@@ -166,6 +176,15 @@ async function compressImage(dataUrl: string, maxDim = 2560): Promise<string> {
 function Index() {
   const generate = useServerFn(generatePromos);
   const { theme } = useTheme();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const email = user?.email;
+    if (email) {
+      setForm((prev) => ({ ...prev, email }));
+    }
+  }, [user]);
 
   const [previews, setPreviews] = useState<(string | null)[]>(() => {
     if (typeof window !== "undefined") {
@@ -307,6 +326,11 @@ function Index() {
   }, [logo]);
 
   const handleUpload = useCallback(async (files: FileList | File[], slotIndex?: number) => {
+    if (!user) {
+      toast.error("Please sign in to upload screenshots.");
+      navigate({ to: "/login" });
+      return;
+    }
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
 
@@ -369,7 +393,7 @@ function Index() {
       toast.error("Failed to process image files.");
       console.error(err);
     }
-  }, []);
+  }, [user, navigate]);
 
   const handleGenerate = useCallback(async () => {
     const activeScreens = previews.filter((p): p is string => p !== null);
@@ -469,11 +493,29 @@ function Index() {
         </defs>
       </svg>
       <Toaster theme={theme} position="top-center" />
-      <Nav status={status} onReset={onReset} onPick={() => fileRef.current?.click()} />
+      <Nav 
+        status={status} 
+        onReset={onReset} 
+        onPick={() => {
+          if (!user) {
+            toast.error("Please sign in to upload screenshots.");
+            navigate({ to: "/login" });
+          } else {
+            fileRef.current?.click();
+          }
+        }} 
+      />
       
       {showLanding ? (
         <LandingPage
-          onPick={() => fileRef.current?.click()}
+          onPick={() => {
+            if (!user) {
+              toast.error("Please sign in to upload screenshots.");
+              navigate({ to: "/login" });
+            } else {
+              fileRef.current?.click();
+            }
+          }}
           onDrop={handleUpload}
         />
       ) : (
@@ -536,6 +578,7 @@ function Nav({
   onPick: () => void;
 }) {
   const { theme, toggle } = useTheme();
+  const { user, profile, logout } = useAuth();
   const showBack = status !== "idle";
   
   return (
@@ -618,13 +661,63 @@ function Nav({
 
         {/* Right side: CTAs and Theme Toggle */}
         <div className="flex items-center gap-4 text-sm font-sans">
-          {!showBack && (
-            <button
-              onClick={onPick}
-              className="bg-emerald-600 dark:bg-[#3ECFB2] text-white dark:text-ink hover:opacity-90 font-semibold rounded-lg px-4 py-2 border-0 cursor-pointer text-xs"
-            >
-              Get Started
-            </button>
+          {user ? (
+            <div className="flex items-center gap-3">
+              <Link
+                to="/dashboard"
+                className="text-xs font-semibold text-muted-foreground hover:text-white transition"
+              >
+                Dashboard
+              </Link>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger className="rounded-full border border-border/80 p-0.5 focus:outline-none cursor-pointer">
+                  {profile?.avatar_url || user?.user_metadata?.avatar_url ? (
+                    <Avatar className="size-8">
+                      <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
+                      <AvatarFallback>{(profile?.full_name || user?.user_metadata?.full_name || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="size-8 rounded-full bg-[#3ECFB2]/15 text-[#3ECFB2] flex items-center justify-center text-xs font-bold font-mono">
+                      {(profile?.full_name || user?.user_metadata?.full_name || "U").slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-[#0C0C0E] border border-border/60 text-white min-w-[160px] rounded-xl p-1.5 space-y-1">
+                  <DropdownMenuItem className="rounded-lg text-xs hover:bg-[#3ECFB2]/15 hover:text-[#3ECFB2] cursor-pointer py-2 px-3">
+                    <Link to="/dashboard" className="w-full h-full flex items-center gap-2">
+                      <ImageIcon className="size-3.5" /> Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="rounded-lg text-xs hover:bg-[#3ECFB2]/15 hover:text-[#3ECFB2] cursor-pointer py-2 px-3">
+                    <Link to="/settings" className="w-full h-full flex items-center gap-2">
+                      <SettingsIcon className="size-3.5" /> Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border/40 my-1" />
+                  <DropdownMenuItem 
+                    onClick={logout}
+                    className="rounded-lg text-xs hover:bg-red-500/10 hover:text-red-400 text-red-500 cursor-pointer py-2 px-3 flex items-center gap-2"
+                  >
+                    <LogOut className="size-3.5" /> Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <>
+              <Link to="/login" className="text-xs text-muted-foreground hover:text-white transition font-semibold">
+                Sign In
+              </Link>
+              {!showBack && (
+                <button
+                  onClick={onPick}
+                  className="bg-emerald-600 dark:bg-[#3ECFB2] text-white dark:text-ink hover:opacity-90 font-semibold rounded-lg px-4 py-2 border-0 cursor-pointer text-xs"
+                >
+                  Get Started
+                </button>
+              )}
+            </>
           )}
           
           <button
@@ -1602,7 +1695,7 @@ function TemplateCanvas({
           );
         default:
           return (
-            <span key={segment} className="underline decoration-wavy mx-1" style={{ decorationColor: accentColor }}>
+            <span key={segment} className="underline decoration-wavy mx-1" style={{ textDecorationColor: accentColor }}>
               {segment}
             </span>
           );
