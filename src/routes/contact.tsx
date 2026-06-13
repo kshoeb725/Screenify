@@ -318,7 +318,7 @@ function ContactPage() {
 
       <footer className="border-t border-border py-6 px-6 text-center text-xs text-muted-foreground bg-card/10">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row justify-between items-center gap-2">
-          <span>&copy; {new Date().getFullYear()} Screenify by Adil Jakir Husen Shaikh. All rights reserved.</span>
+          <span>&copy; 2026 Screenify. All rights reserved</span>
           <div className="flex gap-4">
             <Link to="/terms" className="transition-colors hover:text-foreground">Terms</Link>
             <Link to="/privacy" className="transition-colors hover:text-foreground">Privacy</Link>

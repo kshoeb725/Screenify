@@ -167,7 +167,7 @@ export function Footer({ onHomeClick }: FooterProps) {
         <div className="mt-12 flex flex-col items-center justify-between gap-6 border-t border-border pt-6 sm:flex-row">
           <div className="flex flex-col gap-2.5 text-left">
             <p className="text-xs text-muted-foreground">
-              &copy; 2026 Screenify. All rights reserved.
+              &copy; 2026 Screenify. All rights reserved
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground sm:justify-end">
