@@ -130,7 +130,7 @@ function LoginPage() {
 
         {/* Bottom copyright */}
         <div className="text-xs text-muted-foreground/60 z-10 mt-8">
-          &copy; {new Date().getFullYear()} Screenify. All rights reserved.
+          &copy; {new Date().getFullYear()} Screenify by Adil Jakir Husen Shaikh. All rights reserved.
         </div>
       </div>
 

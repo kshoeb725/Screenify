@@ -11,7 +11,7 @@ function PrivacyPage() {
   const sections = [
     {
       title: "1. Introduction",
-      content: `Screenify ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you visit and use our website (screenify.dev) and SaaS service (collectively, the "Service"). 
+      content: `Screenify ("we", "our", or "us") refers to the SaaS platform and service operated by individual developer Adil Jakir Husen Shaikh, based in Mumbai, Maharashtra, India. We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you visit and use our website (screenify.dev) and SaaS service (collectively, the "Service"). 
       
       We act as a Data Controller for account registration and billing data, and as a Data Processor for any User Content (such as raw screenshots) uploaded to our service. By accessing or using the Service, you consent to the data practices described in this policy.`
     },
@@ -91,7 +91,9 @@ function PrivacyPage() {
     {
       title: "13. Contact Information",
       content: `For any inquiries, data rights requests, or complaints regarding this Privacy Policy or our data processing practices, please contact us at:
-      Email: support@screenify.cloud.`
+      - **Developer**: Adil Jakir Husen Shaikh
+      - **Location**: Mumbai, Maharashtra, India
+      - **Email**: support@screenify.cloud`
     }
   ];
 
@@ -152,7 +154,7 @@ function PrivacyPage() {
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-8 flex flex-wrap justify-between gap-4 text-xs text-muted-foreground">
-          <span>&copy; {new Date().getFullYear()} Screenify</span>
+          <span>&copy; {new Date().getFullYear()} Screenify by Adil Jakir Husen Shaikh</span>
           <Link to="/" className="transition-colors hover:text-foreground">
             Back to Home
           </Link>

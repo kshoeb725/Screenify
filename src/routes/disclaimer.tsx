@@ -100,7 +100,7 @@ function DisclaimerPage() {
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-8 flex flex-wrap justify-between gap-4 text-xs text-muted-foreground">
-          <span>&copy; {new Date().getFullYear()} Screenify</span>
+          <span>&copy; {new Date().getFullYear()} Screenify by Adil Jakir Husen Shaikh</span>
           <Link to="/" className="transition-colors hover:text-foreground">
             Back to Home
           </Link>

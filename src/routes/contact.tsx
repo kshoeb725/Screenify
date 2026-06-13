@@ -133,8 +133,17 @@ function ContactPage() {
               <MessageSquare className="size-6 text-lime" /> Contact Us
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-              We love to hear feedback, submit your form below we will get back in with 1-2 business days.
+              We love to hear feedback. Submit your form below, or reach out directly to our support team.
             </CardDescription>
+            {/* Registered Business Details for Compliance */}
+            <div className="mt-4 pt-4 border-t border-border/40 text-left text-xs text-muted-foreground/85 max-w-xs mx-auto space-y-1 font-sans">
+              <p className="font-mono text-[9px] uppercase tracking-widest text-lime font-bold mb-1.5 text-center">Business Credentials</p>
+              <div className="flex justify-between"><span className="font-mono text-[10px]">Developer:</span> <span className="font-bold text-foreground">Adil Jakir Husen Shaikh</span></div>
+              <div className="flex justify-between"><span className="font-mono text-[10px]">Entity:</span> <span className="font-bold text-foreground">Individual Developer</span></div>
+              <div className="flex justify-between"><span className="font-mono text-[10px]">Location:</span> <span className="font-bold text-foreground">Mumbai, Maharashtra, India</span></div>
+              <div className="flex justify-between"><span className="font-mono text-[10px]">Email:</span> <span className="font-bold text-foreground">support@screenify.cloud</span></div>
+              <div className="flex justify-between"><span className="font-mono text-[10px]">Fulfillment:</span> <span className="font-bold text-foreground">Instant digital delivery</span></div>
+            </div>
           </CardHeader>
 
           <CardContent className="pt-2">
@@ -316,13 +325,13 @@ function ContactPage() {
         </Card>
       </div>
 
-      {/* Footer */}
       <footer className="border-t border-border py-6 px-6 text-center text-xs text-muted-foreground bg-card/10">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row justify-between items-center gap-2">
-          <span>&copy; {new Date().getFullYear()} Screenify. All rights reserved.</span>
+          <span>&copy; {new Date().getFullYear()} Screenify by Adil Jakir Husen Shaikh. All rights reserved.</span>
           <div className="flex gap-4">
             <Link to="/terms" className="transition-colors hover:text-foreground">Terms</Link>
             <Link to="/privacy" className="transition-colors hover:text-foreground">Privacy</Link>
+            <Link to="/about" className="transition-colors hover:text-foreground">About</Link>
             <Link to="/" className="transition-colors hover:text-foreground">Home</Link>
           </div>
         </div>

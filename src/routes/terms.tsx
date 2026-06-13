@@ -12,7 +12,7 @@ function TermsPage() {
     {
       title: "1. Definitions",
       content: `In these Terms and Conditions:
-      - "Screenify" ("we", "our", "us") refers to the SaaS platform and service operated by Screenify.
+      - "Screenify" ("we", "our", "us") refers to the SaaS platform and service operated by individual developer Adil Jakir Husen Shaikh, located in Mumbai, Maharashtra, India.
       - "Service" refers to the website located at screenify.dev, the application, and any associated features, content, products, or services.
       - "User" ("you", "your") refers to any individual or entity registering for, accessing, or using the Service.
       - "User Content" refers to any files, raw screenshots, logos, text, or other assets uploaded or input by the User into the Service.
@@ -70,8 +70,9 @@ function TermsPage() {
       - **Pricing Adjustments**: We reserve the right to modify our pricing tiers at any time. Any changes to subscription pricing will take effect at the start of the next billing cycle, and we will provide you with at least 30 days' advance notice.`
     },
     {
-      title: "12. Payment Processing",
-      content: `All payments, checkouts, and recurring subscriptions are processed securely by Dodo Payments, our third-party payment gateway and Merchant of Record. By making a purchase, you agree to comply with Dodo Payments' customer terms and privacy policies. Screenify does not directly store or access your credit card numbers or banking credentials.`
+      title: "12. Payment Processing & Fulfillment",
+      content: `All payments, checkouts, and recurring subscriptions are processed securely by Dodo Payments, our third-party payment gateway and Merchant of Record. By making a purchase, you agree to comply with Dodo Payments' customer terms and privacy policies. Screenify does not directly store or access your credit card numbers or banking credentials.
+      - **Fulfillment & Delivery**: All purchases, including credits and subscriptions, are delivered instantly online to the User's dashboard. Upon successful payment verification, high-resolution downloads and Pro features are unlocked immediately. There are no physical shipping requirements.`
     },
     {
       title: "13. Service Availability and Modifications",
@@ -95,7 +96,7 @@ function TermsPage() {
     },
     {
       title: "18. Governing Law and Jurisdiction",
-      content: `These Terms and Conditions shall be governed by, and construed in accordance with, the laws of the State of Delaware, United States, without regard to its conflict of law principles. Any legal action or proceeding arising under these Terms that is not subject to arbitration shall be brought exclusively in the state or federal courts located in Delaware.`
+      content: `These Terms and Conditions shall be governed by, and construed in accordance with, the laws of Maharashtra, India, without regard to its conflict of law principles. Any legal action or proceeding arising under these Terms shall be brought exclusively in the courts located in Mumbai, India.`
     },
     {
       title: "19. Dispute Resolution & Class Action Waiver",
@@ -108,7 +109,10 @@ function TermsPage() {
     },
     {
       title: "21. Contact Information",
-      content: `If you have any questions, concerns, or legal notices regarding these Terms, please contact our team via email at support@screenify.cloud.`
+      content: `If you have any questions, concerns, or legal notices regarding these Terms, please contact us at:
+      - **Developer**: Adil Jakir Husen Shaikh
+      - **Location**: Mumbai, Maharashtra, India
+      - **Email**: support@screenify.cloud`
     }
   ];
 
@@ -169,7 +173,7 @@ function TermsPage() {
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-8 flex flex-wrap justify-between gap-4 text-xs text-muted-foreground">
-          <span>&copy; {new Date().getFullYear()} Screenify</span>
+          <span>&copy; {new Date().getFullYear()} Screenify by Adil Jakir Husen Shaikh</span>
           <Link to="/" className="transition-colors hover:text-foreground">
             Back to Home
           </Link>
