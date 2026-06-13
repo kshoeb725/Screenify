@@ -71,7 +71,7 @@ function TermsPage() {
     },
     {
       title: "12. Payment Processing",
-      content: `All payments, checkouts, and recurring subscriptions are processed securely by Lemon Squeezy, our third-party payment gateway and Merchant of Record. By making a purchase, you agree to comply with Lemon Squeezy's customer terms and privacy policies. Screenify does not directly store or access your credit card numbers or banking credentials.`
+      content: `All payments, checkouts, and recurring subscriptions are processed securely by Dodo Payments, our third-party payment gateway and Merchant of Record. By making a purchase, you agree to comply with Dodo Payments' customer terms and privacy policies. Screenify does not directly store or access your credit card numbers or banking credentials.`
     },
     {
       title: "13. Service Availability and Modifications",
@@ -108,7 +108,7 @@ function TermsPage() {
     },
     {
       title: "21. Contact Information",
-      content: `If you have any questions, concerns, or legal notices regarding these Terms, please contact our team via email at Screenify786@gmail.com.`
+      content: `If you have any questions, concerns, or legal notices regarding these Terms, please contact our team via email at support@screenify.dev.`
     }
   ];
 
@@ -158,10 +158,10 @@ function TermsPage() {
           <p className="text-sm text-muted-foreground">
             Questions about these terms? Reach out to us at{" "}
             <a
-              href="mailto:Screenify786@gmail.com"
+              href="mailto:support@screenify.dev"
               className="text-foreground underline underline-offset-4 transition hover:text-lime"
             >
-              Screenify786@gmail.com
+              support@screenify.dev
             </a>
           </p>
         </div>

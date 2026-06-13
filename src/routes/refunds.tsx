@@ -13,7 +13,7 @@ function RefundsPage() {
       title: "1. Overview & Merchant of Record",
       content: `This Refund Policy explains the terms, conditions, and processes for requesting refunds on digital packages and software subscriptions purchased through Screenify.
       
-      All transactions, billing cycles, checkouts, and customer invoices are handled securely by **Lemon Squeezy, LLC**, our primary Merchant of Record and payment gateway. As such, billing and refund executions are processed in alignment with Lemon Squeezy's customer compliance policies and terms.`
+      All transactions, billing cycles, checkouts, and customer invoices are handled securely by **Dodo Payments**, our primary Merchant of Record and payment gateway. As such, billing and refund executions are processed in alignment with Dodo Payments' customer compliance policies and terms.`
     },
     {
       title: "2. Digital Product Nature",
@@ -48,9 +48,9 @@ function RefundsPage() {
     },
     {
       title: "8. How to Request a Refund",
-      content: `To request a refund, please send an email to Screenify786@gmail.com within seven (7) days of the transaction date. Your request must include:
+      content: `To request a refund, please send an email to support@screenify.dev within seven (7) days of the transaction date. Your request must include:
       1. Your account email address.
-      2. The transaction ID or Lemon Squeezy invoice receipt number.
+      2. The transaction ID or Dodo Payments receipt number.
       3. A detailed explanation of the technical issue, duplicate charge, or reason for the request.
       
       We will review your request within three (3) business days and notify you of our decision.`
@@ -59,7 +59,7 @@ function RefundsPage() {
       title: "9. Chargeback and Dispute Policy",
       content: `We encourage you to contact our support team directly to resolve any billing errors, duplicate charges, or technical failures. 
       
-      If you initiate a chargeback or payment dispute with your bank, credit card company, or PayPal without contacting us first, we reserve the right to immediately suspend your Screenify account, terminate your active subscriptions, and delete all generated and stored design sets associated with your credentials.`
+      If you initiate a chargeback or payment dispute with your bank, credit card company, or payment processor without contacting us first, we reserve the right to temporarily suspend your Screenify account, pause active subscriptions, and restrict access to stored design sets during the active investigation of the dispute.`
     }
   ];
 
@@ -109,10 +109,10 @@ function RefundsPage() {
           <p className="text-sm text-muted-foreground">
             Questions about refunds? Reach out to us at{" "}
             <a
-              href="mailto:Screenify786@gmail.com"
+              href="mailto:support@screenify.dev"
               className="text-foreground underline underline-offset-4 transition hover:text-lime"
             >
-              Screenify786@gmail.com
+              support@screenify.dev
             </a>
           </p>
         </div>

@@ -26,7 +26,7 @@ function CookiesPage() {
       title: "3. Specific Subprocessor Cookies",
       content: `Our third-party subprocessors place specific functional and session cookies when you navigate the platform:
       - **Supabase**: Places essential cookies and local storage tokens to store secure user session authentication.
-      - **Lemon Squeezy**: Places cookies during the checkout flow to ensure secure order processing, coordinate payment statuses, and prevent transaction fraud.`
+      - **Dodo Payments**: Places cookies during the checkout flow to ensure secure order processing, coordinate payment statuses, and prevent transaction fraud.`
     },
     {
       title: "4. Session vs. Persistent Cookies",
@@ -51,7 +51,7 @@ function CookiesPage() {
     },
     {
       title: "7. Contact Us",
-      content: `If you have any questions or require additional details about our use of cookies, please email our privacy officer at Screenify786@gmail.com.`
+      content: `If you have any questions or require additional details about our use of cookies, please email our privacy officer at support@screenify.dev.`
     }
   ];
 
@@ -99,13 +99,13 @@ function CookiesPage() {
 
         <div className="mt-14 border-t border-border pt-8">
           <p className="text-sm text-muted-foreground">
-            Questions about our cookies? Reach out to us at{" "}
-            <a
-              href="mailto:Screenify786@gmail.com"
-              className="text-foreground underline underline-offset-4 transition hover:text-lime"
-            >
-              Screenify786@gmail.com
-            </a>
+             Questions about our cookies? Reach out to us at{" "}
+             <a
+               href="mailto:support@screenify.dev"
+               className="text-foreground underline underline-offset-4 transition hover:text-lime"
+             >
+               support@screenify.dev
+             </a>
           </p>
         </div>
       </div>

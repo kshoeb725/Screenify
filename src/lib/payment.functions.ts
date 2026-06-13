@@ -2,34 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-function buildCheckoutUrl(rawValue: string, sessionId: string, email: string) {
-  const trimmed = rawValue.trim();
-  const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  const url = new URL(normalized);
-
-  if (!url.hostname.endsWith(".lemonsqueezy.com") || !url.pathname.startsWith("/checkout/buy/")) {
-    throw new Error(
-      "LEMON_SQUEEZY_CHECKOUT_URL must be a shareable Lemon Squeezy checkout link like https://your-store.lemonsqueezy.com/checkout/buy/VARIANT_ID.",
-    );
-  }
-
-  url.searchParams.set("checkout[custom][session_id]", sessionId);
-  url.searchParams.set("checkout[email]", email);
-  return url;
-}
-
-async function assertCheckoutIsReachable(url: URL) {
-  const response = await fetch(url.toString(), { method: "GET", redirect: "manual" });
-  if (response.status === 404) {
-    throw new Error(
-      "The configured Lemon Squeezy checkout link returns 404. Copy a fresh Share → Hosted checkout link for the active product variant and update LEMON_SQUEEZY_CHECKOUT_URL.",
-    );
-  }
-  if (response.status >= 400) {
-    throw new Error(`Lemon Squeezy checkout is not reachable right now (${response.status}).`);
-  }
-}
-
 export const initPaymentSession = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({ email: z.string().email() }).parse(input),
@@ -37,31 +9,65 @@ export const initPaymentSession = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const sessionId = crypto.randomUUID();
 
+    // Insert pending payment record in Supabase
     await supabaseAdmin.from("payments").insert({
       session_id: sessionId,
       status: "pending",
       customer_email: data.email,
     });
 
-    const checkoutUrlRaw = process.env.LEMON_SQUEEZY_CHECKOUT_URL?.trim();
-    if (!checkoutUrlRaw) {
+    const apiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+    const productId = process.env.DODO_PAYMENTS_PRODUCT_ID?.trim();
+
+    // If API key or product ID is missing, fall back to Demo Mode
+    if (!apiKey || !productId) {
+      console.log("[payments] DODO_PAYMENTS_API_KEY or PRODUCT_ID missing. Launching in Demo Mode.");
       return { sessionId, checkoutUrl: null, demo: true, setupError: null };
     }
 
     try {
-      const url = buildCheckoutUrl(checkoutUrlRaw, sessionId, data.email);
-      await assertCheckoutIsReachable(url);
-      return { sessionId, checkoutUrl: url.toString(), demo: false, setupError: null };
-    } catch (e) {
-      console.error("Invalid Lemon Squeezy checkout URL:", e);
+      const isLive = apiKey.startsWith("live_") || process.env.NODE_ENV === "production";
+      const dodoBaseUrl = isLive ? "https://live.dodopayments.com" : "https://test.dodopayments.com";
+      const appUrl = process.env.APP_URL?.trim() || "http://localhost:3000";
+
+      const response = await fetch(`${dodoBaseUrl}/checkouts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          product_cart: [
+            {
+              product_id: productId,
+              quantity: 1,
+            },
+          ],
+          customer: {
+            email: data.email,
+          },
+          metadata: {
+            session_id: sessionId,
+          },
+          return_url: `${appUrl}/dashboard?session_id=${sessionId}`,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("[payments] Dodo Payments API failed:", errText);
+        throw new Error(`Dodo Payments API error: ${errText || response.statusText}`);
+      }
+
+      const resBody = await response.json();
+      return { sessionId, checkoutUrl: resBody.checkout_url, demo: false, setupError: null };
+    } catch (e: any) {
+      console.error("[payments] Error initiating Dodo Payments session:", e);
       return {
         sessionId,
         checkoutUrl: null,
         demo: false,
-        setupError:
-          e instanceof Error
-            ? e.message
-            : "LEMON_SQUEEZY_CHECKOUT_URL is not a valid Lemon Squeezy checkout URL.",
+        setupError: e instanceof Error ? e.message : "Failed to initiate Dodo Payments checkout session.",
       };
     }
   });
@@ -73,7 +79,7 @@ export const getPaymentStatus = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: payment } = await supabaseAdmin
       .from("payments")
-      .select("status, lemon_squeezy_order_id")
+      .select("status")
       .eq("session_id", data.sessionId)
       .single();
 

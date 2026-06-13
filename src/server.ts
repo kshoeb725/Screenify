@@ -66,29 +66,91 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
-// ─── Lemon Squeezy webhook handler ───────────────────────────────────────────
+// ─── Dodo Payments Webhook Verification ──────────────────────────────────────
 
-async function handleLemonWebhook(request: Request): Promise<Response> {
-  const webhookSecret = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET;
+function verifyDodoWebhook(
+  rawBody: string,
+  id: string,
+  timestamp: string,
+  signatureHeader: string,
+  secretKey: string
+): boolean {
+  if (!id || !timestamp || !signatureHeader || !secretKey) {
+    return false;
+  }
+
+  // Construct signed content
+  const signedContent = `${id}.${timestamp}.${rawBody}`;
+
+  // Decode Dodo webhook secret key (which is base64 encoded, optionally prefixed with 'whsec_')
+  const cleanKey = secretKey.startsWith("whsec_") ? secretKey.substring(6) : secretKey;
+  let secretBuffer: Buffer;
+  try {
+    secretBuffer = Buffer.from(cleanKey, "base64");
+  } catch (err) {
+    console.error("[webhook] Failed to decode webhook key from base64:", err);
+    return false;
+  }
+
+  // Compute expected signature in base64
+  const computedSig = createHmac("sha256", secretBuffer)
+    .update(signedContent)
+    .digest("base64");
+
+  const computedSigBuffer = Buffer.from(computedSig, "utf8");
+
+  // Match against signatures in the header (space-separated, e.g., "v1,sig1 v1,sig2")
+  const signatures = signatureHeader.split(" ");
+  for (const sig of signatures) {
+    const parts = sig.split(",");
+    if (parts.length === 2 && parts[0] === "v1") {
+      const headerSigValue = parts[1];
+      const headerSigBuffer = Buffer.from(headerSigValue, "utf8");
+
+      try {
+        if (
+          headerSigBuffer.length === computedSigBuffer.length &&
+          timingSafeEqual(headerSigBuffer, computedSigBuffer)
+        ) {
+          return true;
+        }
+      } catch (e) {
+        // Continue checking other signatures
+      }
+    }
+  }
+
+  return false;
+}
+
+async function handleDodoWebhook(request: Request): Promise<Response> {
+  const webhookSecret = process.env.DODO_PAYMENTS_WEBHOOK_KEY;
   if (!webhookSecret) {
-    console.error("[webhook] LEMON_SQUEEZY_WEBHOOK_SECRET not configured");
+    console.error("[webhook] DODO_PAYMENTS_WEBHOOK_KEY not configured");
     return new Response("Webhook secret not configured", { status: 500 });
   }
 
   const rawBody = await request.text();
-  const signature = request.headers.get("X-Signature");
+  
+  // Retrieve Standard Webhook headers
+  const webhookId = request.headers.get("webhook-id") || "";
+  const webhookTimestamp = request.headers.get("webhook-timestamp") || "";
+  const webhookSignature = request.headers.get("webhook-signature") || "";
 
-  if (!signature) {
-    return new Response("Missing X-Signature header", { status: 401 });
+  if (!webhookSignature) {
+    return new Response("Missing signature header", { status: 401 });
   }
 
-  // Verify HMAC-SHA256 signature
-  const digest = createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
-  try {
-    if (!timingSafeEqual(Buffer.from(digest, "utf8"), Buffer.from(signature, "utf8"))) {
-      return new Response("Invalid signature", { status: 401 });
-    }
-  } catch {
+  const isVerified = verifyDodoWebhook(
+    rawBody,
+    webhookId,
+    webhookTimestamp,
+    webhookSignature,
+    webhookSecret
+  );
+
+  if (!isVerified) {
+    console.error("[webhook] Signature verification failed");
     return new Response("Invalid signature", { status: 401 });
   }
 
@@ -99,27 +161,28 @@ async function handleLemonWebhook(request: Request): Promise<Response> {
     return new Response("Invalid JSON body", { status: 400 });
   }
 
-  const eventName: string = payload.meta?.event_name ?? "";
-  const sessionId: string | undefined = payload.meta?.custom_data?.session_id;
+  const eventType: string = payload.type ?? "";
+  const data = payload.data;
+  const sessionId: string | undefined = data?.metadata?.session_id;
 
   if (!sessionId) {
-    console.warn("[webhook] No session_id in custom_data — ignoring event:", eventName);
-    return new Response("Missing session_id", { status: 400 });
+    console.warn("[webhook] No session_id in metadata — ignoring event:", eventType);
+    return new Response("Missing session_id", { status: 200 });
   }
 
-  const orderId = String(payload.data?.id ?? "");
-  const customerEmail: string = payload.data?.attributes?.user_email ?? "";
+  const orderId = String(data?.id ?? "");
+  const customerEmail: string = data?.customer?.email || data?.customer_email || "";
 
   let newStatus: string | null = null;
-  switch (eventName) {
-    case "order_created":
+  switch (eventType) {
+    case "payment.succeeded":
       newStatus = "paid";
       break;
-    case "order_refunded":
-      newStatus = "refunded";
-      break;
-    case "subscription_payment_failed":
+    case "payment.failed":
       newStatus = "failed";
+      break;
+    case "refund.succeeded":
+      newStatus = "refunded";
       break;
     default:
       return new Response("Event ignored", { status: 200 });
@@ -134,7 +197,7 @@ async function handleLemonWebhook(request: Request): Promise<Response> {
     .from("payments")
     .update({
       status: newStatus,
-      lemon_squeezy_order_id: orderId,
+      lemon_squeezy_order_id: orderId, // Reuse existing table column for Dodo payment ID
       customer_email: customerEmail,
       updated_at: new Date().toISOString(),
     })
@@ -145,7 +208,7 @@ async function handleLemonWebhook(request: Request): Promise<Response> {
     return new Response("DB update failed", { status: 500 });
   }
 
-  console.log(`[webhook] Payment ${sessionId} → ${newStatus} (order ${orderId})`);
+  console.log(`[webhook] Dodo Payment ${sessionId} → ${newStatus} (payment ${orderId})`);
   return new Response("OK", { status: 200 });
 }
 
@@ -155,10 +218,10 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     const url = new URL(request.url);
 
-    // Intercept Lemon Squeezy webhook before TanStack router
-    if (url.pathname === "/api/lemon-webhook" && request.method === "POST") {
+    // Intercept Dodo Payments webhook before TanStack router
+    if (url.pathname === "/api/dodo-webhook" && request.method === "POST") {
       try {
-        return await handleLemonWebhook(request);
+        return await handleDodoWebhook(request);
       } catch (err) {
         console.error("[webhook] Unhandled error:", err);
         return new Response("Internal error", { status: 500 });

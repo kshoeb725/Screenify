@@ -96,12 +96,12 @@ export function Footer({ onHomeClick }: FooterProps) {
                 </a>
               </li>
               <li>
-                <a
-                  href="mailto:Screenify786@gmail.com"
+                <Link
+                  to="/contact"
                   className="transition-colors hover:text-foreground"
                 >
-                  Support
-                </a>
+                  Contact & Support
+                </Link>
               </li>
             </ul>
           </div>
@@ -113,16 +113,24 @@ export function Footer({ onHomeClick }: FooterProps) {
             </h4>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li>
-                <a
-                  href="mailto:Screenify786@gmail.com"
+                <Link
+                  to="/contact"
                   className="transition-colors hover:text-foreground"
                 >
-                  Screenify786@gmail.com
+                  Contact Form
+                </Link>
+              </li>
+              <li>
+                <a
+                  href="mailto:support@screenify.dev"
+                  className="transition-colors hover:text-foreground"
+                >
+                  support@screenify.dev
                 </a>
               </li>
               <li className="flex items-center gap-3 pt-1">
                 <a
-                  href="https://x.com/as6379301"
+                  href="https://x.com/screenify"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center rounded-full border border-border p-2 transition hover:bg-muted hover:text-foreground"
@@ -133,7 +141,7 @@ export function Footer({ onHomeClick }: FooterProps) {
                   </svg>
                 </a>
                 <a
-                  href="https://www.reddit.com/u/AdilShaikh5786/s/j8JQeoj6aB"
+                  href="https://www.reddit.com/r/screenify"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center rounded-full border border-border p-2 transition hover:bg-muted hover:text-foreground"

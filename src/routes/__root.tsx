@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -133,12 +134,57 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
+
+  useEffect(() => {
+    const consent = localStorage.getItem("screenify:cookie-consent");
+    if (!consent) {
+      setShowCookieBanner(true);
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Outlet />
         <Toaster position="top-center" />
+        
+        {showCookieBanner && (
+          <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-2xl border border-border/60 bg-card/85 p-5 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-5 duration-300">
+            <div className="space-y-3">
+              <h4 className="font-display text-sm font-bold tracking-tight text-foreground flex items-center gap-1.5">
+                🍪 Cookie Consent
+              </h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                We use essential cookies to manage your sessions and secure payments. Learn more in our{" "}
+                <Link to="/cookies" className="text-lime underline hover:text-[#3ECFB2] transition-colors">
+                  Cookie Policy
+                </Link>
+                .
+              </p>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  onClick={() => {
+                    localStorage.setItem("screenify:cookie-consent", "declined");
+                    setShowCookieBanner(false);
+                  }}
+                  className="rounded-lg border border-border px-3 py-1.5 text-[10px] font-semibold text-muted-foreground hover:bg-card hover:text-foreground transition cursor-pointer"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem("screenify:cookie-consent", "accepted");
+                    setShowCookieBanner(false);
+                  }}
+                  className="rounded-lg bg-[#3ECFB2] px-3 py-1.5 text-[10px] font-semibold text-slate-950 hover:opacity-90 transition cursor-pointer"
+                >
+                  Accept
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </AuthProvider>
     </QueryClientProvider>
   );

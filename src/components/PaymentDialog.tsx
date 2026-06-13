@@ -8,6 +8,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { useServerFn } from "@tanstack/react-start";
+import { initPaymentSession } from "@/lib/payment.functions";
 
 export function PaymentDialog({
   open,
@@ -21,16 +23,33 @@ export function PaymentDialog({
   email: string;
 }) {
   const [processing, setProcessing] = useState(false);
+  const initSession = useServerFn(initPaymentSession);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     setProcessing(true);
-    // Simulate payment gateway delay
-    await new Promise((r) => setTimeout(r, 1200));
-    setProcessing(false);
-    toast.success("Subscribed to Screenify Pro successfully!");
-    onSuccess();
-    onOpenChange(false);
+    try {
+      const res = await initSession({ data: { email } });
+      if (res.setupError) {
+        toast.error(res.setupError);
+      } else if (res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
+        return;
+      } else if (res.demo) {
+        toast.info("Demo Mode: Simulating successful checkout...");
+        await new Promise((r) => setTimeout(r, 1000));
+        toast.success("Subscribed to Screenify Pro successfully!");
+        onSuccess();
+        onOpenChange(false);
+      } else {
+        toast.error("Failed to initialize checkout session.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to initialize payment.");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const features = [
@@ -54,11 +73,6 @@ export function PaymentDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubscribe} className="space-y-3 mt-2">
-          <div className="rounded-xl border border-[#3ECFB2]/20 bg-[#3ECFB2]/5 px-3 py-1.5 text-[10.5px] font-mono text-[#3ECFB2] flex items-center gap-1.5">
-            <span className="size-1 rounded-full bg-[#3ECFB2] animate-pulse shrink-0" />
-            <span>DEMO MODE · Click below to simulate checkout & unlock Pro.</span>
-          </div>
-
           {/* Screenify Pro Card */}
           <div className="relative rounded-xl border border-border/80 bg-card/45 p-3 shadow-sm overflow-hidden flex flex-col justify-between space-y-3">
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#3ECFB2]/20 to-transparent" />
@@ -71,7 +85,7 @@ export function PaymentDialog({
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="font-display text-xl font-extrabold text-foreground">$9</span>
-                  <span className="text-[9px] text-muted-foreground font-mono">/ month</span>
+                  <span className="text-[9px] text-muted-foreground font-mono">/ one-time</span>
                 </div>
               </div>
               
@@ -86,8 +100,8 @@ export function PaymentDialog({
             </div>
             
             <div className="border-t border-border/40 pt-2 flex justify-between items-center text-[10px] font-mono">
-              <span className="text-muted-foreground">Billed Monthly:</span>
-              <span className="text-foreground font-semibold">Cancel anytime</span>
+              <span className="text-muted-foreground">Access Type:</span>
+              <span className="text-foreground font-semibold">Lifetime License</span>
             </div>
           </div>
 
@@ -103,8 +117,8 @@ export function PaymentDialog({
               className="w-full rounded-xl bg-[#3ECFB2] text-slate-950 font-bold py-2 text-xs hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 cursor-pointer text-center shadow-sm"
             >
               {processing
-                ? "Processing subscription..."
-                : "Subscribe to Screenify Pro ($9/mo)"}
+                ? "Redirecting to checkout..."
+                : "Buy Screenify Pro Lifetime ($9)"}
             </button>
           </div>
         </form>

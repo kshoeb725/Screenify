@@ -20,7 +20,7 @@ function PrivacyPage() {
       content: `We collect several types of information from and about users of our Service:
       - **Account Information**: When you register, log in, or subscribe, we collect your email address, name, avatar image, and authentication tokens through Supabase Auth.
       - **Uploaded Screenshots & Content**: We process raw screenshots, brand logos, app names, objectives, and target audience text inputs uploaded by you to generate your marketing storefront images.
-      - **Billing and Payment Details**: Transactions are handled directly by Lemon Squeezy. We do not store credit card or bank details on our servers; however, we receive transaction identifiers and subscription statuses to unlock your designs.
+      - **Billing and Payment Details**: Transactions are handled directly by Dodo Payments. We do not store credit card or bank details on our servers; however, we receive transaction identifiers and subscription statuses to unlock your designs.
       - **Usage Data & Device Information**: We automatically collect logs about your interactions with the Service, including your IP address, browser type, operating system, page views, and timestamps.`
     },
     {
@@ -53,7 +53,7 @@ function PrivacyPage() {
       content: `We share personal data with trusted third-party service providers (subprocessors) that perform operational tasks for Screenify. These subprocessors are contractually bound to protect your data and are prohibited from using it for any other purpose:
       - **Supabase Inc.**: Database hosting, user authentication, and secure file/screenshot storage.
       - **OpenAI, L.L.C. / Google LLC**: Multi-modal artificial intelligence APIs used to analyze screenshots and write high-converting copy suggestions.
-      - **Lemon Squeezy, LLC**: Our Merchant of Record and payment gateway that processes checkouts, taxes, and subscriptions.
+      - **Dodo Payments**: Our Merchant of Record and payment gateway that processes checkouts, taxes, and subscriptions.
       - **Analytics Providers**: Tools used to collect anonymous usage metrics to optimize site performance.`
     },
     {
@@ -78,7 +78,7 @@ function PrivacyPage() {
       - **Right to Erasure (Deletions)**: You can request that we delete your account and all associated screenshots.
       - **Right to Portability**: You can request a copy of your configurations in a structured, machine-readable format.
       - **Right to Object/Restrict**: You can object to processing based on legitimate interests.
-      To exercise any of these rights, please submit a request to Screenify786@gmail.com.`
+      To exercise any of these rights, please submit a request to support@screenify.dev.`
     },
     {
       title: "11. Children's Privacy",
@@ -91,7 +91,7 @@ function PrivacyPage() {
     {
       title: "13. Contact Information",
       content: `For any inquiries, data rights requests, or complaints regarding this Privacy Policy or our data processing practices, please contact us at:
-      Email: Screenify786@gmail.com.`
+      Email: support@screenify.dev.`
     }
   ];
 
@@ -141,10 +141,10 @@ function PrivacyPage() {
           <p className="text-sm text-muted-foreground">
             Questions about your privacy? Reach out to us at{" "}
             <a
-              href="mailto:Screenify786@gmail.com"
+              href="mailto:support@screenify.dev"
               className="text-foreground underline underline-offset-4 transition hover:text-lime"
             >
-              Screenify786@gmail.com
+              support@screenify.dev
             </a>
           </p>
         </div>

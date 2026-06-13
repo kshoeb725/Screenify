@@ -678,6 +678,12 @@ function Nav({
             >
               FAQ
             </a>
+            <Link 
+              to="/contact" 
+              className="hover:text-foreground transition-colors"
+            >
+              Contact
+            </Link>
           </nav>
         )}
 
