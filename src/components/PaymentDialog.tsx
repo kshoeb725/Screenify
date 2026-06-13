@@ -85,7 +85,7 @@ export function PaymentDialog({
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="font-display text-xl font-extrabold text-foreground">$9</span>
-                  <span className="text-[9px] text-muted-foreground font-mono">/ one-time</span>
+                  <span className="text-[9px] text-muted-foreground font-mono">/ month</span>
                 </div>
               </div>
               
@@ -101,7 +101,7 @@ export function PaymentDialog({
             
             <div className="border-t border-border/40 pt-2 flex justify-between items-center text-[10px] font-mono">
               <span className="text-muted-foreground">Access Type:</span>
-              <span className="text-foreground font-semibold">Lifetime License</span>
+              <span className="text-foreground font-semibold">Monthly Subscription</span>
             </div>
           </div>
 
@@ -118,7 +118,7 @@ export function PaymentDialog({
             >
               {processing
                 ? "Redirecting to checkout..."
-                : "Buy Screenify Pro Lifetime ($9)"}
+                : "Subscribe to Screenify Pro ($9/mo)"}
             </button>
           </div>
         </form>

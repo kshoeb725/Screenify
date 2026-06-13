@@ -122,10 +122,10 @@ export function Footer({ onHomeClick }: FooterProps) {
               </li>
               <li>
                 <a
-                  href="mailto:support@screenify.dev"
+                  href="mailto:support@screenify.cloud"
                   className="transition-colors hover:text-foreground"
                 >
-                  support@screenify.dev
+                  support@screenify.cloud
                 </a>
               </li>
               <li className="flex items-center gap-3 pt-1">

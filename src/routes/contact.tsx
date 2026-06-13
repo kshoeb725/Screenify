@@ -14,7 +14,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { MessageSquare, Mail, User, Send, CheckCircle2, Loader2 } from "lucide-react";
+import { MessageSquare, Mail, User, Send, CheckCircle2, Loader2, Upload, X } from "lucide-react";
 
 export const Route = createFileRoute("/contact")({
   component: ContactPage,
@@ -25,6 +25,7 @@ function ContactPage() {
   const [email, setEmail] = useState("");
   const [type, setType] = useState("feedback");
   const [message, setMessage] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -37,16 +38,43 @@ function ContactPage() {
 
     setSubmitting(true);
     try {
+      const insertData: any = {
+        name,
+        email,
+        type,
+        message,
+      };
+      if (imageUrl) {
+        insertData.image_url = imageUrl;
+      }
+
       const { error } = await supabase
         .from("contact_submissions" as any)
-        .insert({
-          name,
-          email,
-          type,
-          message,
-        });
+        .insert(insertData);
 
-      if (error) throw error;
+      if (error) {
+        // Fallback if image_url column is missing (e.g. database migration not run yet)
+        const isMissingColumn = error.code === "42703" || 
+                                error.message?.includes("column") || 
+                                error.message?.includes("does not exist");
+                                
+        if (isMissingColumn && imageUrl) {
+          console.warn("image_url column missing from contact_submissions table, retrying with appended image...");
+          const fallbackMessage = `${message}\n\n[Attached Image (Base64): ${imageUrl}]`;
+          const { error: retryError } = await supabase
+            .from("contact_submissions" as any)
+            .insert({
+              name,
+              email,
+              type,
+              message: fallbackMessage,
+            });
+            
+          if (retryError) throw retryError;
+        } else {
+          throw error;
+        }
+      }
 
       setSuccess(true);
       toast.success("Message sent successfully!");
@@ -128,6 +156,7 @@ function ContactPage() {
                       setName("");
                       setEmail("");
                       setMessage("");
+                      setImageUrl(null);
                     }}
                     variant="outline"
                     className="rounded-xl border-border hover:bg-card cursor-pointer text-xs"
@@ -199,6 +228,68 @@ function ContactPage() {
                     rows={4}
                     className="bg-background/50 border-border focus:border-[#3ECFB2]/50 rounded-xl text-sm leading-relaxed resize-none p-3"
                   />
+                </div>
+
+                {/* Image Upload Field */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-mono text-muted-foreground">Attach Screenshot / Image (Optional)</Label>
+                  {imageUrl ? (
+                    <div className="relative border border-border bg-background/30 rounded-xl p-3 flex items-center justify-between gap-4 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <img 
+                          src={imageUrl} 
+                          alt="Attachment preview" 
+                          className="size-12 rounded-lg object-cover border border-border bg-slate-900 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-foreground truncate">screenshot_attachment.png</p>
+                          <p className="text-[10px] text-muted-foreground font-mono">Ready to submit</p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => setImageUrl(null)}
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 cursor-pointer shrink-0"
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <label 
+                      className="flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-[#3ECFB2]/50 hover:bg-[#3ECFB2]/5 rounded-xl py-6 cursor-pointer transition-all duration-200 select-none group"
+                    >
+                      <Upload className="size-6 text-muted-foreground group-hover:text-[#3ECFB2] mb-1.5 transition-colors" />
+                      <span className="text-xs font-bold text-foreground">Upload an Image</span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5">PNG, JPG, WEBP (Max 5MB)</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (files && files.length > 0) {
+                            const file = files[0];
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error("Image size exceeds 5MB limit.");
+                              return;
+                            }
+                            try {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setImageUrl(reader.result as string);
+                                toast.success("Image attached successfully!");
+                              };
+                              reader.readAsDataURL(file);
+                            } catch (err) {
+                              toast.error("Failed to process image file.");
+                            }
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
 
                 {/* Submit Button */}

@@ -48,7 +48,7 @@ function RefundsPage() {
     },
     {
       title: "8. How to Request a Refund",
-      content: `To request a refund, please send an email to support@screenify.dev within seven (7) days of the transaction date. Your request must include:
+      content: `To request a refund, please send an email to support@screenify.cloud within seven (7) days of the transaction date. Your request must include:
       1. Your account email address.
       2. The transaction ID or Dodo Payments receipt number.
       3. A detailed explanation of the technical issue, duplicate charge, or reason for the request.
@@ -109,10 +109,10 @@ function RefundsPage() {
           <p className="text-sm text-muted-foreground">
             Questions about refunds? Reach out to us at{" "}
             <a
-              href="mailto:support@screenify.dev"
+              href="mailto:support@screenify.cloud"
               className="text-foreground underline underline-offset-4 transition hover:text-lime"
             >
-              support@screenify.dev
+              support@screenify.cloud
             </a>
           </p>
         </div>

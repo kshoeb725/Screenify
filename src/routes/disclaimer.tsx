@@ -39,7 +39,7 @@ function DisclaimerPage() {
     },
     {
       title: "6. Contact Us",
-      content: `If you require clarification on this AI Disclaimer, please reach out to our team at support@screenify.dev.`
+      content: `If you require clarification on this AI Disclaimer, please reach out to our team at support@screenify.cloud.`
     }
   ];
 
@@ -89,10 +89,10 @@ function DisclaimerPage() {
           <p className="text-sm text-muted-foreground">
             Questions about this disclaimer? Reach out to us at{" "}
             <a
-              href="mailto:support@screenify.dev"
+              href="mailto:support@screenify.cloud"
               className="text-foreground underline underline-offset-4 transition hover:text-lime"
             >
-              support@screenify.dev
+              support@screenify.cloud
             </a>
           </p>
         </div>

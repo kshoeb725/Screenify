@@ -767,12 +767,12 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
 
             <div className="space-y-4">
               <div>
-                <h3 className="font-display text-xl font-bold text-foreground">Pro Lifetime</h3>
+                <h3 className="font-display text-xl font-bold text-foreground">Pro Monthly</h3>
                 <p className="text-xs text-muted-foreground">For serious Shopify builders & agencies.</p>
               </div>
               <div className="flex items-baseline gap-1 pt-2">
                 <span className="text-4xl font-extrabold text-foreground">$9</span>
-                <span className="text-xs text-muted-foreground">/ one-time fee</span>
+                <span className="text-xs text-muted-foreground">/ month</span>
               </div>
               <div className="space-y-2.5 pt-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2"><Check className="size-4 text-emerald-600 dark:text-[#C8E84A] shrink-0" /> Unlimited Screenshots</div>

@@ -78,7 +78,7 @@ function PrivacyPage() {
       - **Right to Erasure (Deletions)**: You can request that we delete your account and all associated screenshots.
       - **Right to Portability**: You can request a copy of your configurations in a structured, machine-readable format.
       - **Right to Object/Restrict**: You can object to processing based on legitimate interests.
-      To exercise any of these rights, please submit a request to support@screenify.dev.`
+      To exercise any of these rights, please submit a request to support@screenify.cloud.`
     },
     {
       title: "11. Children's Privacy",
@@ -91,7 +91,7 @@ function PrivacyPage() {
     {
       title: "13. Contact Information",
       content: `For any inquiries, data rights requests, or complaints regarding this Privacy Policy or our data processing practices, please contact us at:
-      Email: support@screenify.dev.`
+      Email: support@screenify.cloud.`
     }
   ];
 
@@ -141,10 +141,10 @@ function PrivacyPage() {
           <p className="text-sm text-muted-foreground">
             Questions about your privacy? Reach out to us at{" "}
             <a
-              href="mailto:support@screenify.dev"
+              href="mailto:support@screenify.cloud"
               className="text-foreground underline underline-offset-4 transition hover:text-lime"
             >
-              support@screenify.dev
+              support@screenify.cloud
             </a>
           </p>
         </div>

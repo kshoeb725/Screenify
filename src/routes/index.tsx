@@ -1424,6 +1424,29 @@ function TemplateCanvas({
     `}} />
   );
 
+  const replaceAmpersand = (str: string) => {
+    if (!str || typeof str !== "string") return str;
+    if (!str.includes("&")) return str;
+    const subparts = str.split(/(&)/);
+    return subparts.map((sub, idx) => {
+      if (sub === "&") {
+        if (template === "showcase") {
+          return (
+            <span 
+              key={idx} 
+              className="font-normal inline-block font-sans" 
+              style={{ fontFamily: 'Georgia, Cambria, serif', fontStyle: 'normal' }}
+            >
+              &
+            </span>
+          );
+        }
+        return sub;
+      }
+      return sub;
+    });
+  };
+
   const getSimpleLuminance = (hex: string): number => {
     if (!hex || typeof hex !== "string") return 255;
     const cleanHex = hex.replace("#", "").trim();
@@ -1565,7 +1588,7 @@ function TemplateCanvas({
     const hasBold = parts.length > 1;
     
     const formatSegment = (segment: string, isHighlighted: boolean) => {
-      if (!isHighlighted) return segment;
+      if (!isHighlighted) return replaceAmpersand(segment);
       
       switch (templateId) {
         case "executive":
@@ -1591,7 +1614,7 @@ function TemplateCanvas({
           return (
             <span key={segment} className="italic font-serif-elegant font-normal mx-1"
                   style={{ color: accentColor }}>
-              {segment}
+              {replaceAmpersand(segment)}
             </span>
           );
         case "enterprise":
@@ -1725,12 +1748,12 @@ function TemplateCanvas({
       const firstPart = words.slice(0, -2).join(" ");
       return (
         <>
-          {firstPart}{" "}
+          {replaceAmpersand(firstPart)}{" "}
           {formatSegment(lastTwo, true)}
         </>
       );
     }
-    return text;
+    return replaceAmpersand(text);
   };
 
   const renderCreativeFeature = (feat: string, index: number, styleType: "glass" | "outline" | "solid" | "serif") => {
@@ -1796,7 +1819,7 @@ function TemplateCanvas({
                  backgroundColor: accentColor || bodyTextColor, 
                  boxShadow: `0 0 10px ${accentColor}` 
                }} />
-          <span>{feat}</span>
+          <span>{replaceAmpersand(feat)}</span>
         </div>
       );
     } else {
@@ -1871,16 +1894,16 @@ function TemplateCanvas({
 
           {/* Logo & Category Header */}
           <div className="flex justify-between items-center z-10">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               {logo && (
-                <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
+                <img src={logo} alt="Logo" className="h-13 max-w-[200px] object-contain" />
               )}
-              <span className="font-mono text-[12px] tracking-wider px-4 py-1.5 rounded-full font-bold uppercase"
+              <span className="font-mono text-[22px] tracking-wider px-5 py-2 rounded-full font-extrabold uppercase"
                     style={{ color: accentColor, backgroundColor: `${accentColor}20` }}>
                 {appName || "WATI"}
               </span>
             </div>
-            <div className="text-sm font-mono tracking-widest uppercase font-bold opacity-60" style={{ color: bodyTextColor }}>
+            <div className="text-[18px] font-mono tracking-[0.2em] uppercase font-black opacity-70" style={{ color: bodyTextColor }}>
               {appName || "wati"}
             </div>
           </div>
@@ -1890,7 +1913,7 @@ function TemplateCanvas({
             <h1 className="text-[72px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
               {renderHeadline(headline, "executive")}
             </h1>
-            <p className="text-[23px] mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
+            <p className="text-[26px] mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
                style={{ color: secondaryColor }}>
               {subheadline}
             </p>
@@ -2000,18 +2023,18 @@ function TemplateCanvas({
           <div className="absolute top-1/4 left-1/3 w-[300px] h-[300px] rounded-full bg-pink-500/5 blur-3xl pointer-events-none" />
           
           <div className="col-span-5 flex flex-col justify-center h-full pr-2 z-10">
-            <div className="flex items-center gap-3 mb-6 z-10">
+            <div className="flex items-center gap-4 mb-8 z-10">
               {logo && (
-                <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
+                <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain" />
               )}
-              <span className="font-extrabold text-[22px] tracking-tight uppercase" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+              <span className="font-black text-[32px] tracking-tight uppercase" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
             </div>
             
             <h1 className="text-[64px] font-black leading-[1.08] mb-4 font-sans-jakarta" style={{ color: textColor }}>
               {renderHeadline(headline, "conversion")}
             </h1>
             
-            <p className="text-[22px] mb-6 leading-relaxed font-bold font-sans-jakarta"
+            <p className="text-[26px] mb-6 leading-relaxed font-bold font-sans-jakarta"
                style={{ color: secondaryColor }}>
               {subheadline}
             </p>
@@ -2063,11 +2086,11 @@ function TemplateCanvas({
           {/* Left Side: Serif Copy & Brand */}
           <div className="col-span-6 flex flex-col justify-between h-full py-8 pr-8 z-10">
             {/* Top Logo */}
-            <div className="flex items-center gap-3 text-[18px] font-black tracking-[0.3em] uppercase font-serif-elegant" style={{ color: bodyTextColor }}>
+            <div className="flex items-center gap-4 text-[28px] font-black tracking-[0.25em] uppercase font-serif-elegant" style={{ color: bodyTextColor }}>
               {logo && (
-                <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
+                <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain" />
               )}
-              <span>{appName || "FAIRE"}</span>
+              <span>{replaceAmpersand(appName || "FAIRE")}</span>
             </div>
  
             {/* Mid Headline */}
@@ -2075,7 +2098,7 @@ function TemplateCanvas({
               <h1 className="text-[60px] font-black leading-[1.15] font-serif-elegant mb-5" style={{ color: textColor }}>
                 {renderHeadline(headline, "showcase")}
               </h1>
-              <p className="text-[20px] mt-6 leading-relaxed font-sans font-medium"
+              <p className="text-[25px] mt-6 leading-relaxed font-sans-outfit font-medium opacity-90"
                  style={{ color: secondaryColor }}>
                 {subheadline}
               </p>
@@ -2112,18 +2135,18 @@ function TemplateCanvas({
           <div className="col-span-5 flex flex-col justify-between h-full py-6 pr-4 z-10">
             <div>
               {/* Brand Logo representation */}
-              <div className="flex items-center gap-2.5 font-black text-lg mb-6 tracking-wide font-sans-outfit" style={{ color: bodyTextColor }}>
+              <div className="flex items-center gap-4 mb-8 tracking-wide font-sans-outfit" style={{ color: bodyTextColor }}>
                 {logo && (
-                  <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
+                  <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain" />
                 )}
-                <span className="uppercase tracking-widest text-base">{appName || "Shipway"}</span>
+                <span className="uppercase tracking-[0.15em] font-black text-[30px]">{appName || "Shipway"}</span>
               </div>
  
               {/* Headline */}
               <h1 className="text-[62px] font-black leading-[1.1] tracking-tight font-sans-outfit" style={{ color: textColor }}>
                 {renderHeadline(headline, "enterprise")}
               </h1>
-              <p className="text-[20px] mt-4 leading-relaxed font-sans-outfit font-medium"
+              <p className="text-[25px] mt-4 leading-relaxed font-sans-outfit font-semibold opacity-95"
                  style={{ color: secondaryColor }}>
                 {subheadline}
               </p>
@@ -2195,7 +2218,7 @@ function TemplateCanvas({
               <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
                 {renderHeadline(headline, "growth")}
               </h1>
-              <p className="text-[22px] opacity-90 mt-4 max-w-2xl font-bold leading-relaxed font-sans-jakarta"
+              <p className="text-[26px] opacity-95 mt-4 max-w-2xl font-bold leading-relaxed font-sans-jakarta"
                  style={{ color: secondaryColor }}>
                 {subheadline}
               </p>
@@ -2230,7 +2253,7 @@ function TemplateCanvas({
             <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
               {renderHeadline(headline, "hero")}
             </h1>
-            <p className="text-[22px] mt-4 max-w-2xl mx-auto leading-relaxed font-bold font-sans-jakarta"
+            <p className="text-[26px] mt-4 max-w-3xl mx-auto leading-relaxed font-bold font-sans-jakarta"
                style={{ color: secondaryColor }}>
               {subheadline}
             </p>
@@ -2273,7 +2296,7 @@ function TemplateCanvas({
             <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
               {renderHeadline(headline, "sidebyside")}
             </h1>
-            <p className="text-[22px] mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
+            <p className="text-[25px] mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
                style={{ color: secondaryColor }}>
               {subheadline}
             </p>
@@ -2326,7 +2349,7 @@ function TemplateCanvas({
             <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
               {renderHeadline(headline, "spotlight")}
             </h1>
-            <p className="text-[22px] mt-4 max-w-2xl mx-auto leading-relaxed font-bold font-sans-jakarta"
+            <p className="text-[26px] mt-4 max-w-3xl mx-auto leading-relaxed font-bold font-sans-jakarta"
                style={{ color: secondaryColor }}>
               {subheadline}
             </p>
@@ -2371,7 +2394,7 @@ function TemplateCanvas({
             <h1 className="text-[64px] font-black leading-[1.1] tracking-tight font-sans-jakarta" style={{ color: textColor }}>
               {renderHeadline(headline, "modernsaas")}
             </h1>
-            <p className="text-[22px] mt-4 max-w-2xl leading-relaxed font-bold font-sans-jakarta"
+            <p className="text-[26px] mt-4 max-w-3xl leading-relaxed font-bold font-sans-jakarta"
                style={{ color: secondaryColor }}>
               {subheadline}
             </p>
@@ -2448,18 +2471,18 @@ function TemplateCanvas({
 
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-center z-10 h-full">
-            <div className="flex items-center gap-3.5 mb-8">
+            <div className="flex items-center gap-4 mb-10">
               {logo && (
-                <img src={logo} alt="Logo" className="h-12 max-w-[180px] object-contain rounded-lg" />
+                <img src={logo} alt="Logo" className="h-15 max-w-[220px] object-contain rounded-xl" />
               )}
-              <span className="font-extrabold text-[24px] tracking-wide uppercase opacity-90" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+              <span className="font-black text-[34px] tracking-wide uppercase opacity-95" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
             </div>
 
             <h1 className="text-[52px] font-black leading-[1.15] tracking-tight mb-6" style={{ color: textColor }}>
               {renderHeadline(headline || "Boost Sales With **Smart Upsells**", "boost_sales")}
             </h1>
 
-            <p className="text-[19px] leading-relaxed mb-10" style={{ color: secondaryColor }}>
+            <p className="text-[24px] leading-relaxed mb-10 font-sans-outfit font-medium opacity-90" style={{ color: secondaryColor }}>
               {subheadline || "AI-powered upsell & cross-sell offers that increase AOV and maximize revenue."}
             </p>
 
@@ -2512,17 +2535,18 @@ function TemplateCanvas({
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-between z-10 h-full py-4">
             <div>
-              {logo && (
-                <div className="mb-6 flex items-center gap-3">
-                  <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain" />
-                </div>
-              )}
+              <div className="mb-8 flex items-center gap-4">
+                {logo && (
+                  <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain" />
+                )}
+                <span className="font-black text-[32px] tracking-wide uppercase opacity-95" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+              </div>
 
               <h1 className="text-[52px] font-black leading-[1.15] tracking-tight mb-5" style={{ color: textColor }}>
                 {renderHeadline(headline || "All-in-One **Solution for Your Store**", "all_in_one")}
               </h1>
 
-              <p className="text-[19px] opacity-75 leading-relaxed" style={{ color: secondaryColor }}>
+              <p className="text-[24px] opacity-90 leading-relaxed font-sans-outfit font-medium" style={{ color: secondaryColor }}>
                 {subheadline || "Everything you need to grow, manage & scale your business."}
               </p>
             </div>
@@ -2592,15 +2616,18 @@ function TemplateCanvas({
 
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-center z-10 h-full">
-            {logo && (
-              <img src={logo} alt="Logo" className="h-12 max-w-[180px] object-contain rounded mb-8" />
-            )}
+            <div className="flex items-center gap-4 mb-8">
+              {logo && (
+                <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain rounded" />
+              )}
+              <span className="font-black text-[32px] tracking-wide uppercase opacity-95" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+            </div>
 
             <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
               {renderHeadline(headline || "Save Time. Automate More. **Grow Faster.**", "save_time")}
             </h1>
 
-            <p className="text-[19px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+            <p className="text-[24px] leading-relaxed mb-9 font-sans-outfit font-medium opacity-90" style={{ color: secondaryColor }}>
               {subheadline || "Automate repetitive tasks and focus on what matters most."}
             </p>
 
@@ -2655,15 +2682,16 @@ function TemplateCanvas({
           
           {/* Top Header Section with Logo and Centered Text */}
           <div className="w-full flex flex-col items-center text-center z-20 mt-1 select-none">
-            {logo ? (
-              <img src={logo} alt="Logo" className="h-12 max-w-[180px] object-contain rounded mb-4" />
-            ) : (
-              <div className="h-2" />
-            )}
+            <div className="flex items-center gap-4 mb-4">
+              {logo && (
+                <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain rounded" />
+              )}
+              <span className="font-black text-[32px] tracking-wide uppercase opacity-95" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+            </div>
             <h1 className="text-[48px] font-black leading-[1.15] tracking-tight max-w-4xl mx-auto" style={{ color: textColor }}>
               {renderHeadline(headline || "Beautiful Reports. Smarter Decisions. **Bigger Growth.**", "reports_growth")}
             </h1>
-            <p className="text-[18px] opacity-80 mt-3 max-w-2xl mx-auto font-bold leading-relaxed" style={{ color: secondaryColor }}>
+            <p className="text-[23px] opacity-90 mt-3 max-w-3xl mx-auto font-bold leading-relaxed font-sans-jakarta" style={{ color: secondaryColor }}>
               {subheadline || "Get actionable insights and make data-driven decisions."}
             </p>
           </div>
@@ -2801,17 +2829,18 @@ function TemplateCanvas({
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-center gap-8 z-10 h-full py-4">
             <div>
-              {logo && (
-                <div className="flex items-center gap-3.5 mb-6">
-                  <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded" />
-                </div>
-              )}
+              <div className="flex items-center gap-4 mb-8">
+                {logo && (
+                  <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain rounded" />
+                )}
+                <span className="font-black text-[32px] tracking-wide uppercase opacity-95" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+              </div>
 
               <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-4" style={{ color: textColor }}>
                 {renderHeadline(headline || "Manage Everything **From One Place**", "manage_everything")}
               </h1>
 
-              <p className="text-[19px] leading-relaxed opacity-85" style={{ color: secondaryColor }}>
+              <p className="text-[24px] leading-relaxed opacity-95 font-sans-outfit font-medium" style={{ color: secondaryColor }}>
                 {subheadline || "A unified dashboard for all your store operations."}
               </p>
             </div>
@@ -2908,15 +2937,18 @@ function TemplateCanvas({
 
           {/* Right Column */}
           <div className="col-span-5 flex flex-col justify-center z-10 h-full pl-6">
-            {logo && (
-              <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded mb-6" />
-            )}
+            <div className="flex items-center gap-4 mb-8">
+              {logo && (
+                <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain rounded" />
+              )}
+              <span className="font-black text-[32px] tracking-wide uppercase opacity-95" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+            </div>
 
             <h1 className="text-[48px] font-black leading-[1.15] tracking-tight mb-5" style={{ color: textColor }}>
               {renderHeadline(headline || "Powerful Features. Simple to Use. **Loved by Stores.**", "powerful_features")}
             </h1>
 
-            <p className="text-[17px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+            <p className="text-[23px] leading-relaxed mb-9 font-sans-outfit font-medium opacity-90" style={{ color: secondaryColor }}>
               {subheadline || "Packed with powerful features designed for Shopify stores."}
             </p>
 
@@ -2961,17 +2993,18 @@ function TemplateCanvas({
 
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-center z-10 h-full">
-            {logo && (
-              <div className="flex items-center gap-3 mb-6">
-                <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded" />
-              </div>
-            )}
+            <div className="flex items-center gap-4 mb-8">
+              {logo && (
+                <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain rounded" />
+              )}
+              <span className="font-black text-[32px] tracking-wide uppercase opacity-95" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+            </div>
 
             <h1 className="text-[52px] font-black leading-[1.12] tracking-tight mb-5" style={{ color: textColor }}>
               {renderHeadline(headline || "Increase AOV With **Smart Recommendations**", "smart_recommendations")}
             </h1>
 
-            <p className="text-[18px] leading-relaxed mb-9" style={{ color: secondaryColor }}>
+            <p className="text-[23px] leading-relaxed mb-9 font-sans-outfit font-medium opacity-90" style={{ color: secondaryColor }}>
               {subheadline || "AI-powered product recommendations that drive more sales."}
             </p>
 
@@ -3024,19 +3057,19 @@ function TemplateCanvas({
 
           {/* Centered Top Header Section */}
           <div className="w-full flex flex-col items-center text-center z-20 mt-1 select-none">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="relative flex size-2 shrink-0">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="relative flex size-3 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
               </span>
-              <span className="font-mono text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: accentColor }}>
+              <span className="font-mono text-[20px] font-black uppercase tracking-[0.2em]" style={{ color: accentColor }}>
                 {appName ? appName : "Real-time Analytics"}
               </span>
             </div>
             <h1 className="text-[50px] font-black leading-[1.15] tracking-tight max-w-4xl mx-auto mb-3" style={{ color: textColor }}>
               {renderHeadline(headline || "Real-time Analytics For **Real Growth**", "realtime_analytics")}
             </h1>
-            <p className="text-[18px] opacity-80 max-w-2xl mx-auto font-bold leading-relaxed" style={{ color: secondaryColor }}>
+            <p className="text-[23px] opacity-90 max-w-3xl mx-auto font-bold leading-relaxed font-sans-jakarta" style={{ color: secondaryColor }}>
               {subheadline || "Track performance in real-time and stay ahead of the competition."}
             </p>
           </div>
@@ -3159,17 +3192,18 @@ function TemplateCanvas({
           {/* Left Column */}
           <div className="col-span-5 flex flex-col justify-between z-10 h-full py-4">
             <div>
-              {logo && (
-                <div className="flex items-center gap-3.5 mb-6">
-                  <img src={logo} alt="Logo" className="h-11 max-w-[180px] object-contain rounded" />
-                </div>
-              )}
+              <div className="flex items-center gap-4 mb-8">
+                {logo && (
+                  <img src={logo} alt="Logo" className="h-14 max-w-[220px] object-contain rounded" />
+                )}
+                <span className="font-black text-[32px] tracking-wide uppercase opacity-95" style={{ color: bodyTextColor }}>{appName || "App Name"}</span>
+              </div>
 
               <h1 className="text-[52px] font-black leading-[1.1] tracking-tight mb-5" style={{ color: textColor }}>
                 {renderHeadline(headline || "All the Tools You Need to **Succeed!**", "tools_success")}
               </h1>
 
-              <p className="text-[18px] leading-relaxed" style={{ color: secondaryColor }}>
+              <p className="text-[23px] leading-relaxed font-sans-outfit font-medium opacity-90" style={{ color: secondaryColor }}>
                 {subheadline || "Everything you need to build, grow and scale your store."}
               </p>
             </div>

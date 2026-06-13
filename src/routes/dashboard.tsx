@@ -296,7 +296,7 @@ function DashboardPage() {
               <h1 className="text-3xl font-bold tracking-tight text-foreground">Hello, {displayName}</h1>
               {hasPaid && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3ECFB2]/15 text-[#3ECFB2] text-[10px] font-mono font-bold tracking-wide uppercase border border-[#3ECFB2]/20">
-                  <Sparkles className="size-3" /> Pro Lifetime
+                  <Sparkles className="size-3" /> Pro Monthly
                 </span>
               )}
             </div>
@@ -574,7 +574,7 @@ function DashboardPage() {
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Active Tier</p>
                     <p className="text-lg font-bold text-foreground">
-                      {hasPaid ? "Pro Lifetime Plan" : "Free Trial Plan"}
+                      {hasPaid ? "Pro Monthly Plan" : "Free Trial Plan"}
                     </p>
                   </div>
                   {!hasPaid ? (
@@ -586,7 +586,7 @@ function DashboardPage() {
                     </Button>
                   ) : (
                     <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
-                      <CheckCircle2 className="size-4" /> Lifetime Unlocked
+                      <CheckCircle2 className="size-4" /> Subscription Active
                     </div>
                   )}
                 </div>

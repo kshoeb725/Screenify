@@ -108,7 +108,7 @@ function TermsPage() {
     },
     {
       title: "21. Contact Information",
-      content: `If you have any questions, concerns, or legal notices regarding these Terms, please contact our team via email at support@screenify.dev.`
+      content: `If you have any questions, concerns, or legal notices regarding these Terms, please contact our team via email at support@screenify.cloud.`
     }
   ];
 
@@ -158,10 +158,10 @@ function TermsPage() {
           <p className="text-sm text-muted-foreground">
             Questions about these terms? Reach out to us at{" "}
             <a
-              href="mailto:support@screenify.dev"
+              href="mailto:support@screenify.cloud"
               className="text-foreground underline underline-offset-4 transition hover:text-lime"
             >
-              support@screenify.dev
+              support@screenify.cloud
             </a>
           </p>
         </div>

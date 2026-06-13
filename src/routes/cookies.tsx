@@ -51,7 +51,7 @@ function CookiesPage() {
     },
     {
       title: "7. Contact Us",
-      content: `If you have any questions or require additional details about our use of cookies, please email our privacy officer at support@screenify.dev.`
+      content: `If you have any questions or require additional details about our use of cookies, please email our privacy officer at support@screenify.cloud.`
     }
   ];
 
@@ -101,10 +101,10 @@ function CookiesPage() {
           <p className="text-sm text-muted-foreground">
              Questions about our cookies? Reach out to us at{" "}
              <a
-               href="mailto:support@screenify.dev"
+               href="mailto:support@screenify.cloud"
                className="text-foreground underline underline-offset-4 transition hover:text-lime"
              >
-               support@screenify.dev
+               support@screenify.cloud
              </a>
           </p>
         </div>

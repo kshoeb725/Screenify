@@ -62,7 +62,7 @@ function AcceptableUsePage() {
     },
     {
       title: "8. Report Violations",
-      content: `If you discover any content or behaviors on Screenify that violate this Acceptable Use Policy, please report them to support@screenify.dev.`
+      content: `If you discover any content or behaviors on Screenify that violate this Acceptable Use Policy, please report them to support@screenify.cloud.`
     }
   ];
 
@@ -112,10 +112,10 @@ function AcceptableUsePage() {
           <p className="text-sm text-muted-foreground">
             Questions about acceptable use? Reach out to us at{" "}
             <a
-              href="mailto:support@screenify.dev"
+              href="mailto:support@screenify.cloud"
               className="text-foreground underline underline-offset-4 transition hover:text-lime"
             >
-              support@screenify.dev
+              support@screenify.cloud
             </a>
           </p>
         </div>
