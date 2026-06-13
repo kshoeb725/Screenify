@@ -135,15 +135,6 @@ function ContactPage() {
             <CardDescription className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
               We love to hear feedback. Submit your form below, or reach out directly to our support team.
             </CardDescription>
-            {/* Registered Business Details for Compliance */}
-            <div className="mt-4 pt-4 border-t border-border/40 text-left text-xs text-muted-foreground/85 max-w-xs mx-auto space-y-1 font-sans">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-lime font-bold mb-1.5 text-center">Business Credentials</p>
-              <div className="flex justify-between"><span className="font-mono text-[10px]">Developer:</span> <span className="font-bold text-foreground">Adil Jakir Husen Shaikh</span></div>
-              <div className="flex justify-between"><span className="font-mono text-[10px]">Entity:</span> <span className="font-bold text-foreground">Individual Developer</span></div>
-              <div className="flex justify-between"><span className="font-mono text-[10px]">Location:</span> <span className="font-bold text-foreground">Mumbai, Maharashtra, India</span></div>
-              <div className="flex justify-between"><span className="font-mono text-[10px]">Email:</span> <span className="font-bold text-foreground">support@screenify.cloud</span></div>
-              <div className="flex justify-between"><span className="font-mono text-[10px]">Fulfillment:</span> <span className="font-bold text-foreground">Instant digital delivery</span></div>
-            </div>
           </CardHeader>
 
           <CardContent className="pt-2">

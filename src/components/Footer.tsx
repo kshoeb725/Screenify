@@ -167,30 +167,8 @@ export function Footer({ onHomeClick }: FooterProps) {
         <div className="mt-12 flex flex-col items-center justify-between gap-6 border-t border-border pt-6 sm:flex-row">
           <div className="flex flex-col gap-2.5 text-left">
             <p className="text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} Screenify by Adil Jakir Husen Shaikh. All rights reserved.
+              &copy; 2026 Screenify. All rights reserved.
             </p>
-            {/* Accepted payment logos */}
-            <div className="flex items-center gap-2 opacity-50 hover:opacity-80 transition-opacity">
-              <svg className="h-4 w-7" viewBox="0 0 36 24" fill="none">
-                <rect width="36" height="24" rx="3" fill="#1A1F71" />
-                <path d="M13.6 15.6h1.9l1.2-7.3h-1.9l-1.2 7.3zm7.8-7.1c-.4-.2-.9-.3-1.5-.3-1.6 0-2.8.9-2.8 2.1 0 .9.8 1.4 1.4 1.7.6.3.8.5.8.8 0 .4-.5.6-1 .6-.7 0-1.1-.1-1.7-.4l-.2-.1-.3 1.8c.5.2 1.4.4 2.3.4 2.1 0 3.5-1 3.5-2.7 0-.9-.5-1.6-1.7-2.1-.7-.4-1.1-.6-1.1-.9 0-.3.3-.6 1-.6.6 0 1 .1 1.4.3l.2.1.2-1.8zm5.7-.2h-1.8c-.6 0-1 .3-1.2.9l-3.4 8h2l.4-1.1h2.4l.2 1.1h1.8l-1.6-8.9zm-2 5.1l.8-2.2.4 2.2h-1.2zm-16.7-5.1L11.7 15h2l3-8.9h-2l-1.9 6.2-2.3-6.2H8.4z" fill="#FFF" />
-              </svg>
-              <svg className="h-4 w-7" viewBox="0 0 36 24" fill="none">
-                <rect width="36" height="24" rx="3" fill="#0A0A0A" />
-                <circle cx="15.5" cy="12" r="7" fill="#EB001B" />
-                <circle cx="20.5" cy="12" r="7" fill="#F79E1B" />
-                <path d="M18 7.3a6.9 6.9 0 010 9.4 6.9 6.9 0 010-9.4z" fill="#FF5F00" />
-              </svg>
-              <svg className="h-4 w-7" viewBox="0 0 36 24" fill="none">
-                <rect width="36" height="24" rx="3" fill="#0170B9" />
-                <path d="M7 15.5h2.2l.3-.9H11l.3.9h2.3l-2-5.7H9.1l-2.1 5.7zm3.1-2.4l.6-1.8.6 1.8H10.1zm4.8 2.4h3.5v-1.1h-2.1v-1.1h2v-1.1h-2v-1.1h2.1v-1.2h-3.5v5.7zm5.5 0h1.5l1.1-2 1.1 2h1.5l-1.7-2.8 1.6-2.9h-1.5l-1 1.9-1-1.9h-1.5l1.6 2.9-1.8 2.8z" fill="#FFF" />
-              </svg>
-              <svg className="h-4 w-7" viewBox="0 0 36 24" fill="none">
-                <rect width="36" height="24" rx="3" fill="#FFF" stroke="#E2E8F0" strokeWidth="1" />
-                <path d="M12.5 11.2c0-1.2 1-2.1 2.2-2.1s2.2.9 2.2 2.1c0 1.2-1 2.1-2.2 2.1s-2.2-.9-2.2-2.1zm.5 0c0 .9.7 1.6 1.7 1.6s1.7-.7 1.7-1.6c0-.9-.7-1.6-1.7-1.6s-1.7.7-1.7 1.6zm8.8-2.6h-1.4v4.7h.8v-1.7h.6c1 0 1.7-.7 1.7-1.5s-.7-1.5-1.7-1.5zm-.6 2.3v-1.5h.6c.5 0 .9.3.9.7 0 .5-.4.8-.9.8h-.6zm6.3-1.8l-1 2.6-1-2.6h-.9l1.4 3.5-.2.5c-.1.3-.3.4-.6.4h-.2v.7c.3 0 .7-.1.9-.4l2.2-5.1h-.9z" fill="#000" />
-                <path d="M9.8 11.8c.2 0 .5-.1.6-.3.2-.2.3-.5.3-.9 0-.6-.5-.9-.9-.9-.3 0-.6.1-.7.4-.2.2-.3.5-.3.8 0 .6.5.9 1 .9zm.1.6c-.7 0-1.1-.3-1.3-.8h-.1v2.1h-.7V9.7h.6v.7h.1c.2-.5.7-.8 1.3-.8.9 0 1.6.6 1.6 1.7 0 1.1-.7 1.8-1.5 1.8z" fill="#000" />
-              </svg>
-            </div>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground sm:justify-end">
             <Link to="/privacy" className="transition-colors hover:text-foreground">
