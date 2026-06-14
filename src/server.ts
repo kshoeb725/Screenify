@@ -128,7 +128,7 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
   const webhookSecret = process.env.DODO_WEBHOOK_SECRET || process.env.DODO_PAYMENTS_WEBHOOK_KEY;
   if (!webhookSecret) {
     console.error("[webhook] DODO_WEBHOOK_SECRET or DODO_PAYMENTS_WEBHOOK_KEY not configured");
-    return new Response("Webhook secret not configured", { status: 500 });
+    return new Response("Webhook secret not configured in env variables", { status: 500 });
   }
 
   const rawBody = await request.text();
@@ -138,7 +138,11 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
   const webhookTimestamp = request.headers.get("webhook-timestamp") || "";
   const webhookSignature = request.headers.get("webhook-signature") || "";
 
+  console.log(`[webhook] Webhook event received. ID: ${webhookId}, Timestamp: ${webhookTimestamp}`);
+  console.log(`[webhook] Secret configured starting with: "${webhookSecret.substring(0, 10)}..." (length: ${webhookSecret.length})`);
+
   if (!webhookSignature) {
+    console.error("[webhook] Missing webhook-signature header");
     return new Response("Missing signature header", { status: 401 });
   }
 
@@ -151,9 +155,14 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
   );
 
   if (!isVerified) {
-    console.error("[webhook] Signature verification failed");
-    return new Response("Invalid signature", { status: 401 });
+    console.error(`[webhook] Signature verification failed for event: ${webhookId}`);
+    return new Response(
+      `Invalid signature. Verified against secret prefix: "${webhookSecret.substring(0, 10)}..." (length: ${webhookSecret.length})`, 
+      { status: 401 }
+    );
   }
+
+  console.log(`[webhook] Signature verified successfully for event: ${webhookId}`);
 
   let payload: any;
   try {
