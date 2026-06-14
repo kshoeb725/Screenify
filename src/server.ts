@@ -379,10 +379,50 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
   }
 }
 
+// Helper to clean environment variables (removes quotes and whitespace)
+function cleanEnvVars() {
+  const keysToClean = [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "DODO_PAYMENTS_WEBHOOK_KEY",
+    "DODO_WEBHOOK_SECRET",
+    "DODO_PAYMENTS_API_KEY",
+    "DODO_API_KEY",
+    "DODO_PAYMENTS_PRODUCT_ID",
+    "DODO_PLAN_ID"
+  ];
+
+  for (const key of keysToClean) {
+    let val = process.env[key];
+    if (val) {
+      val = val.trim();
+      if (val.startsWith('"') && val.endsWith('"')) {
+        val = val.substring(1, val.length - 1);
+      } else if (val.startsWith("'") && val.endsWith("'")) {
+        val = val.substring(1, val.length - 1);
+      }
+      process.env[key] = val;
+    }
+  }
+}
+
+// Clean initial env vars loaded at boot
+cleanEnvVars();
+
 // ─── Main fetch handler ───────────────────────────────────────────────────────
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // Merge runtime env variables (Cloudflare/Edge runtime binding fallback)
+    if (env && typeof env === "object") {
+      for (const [key, value] of Object.entries(env)) {
+        if (typeof value === "string") {
+          process.env[key] = value;
+        }
+      }
+    }
+    cleanEnvVars();
+
     const url = new URL(request.url);
 
     // Intercept Dodo Payments webhook before TanStack router
