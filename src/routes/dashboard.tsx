@@ -165,6 +165,15 @@ function DashboardPage() {
     }
   }, [user, loading, navigate]);
 
+  // Sync hasPaid status with the verified profile.is_pro field from database
+  useEffect(() => {
+    if (profile) {
+      setHasPaid(!!profile.is_pro);
+    } else {
+      setHasPaid(false);
+    }
+  }, [profile]);
+
   // Fetch submissions, payments, and subscriptions when user is loaded
   useEffect(() => {
     if (!user) return;
@@ -200,12 +209,6 @@ function DashboardPage() {
 
         if (!subscriptionError && subscriptionData && subscriptionData.length > 0) {
           setSubscription(subscriptionData[0]);
-          const activePro = subscriptionData.some((s) => s.status === "active" || s.status === "renewed");
-          setHasPaid(activePro);
-        } else if (payData) {
-          // Fallback to payments if no subscription records exist yet
-          const activePro = payData.some((p) => p.status === "completed" || p.status === "paid");
-          setHasPaid(activePro);
         }
       } catch (err) {
         console.error("Error loading user dashboard data:", err);
@@ -218,29 +221,8 @@ function DashboardPage() {
   }, [user]);
 
   const handlePaidSuccess = () => {
-    setHasPaid(true);
-    // Refresh payments and subscriptions list
-    if (user) {
-      supabase
-        .from("payments")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .then(({ data }) => {
-          if (data) setPayments(data);
-        });
-      
-      supabase
-        .from("subscriptions")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            setSubscription(data[0]);
-            const activePro = data.some((s) => s.status === "active" || s.status === "renewed");
-            setHasPaid(activePro);
-          }
-        });
-    }
+    // Refresh all data by reloading window for instant sync
+    window.location.reload();
   };
 
   if (loading) {
