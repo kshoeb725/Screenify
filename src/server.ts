@@ -5,6 +5,7 @@ import { renderErrorPage } from "./lib/error-page";
 import { createHmac, timingSafeEqual } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "./integrations/supabase/client.server";
+import { Webhook } from "standardwebhooks";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -76,52 +77,18 @@ function verifyDodoWebhook(
   signatureHeader: string,
   secretKey: string
 ): boolean {
-  if (!id || !timestamp || !signatureHeader || !secretKey) {
-    return false;
-  }
-
-  // Construct signed content
-  const signedContent = `${id}.${timestamp}.${rawBody}`;
-
-  // Decode Dodo webhook secret key (which is base64 encoded, optionally prefixed with 'whsec_')
-  const cleanKey = secretKey.startsWith("whsec_") ? secretKey.substring(6) : secretKey;
-  let secretBuffer: Buffer;
   try {
-    secretBuffer = Buffer.from(cleanKey, "base64");
-  } catch (err) {
-    console.error("[webhook] Failed to decode webhook key from base64:", err);
+    const wh = new Webhook(secretKey);
+    wh.verify(rawBody, {
+      "webhook-id": id,
+      "webhook-timestamp": timestamp,
+      "webhook-signature": signatureHeader,
+    });
+    return true;
+  } catch (err: any) {
+    console.error("[webhook] Signature verification failed via standardwebhooks library:", err.message);
     return false;
   }
-
-  // Compute expected signature in base64
-  const computedSig = createHmac("sha256", secretBuffer)
-    .update(signedContent)
-    .digest("base64");
-
-  const computedSigBuffer = Buffer.from(computedSig, "utf8");
-
-  // Match against signatures in the header (space-separated, e.g., "v1,sig1 v1,sig2")
-  const signatures = signatureHeader.split(" ");
-  for (const sig of signatures) {
-    const parts = sig.split(",");
-    if (parts.length === 2 && parts[0] === "v1") {
-      const headerSigValue = parts[1];
-      const headerSigBuffer = Buffer.from(headerSigValue, "utf8");
-
-      try {
-        if (
-          headerSigBuffer.length === computedSigBuffer.length &&
-          timingSafeEqual(headerSigBuffer, computedSigBuffer)
-        ) {
-          return true;
-        }
-      } catch (e) {
-        // Continue checking other signatures
-      }
-    }
-  }
-
-  return false;
 }
 
 async function handleDodoWebhook(request: Request): Promise<Response> {
