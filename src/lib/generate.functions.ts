@@ -379,6 +379,30 @@ Return ONLY valid JSON with this exact schema:
 export const generatePromos = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
+    // Access Control: Free tier is limited to 3 generations
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("is_pro")
+      .eq("email", data.email)
+      .maybeSingle();
+
+    const isPro = profile?.is_pro ?? false;
+
+    if (!isPro) {
+      const { count, error: countError } = await supabaseAdmin
+        .from("submissions")
+        .select("*", { count: "exact", head: true })
+        .eq("email", data.email);
+
+      if (countError) {
+        console.error("[generate] Error counting submissions for limit check:", countError);
+      }
+
+      if (count !== null && count >= 3) {
+        throw new Error("Free tier generation limit reached. Please upgrade to Pro to unlock unlimited generations.");
+      }
+    }
+
     const plan = await analyze(data.imageDataUrls, {
       appName: data.appName,
       targetAudience: data.targetAudience,

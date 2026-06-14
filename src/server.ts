@@ -4,6 +4,7 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { createHmac, timingSafeEqual } from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "./integrations/supabase/client.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -124,9 +125,9 @@ function verifyDodoWebhook(
 }
 
 async function handleDodoWebhook(request: Request): Promise<Response> {
-  const webhookSecret = process.env.DODO_PAYMENTS_WEBHOOK_KEY;
+  const webhookSecret = process.env.DODO_WEBHOOK_SECRET || process.env.DODO_PAYMENTS_WEBHOOK_KEY;
   if (!webhookSecret) {
-    console.error("[webhook] DODO_PAYMENTS_WEBHOOK_KEY not configured");
+    console.error("[webhook] DODO_WEBHOOK_SECRET or DODO_PAYMENTS_WEBHOOK_KEY not configured");
     return new Response("Webhook secret not configured", { status: 500 });
   }
 
@@ -165,51 +166,217 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
   const data = payload.data;
   const sessionId: string | undefined = data?.metadata?.session_id;
 
-  if (!sessionId) {
-    console.warn("[webhook] No session_id in metadata — ignoring event:", eventType);
-    return new Response("Missing session_id", { status: 200 });
+  // Check event idempotency first
+  const { data: existingEvent } = await supabaseAdmin
+    .from("webhook_events")
+    .select("processed, error")
+    .eq("event_id", webhookId)
+    .maybeSingle();
+
+  if (existingEvent) {
+    if (existingEvent.processed) {
+      console.log(`[webhook] Event ${webhookId} already processed.`);
+      return new Response("Event already processed", { status: 200 });
+    }
+    console.warn(`[webhook] Event ${webhookId} exists but not processed. Retrying.`);
+  } else {
+    // Log new webhook event in db
+    await supabaseAdmin
+      .from("webhook_events")
+      .insert({
+        event_id: webhookId,
+        event_type: eventType,
+        payload: payload,
+        processed: false
+      });
   }
 
-  const orderId = String(data?.id ?? "");
-  const customerEmail: string = data?.customer?.email || data?.customer_email || "";
+  let userId = data?.metadata?.user_id || payload.data?.metadata?.user_id;
+  const customerEmail: string = data?.customer?.email || data?.customer_email || payload.data?.customer?.email || "";
 
-  let newStatus: string | null = null;
-  switch (eventType) {
-    case "payment.succeeded":
-      newStatus = "paid";
-      break;
-    case "payment.failed":
-      newStatus = "failed";
-      break;
-    case "refund.succeeded":
-      newStatus = "refunded";
-      break;
-    default:
-      return new Response("Event ignored", { status: 200 });
+  if (!userId && customerEmail) {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("email", customerEmail)
+      .maybeSingle();
+    
+    if (profile) {
+      userId = profile.id;
+    }
   }
 
-  // Update payment record in Supabase
-  const supabaseUrl = process.env.SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY!;
-  const db = createClient(supabaseUrl, supabaseKey);
+  try {
+    if (eventType.startsWith("subscription.")) {
+      const subId = data?.subscription_id || data?.id;
+      const customerId = data?.customer_id;
+      const subStatus = data?.status || "active";
+      const planName = data?.plan_name || "Pro Plan";
+      const billingCycle = "monthly";
+      const currentPeriodStart = data?.current_period_start || new Date().toISOString();
+      const currentPeriodEnd = data?.next_billing_date || data?.current_period_end || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { error } = await db
-    .from("payments")
-    .update({
-      status: newStatus,
-      lemon_squeezy_order_id: orderId, // Reuse existing table column for Dodo payment ID
-      customer_email: customerEmail,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("session_id", sessionId);
+      if (!subId) {
+        throw new Error("Missing subscription_id in payload");
+      }
 
-  if (error) {
-    console.error("[webhook] DB update failed:", error);
-    return new Response("DB update failed", { status: 500 });
+      const { error: subError } = await supabaseAdmin
+        .from("subscriptions")
+        .upsert({
+          user_id: userId || null,
+          dodo_customer_id: customerId,
+          dodo_subscription_id: subId,
+          plan_name: planName,
+          billing_cycle: billingCycle,
+          status: subStatus,
+          current_period_start: currentPeriodStart,
+          current_period_end: currentPeriodEnd,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "dodo_subscription_id" });
+
+      if (subError) {
+        throw new Error(`Failed to upsert subscription: ${subError.message}`);
+      }
+
+      // Sync Pro status to user profile
+      if (subStatus === "active" || subStatus === "renewed") {
+        if (userId) {
+          await supabaseAdmin
+            .from("profiles")
+            .update({ is_pro: true, dodo_customer_id: customerId })
+            .eq("id", userId);
+        }
+      } else if (subStatus === "expired" || subStatus === "cancelled") {
+        const hasExpired = subStatus === "expired" || new Date(currentPeriodEnd) <= new Date();
+        if (hasExpired && userId) {
+          // Verify no other active subscriptions
+          const { data: otherSubs } = await supabaseAdmin
+            .from("subscriptions")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("status", "active");
+
+          if (!otherSubs || otherSubs.length === 0) {
+            await supabaseAdmin
+              .from("profiles")
+              .update({ is_pro: false })
+              .eq("id", userId);
+          }
+        }
+      }
+
+    } else if (eventType.startsWith("payment.")) {
+      const paymentId = data?.payment_id || data?.id;
+      const amount = data?.amount ? (data.amount / 100) : null;
+      const currency = data?.currency || "USD";
+      const payStatus = data?.status || "pending";
+      const payMethod = data?.payment_method || "card";
+      const txRef = data?.transaction_reference || data?.receipt_url || "";
+
+      const dbPaymentUpdate: any = {
+        payment_status: payStatus,
+        status: payStatus === "succeeded" ? "paid" : payStatus,
+        amount,
+        currency,
+        payment_method: payMethod,
+        transaction_reference: txRef,
+        dodo_payment_id: paymentId,
+        customer_email: customerEmail,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (userId) {
+        dbPaymentUpdate.user_id = userId;
+      }
+
+      // Try updating via session_id, or insert new if session_id not found
+      let payError = true;
+      if (sessionId) {
+        const { error } = await supabaseAdmin
+          .from("payments")
+          .update(dbPaymentUpdate)
+          .eq("session_id", sessionId);
+        if (!error) payError = false;
+      }
+
+      if (payError) {
+        console.warn("[webhook] Payment update failed by session_id. Creating new payment record.");
+        await supabaseAdmin
+          .from("payments")
+          .insert({
+            user_id: userId || null,
+            session_id: sessionId || `pay_${paymentId}`,
+            amount,
+            currency,
+            status: payStatus === "succeeded" ? "paid" : payStatus,
+            payment_status: payStatus,
+            payment_method: payMethod,
+            transaction_reference: txRef,
+            customer_email: customerEmail,
+            dodo_payment_id: paymentId,
+          });
+      }
+
+      if (payStatus === "succeeded" || payStatus === "paid") {
+        if (userId) {
+          await supabaseAdmin
+            .from("profiles")
+            .update({ is_pro: true })
+            .eq("id", userId);
+        }
+      }
+
+    } else if (eventType.startsWith("refund.")) {
+      const paymentId = data?.payment_id || data?.id;
+      const refundStatus = data?.status || "succeeded";
+
+      if (refundStatus === "succeeded" || refundStatus === "completed") {
+        const { data: payment } = await supabaseAdmin
+          .from("payments")
+          .update({
+            payment_status: "refunded",
+            status: "refunded",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("dodo_payment_id", paymentId)
+          .select("user_id")
+          .maybeSingle();
+
+        if (payment?.user_id) {
+          const { data: otherSubs } = await supabaseAdmin
+            .from("subscriptions")
+            .select("id")
+            .eq("user_id", payment.user_id)
+            .eq("status", "active");
+
+          if (!otherSubs || otherSubs.length === 0) {
+            await supabaseAdmin
+              .from("profiles")
+              .update({ is_pro: false })
+              .eq("id", payment.user_id);
+          }
+        }
+      }
+    }
+
+    // Mark event as processed
+    await supabaseAdmin
+      .from("webhook_events")
+      .update({ processed: true })
+      .eq("event_id", webhookId);
+
+    console.log(`[webhook] Processed event ${eventType} successfully.`);
+    return new Response("OK", { status: 200 });
+
+  } catch (err: any) {
+    console.error("[webhook] Error processing event:", err);
+    await supabaseAdmin
+      .from("webhook_events")
+      .update({ error: err.message || "Unknown error" })
+      .eq("event_id", webhookId);
+
+    return new Response(`Processing error: ${err.message}`, { status: 500 });
   }
-
-  console.log(`[webhook] Dodo Payment ${sessionId} → ${newStatus} (payment ${orderId})`);
-  return new Response("OK", { status: 200 });
 }
 
 // ─── Main fetch handler ───────────────────────────────────────────────────────

@@ -16,33 +16,62 @@ export type Database = {
     Tables: {
       payments: {
         Row: {
-          created_at: string | null
+          created_at: string
           customer_email: string | null
           id: string
           lemon_squeezy_order_id: string | null
           session_id: string
           status: string
-          updated_at: string | null
+          updated_at: string
+          user_id: string | null
+          amount: number | null
+          currency: string | null
+          payment_status: string | null
+          payment_method: string | null
+          transaction_reference: string | null
+          dodo_payment_id: string | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           customer_email?: string | null
           id?: string
           lemon_squeezy_order_id?: string | null
           session_id: string
           status?: string
-          updated_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+          amount?: number | null
+          currency?: string | null
+          payment_status?: string | null
+          payment_method?: string | null
+          transaction_reference?: string | null
+          dodo_payment_id?: string | null
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           customer_email?: string | null
           id?: string
           lemon_squeezy_order_id?: string | null
           session_id?: string
           status?: string
-          updated_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+          amount?: number | null
+          currency?: string | null
+          payment_status?: string | null
+          payment_method?: string | null
+          transaction_reference?: string | null
+          dodo_payment_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       submissions: {
         Row: {
@@ -92,6 +121,8 @@ export type Database = {
           id: string
           provider: string | null
           updated_at: string
+          is_pro: boolean | null
+          dodo_customer_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -101,6 +132,8 @@ export type Database = {
           id: string
           provider?: string | null
           updated_at?: string
+          is_pro?: boolean | null
+          dodo_customer_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -110,6 +143,142 @@ export type Database = {
           id?: string
           provider?: string | null
           updated_at?: string
+          is_pro?: boolean | null
+          dodo_customer_id?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string | null
+          dodo_customer_id: string | null
+          dodo_subscription_id: string
+          plan_name: string
+          billing_cycle: string
+          status: string
+          current_period_start: string | null
+          current_period_end: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          dodo_customer_id?: string | null
+          dodo_subscription_id: string
+          plan_name: string
+          billing_cycle: string
+          status: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          dodo_customer_id?: string | null
+          dodo_subscription_id?: string
+          plan_name?: string
+          billing_cycle?: string
+          status?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      invoices: {
+        Row: {
+          id: string
+          user_id: string | null
+          subscription_id: string | null
+          dodo_invoice_id: string
+          amount: number | null
+          currency: string | null
+          status: string
+          invoice_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          subscription_id?: string | null
+          dodo_invoice_id: string
+          amount?: number | null
+          currency?: string | null
+          status: string
+          invoice_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          subscription_id?: string | null
+          dodo_invoice_id?: string
+          amount?: number | null
+          currency?: string | null
+          status?: string
+          invoice_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      webhook_events: {
+        Row: {
+          id: string
+          event_id: string
+          event_type: string
+          payload: Json
+          processed: boolean
+          error: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          event_type: string
+          payload: Json
+          processed?: boolean
+          error?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          event_type?: string
+          payload?: Json
+          processed?: boolean
+          error?: string | null
+          created_at?: string
         }
         Relationships: []
       }

@@ -12,6 +12,8 @@ interface AuthContextType {
     full_name: string | null;
     avatar_url: string | null;
     provider: string | null;
+    is_pro: boolean | null;
+    dodo_customer_id: string | null;
   } | null;
   loading: boolean;
   logout: () => Promise<void>;

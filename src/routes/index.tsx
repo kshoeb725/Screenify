@@ -185,7 +185,7 @@ function Index() {
   const generate = useServerFn(generatePromos);
   const { theme } = useTheme();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const search = Route.useSearch();
 
   useEffect(() => {
@@ -194,6 +194,16 @@ function Index() {
       setForm((prev) => ({ ...prev, email }));
     }
   }, [user]);
+
+  useEffect(() => {
+    if (profile) {
+      setPaid(!!profile.is_pro);
+      localStorage.setItem("screenmint_paid", String(!!profile.is_pro));
+    } else {
+      setPaid(false);
+      localStorage.removeItem("screenmint_paid");
+    }
+  }, [profile]);
 
   const [previews, setPreviews] = useState<(string | null)[]>(() => {
     if (typeof window !== "undefined") {
@@ -610,17 +620,31 @@ function Nav({
         {/* Left side: Logo & Back Arrow */}
         <div className="flex items-center gap-4">
           {showBack && (
-            <button
-              onClick={onReset}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-xs font-semibold cursor-pointer transition active:scale-95 text-foreground"
-              title="Return to landing page"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-              <span className="hidden sm:inline">Back to Home</span>
-            </button>
+            user ? (
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-xs font-semibold cursor-pointer transition active:scale-95 text-foreground animate-in fade-in slide-in-from-left-2 duration-200"
+                title="Return to dashboard"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span className="hidden sm:inline">Back to Dashboard</span>
+              </Link>
+            ) : (
+              <button
+                onClick={onReset}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-xs font-semibold cursor-pointer transition active:scale-95 text-foreground animate-in fade-in slide-in-from-left-2 duration-200"
+                title="Return to landing page"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span className="hidden sm:inline">Back to Home</span>
+              </button>
+            )
           )}
           
           <div 

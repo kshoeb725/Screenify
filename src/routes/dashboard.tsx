@@ -23,6 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PaymentDialog } from "@/components/PaymentDialog";
+import { useServerFn } from "@tanstack/react-start";
+import { cancelSubscription } from "@/lib/payment.functions";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -44,9 +46,39 @@ function DashboardPage() {
   const [activeTab, setActiveTab] = useState("screenshots");
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+  const [subscription, setSubscription] = useState<any | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [hasPaid, setHasPaid] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const cancelSession = useServerFn(cancelSubscription);
+
+  const handleCancelSubscription = async () => {
+    if (!subscription?.dodo_subscription_id) return;
+    
+    if (!confirm("Are you sure you want to cancel your subscription? You will lose Pro features at the end of your billing cycle.")) {
+      return;
+    }
+
+    setCancelling(true);
+    try {
+      const res = await cancelSession({
+        data: { subscriptionId: subscription.dodo_subscription_id },
+      });
+      if (res.success) {
+        toast.success("Subscription scheduled for cancellation successfully!");
+        setSubscription((prev: any) => prev ? { ...prev, status: "cancelled" } : null);
+      } else {
+        toast.error(res.error || "Failed to cancel subscription.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to cancel subscription.");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -133,7 +165,7 @@ function DashboardPage() {
     }
   }, [user, loading, navigate]);
 
-  // Fetch submissions and payments when user is loaded
+  // Fetch submissions, payments, and subscriptions when user is loaded
   useEffect(() => {
     if (!user) return;
 
@@ -147,8 +179,6 @@ function DashboardPage() {
           .order("created_at", { ascending: false });
 
         if (!subError && subData) {
-          // Client-side filter to double-check matching email if needed, 
-          // although RLS policy already handles filtering on email = auth.jwt()->>'email'
           setSubmissions(subData);
         }
 
@@ -160,6 +190,20 @@ function DashboardPage() {
 
         if (!payError && payData) {
           setPayments(payData);
+        }
+
+        // Fetch subscriptions matching user's ID
+        const { data: subscriptionData, error: subscriptionError } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (!subscriptionError && subscriptionData && subscriptionData.length > 0) {
+          setSubscription(subscriptionData[0]);
+          const activePro = subscriptionData.some((s) => s.status === "active" || s.status === "renewed");
+          setHasPaid(activePro);
+        } else if (payData) {
+          // Fallback to payments if no subscription records exist yet
           const activePro = payData.some((p) => p.status === "completed" || p.status === "paid");
           setHasPaid(activePro);
         }
@@ -175,7 +219,7 @@ function DashboardPage() {
 
   const handlePaidSuccess = () => {
     setHasPaid(true);
-    // Refresh payments list
+    // Refresh payments and subscriptions list
     if (user) {
       supabase
         .from("payments")
@@ -183,6 +227,18 @@ function DashboardPage() {
         .order("created_at", { ascending: false })
         .then(({ data }) => {
           if (data) setPayments(data);
+        });
+      
+      supabase
+        .from("subscriptions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setSubscription(data[0]);
+            const activePro = data.some((s) => s.status === "active" || s.status === "renewed");
+            setHasPaid(activePro);
+          }
         });
     }
   };
@@ -570,23 +626,76 @@ function DashboardPage() {
               <CardContent className="pt-6 space-y-6">
                 
                 {/* Active Plan Detail Box */}
-                <div className="rounded-xl border border-border/40 bg-muted/20 p-5 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Active Tier</p>
-                    <p className="text-lg font-bold text-foreground">
-                      {hasPaid ? "Pro Monthly Plan" : "Free Trial Plan"}
-                    </p>
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-5 flex flex-col space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Current Plan</p>
+                      <p className="text-lg font-bold text-foreground">
+                        {hasPaid ? (subscription?.plan_name || "Pro Monthly Plan") : "Free Tier Plan"}
+                      </p>
+                    </div>
+                    {!hasPaid ? (
+                      <Button
+                        onClick={() => setPayOpen(true)}
+                        className="bg-[#3ECFB2] hover:bg-[#059669] text-slate-950 font-bold rounded-xl px-5 py-2 cursor-pointer text-xs transition active:scale-[0.98]"
+                      >
+                        Upgrade to Pro
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full capitalize">
+                        <CheckCircle2 className="size-3.5" /> {subscription?.status || "Active"}
+                      </div>
+                    )}
                   </div>
-                  {!hasPaid ? (
-                    <Button
-                      onClick={() => setPayOpen(true)}
-                      className="bg-[#3ECFB2] hover:bg-[#059669] text-ink font-semibold rounded-xl px-5 py-4 cursor-pointer text-xs"
-                    >
-                      Upgrade to Pro
-                    </Button>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
-                      <CheckCircle2 className="size-4" /> Subscription Active
+
+                  {hasPaid && subscription && (
+                    <div className="border-t border-border/20 pt-4 grid grid-cols-2 gap-4 text-xs font-mono">
+                      <div>
+                        <p className="text-muted-foreground">Billing Cycle:</p>
+                        <p className="text-foreground font-semibold capitalize">{subscription.billing_cycle || "Monthly"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">
+                          {subscription.status === "cancelled" ? "Expiration Date:" : "Renewal Date:"}
+                        </p>
+                        <p className="text-foreground font-semibold">
+                          {subscription.current_period_end 
+                            ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })
+                            : "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {hasPaid && subscription && subscription.status !== "cancelled" && (
+                    <div className="border-t border-border/20 pt-3 flex justify-end">
+                      <Button
+                        variant="destructive"
+                        disabled={cancelling}
+                        onClick={handleCancelSubscription}
+                        className="rounded-xl px-4 py-1.5 text-xs font-semibold h-auto cursor-pointer text-white"
+                      >
+                        {cancelling ? (
+                          <>
+                            <Loader2 className="size-3 animate-spin mr-1.5" /> Cancelling...
+                          </>
+                        ) : (
+                          "Cancel Subscription"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {hasPaid && subscription && subscription.status === "cancelled" && (
+                    <div className="border-t border-border/20 pt-3 text-[11px] text-amber-500 font-mono">
+                      ⚠️ Subscription is cancelled and will expire on{" "}
+                      {subscription.current_period_end
+                        ? new Date(subscription.current_period_end).toLocaleDateString()
+                        : "N/A"}.
                     </div>
                   )}
                 </div>

@@ -1,32 +1,37 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const initPaymentSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({ email: z.string().email() }).parse(input),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const sessionId = crypto.randomUUID();
+    const userId = context.userId;
 
     // Insert pending payment record in Supabase
     await supabaseAdmin.from("payments").insert({
       session_id: sessionId,
       status: "pending",
+      payment_status: "pending",
       customer_email: data.email,
+      user_id: userId,
     });
 
-    const apiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
-    const productId = process.env.DODO_PAYMENTS_PRODUCT_ID?.trim();
+    const apiKey = (process.env.DODO_API_KEY || process.env.DODO_PAYMENTS_API_KEY)?.trim();
+    const productId = (process.env.DODO_PLAN_ID || process.env.DODO_PAYMENTS_PRODUCT_ID)?.trim();
 
     // If API key or product ID is missing, fall back to Demo Mode
     if (!apiKey || !productId) {
-      console.log("[payments] DODO_PAYMENTS_API_KEY or PRODUCT_ID missing. Launching in Demo Mode.");
+      console.log("[payments] DODO_API_KEY or PLAN_ID missing. Launching in Demo Mode.");
       return { sessionId, checkoutUrl: null, demo: true, setupError: null };
     }
 
     try {
-      const isLive = apiKey.startsWith("live_") || process.env.NODE_ENV === "production";
+      const isLive = process.env.DODO_ENVIRONMENT === "live_mode" || apiKey.startsWith("live_");
       const dodoBaseUrl = isLive ? "https://live.dodopayments.com" : "https://test.dodopayments.com";
       const appUrl = process.env.APP_URL?.trim() || "http://localhost:3000";
 
@@ -48,6 +53,7 @@ export const initPaymentSession = createServerFn({ method: "POST" })
           },
           metadata: {
             session_id: sessionId,
+            user_id: userId,
           },
           return_url: `${appUrl}/dashboard?session_id=${sessionId}`,
         }),
@@ -84,4 +90,81 @@ export const getPaymentStatus = createServerFn({ method: "POST" })
       .single();
 
     return { status: (payment?.status as string) ?? "pending" };
+  });
+
+export const cancelSubscription = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ subscriptionId: z.string() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const userId = context.userId;
+    const { subscriptionId } = data;
+
+    // 1. Fetch subscription from our database to verify it belongs to this user
+    const { data: sub, error: fetchError } = await supabaseAdmin
+      .from("subscriptions")
+      .select("*")
+      .eq("dodo_subscription_id", subscriptionId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (fetchError || !sub) {
+      console.error("[payments] Subscription not found or access denied:", fetchError);
+      return { success: false, error: "Subscription not found or access denied." };
+    }
+
+    const apiKey = (process.env.DODO_API_KEY || process.env.DODO_PAYMENTS_API_KEY)?.trim();
+    if (!apiKey) {
+      // Demo Mode fallback for cancellation
+      console.log("[payments] DODO_API_KEY missing. Simulating cancellation in Demo Mode.");
+      
+      // Update local subscription to cancelled
+      await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          status: "cancelled",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("dodo_subscription_id", subscriptionId);
+
+      return { success: true, demo: true };
+    }
+
+    try {
+      const isLive = process.env.DODO_ENVIRONMENT === "live_mode" || apiKey.startsWith("live_");
+      const dodoBaseUrl = isLive ? "https://live.dodopayments.com" : "https://test.dodopayments.com";
+
+      // Call Dodo PATCH endpoint to schedule cancellation at next billing date
+      const response = await fetch(`${dodoBaseUrl}/subscriptions/${subscriptionId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          cancel_at_next_billing_date: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("[payments] Dodo cancel API failed:", errText);
+        throw new Error(`Dodo API error: ${errText || response.statusText}`);
+      }
+
+      // Update local subscription to cancelled
+      await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          status: "cancelled",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("dodo_subscription_id", subscriptionId);
+
+      return { success: true, demo: false };
+    } catch (e: any) {
+      console.error("[payments] Error cancelling Dodo subscription:", e);
+      return { success: false, error: e.message || "Failed to cancel subscription." };
+    }
   });
