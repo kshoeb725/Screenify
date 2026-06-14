@@ -31,7 +31,8 @@ export const initPaymentSession = createServerFn({ method: "POST" })
     }
 
     try {
-      const isLive = process.env.DODO_ENVIRONMENT === "live_mode" || apiKey.startsWith("live_");
+      const envVal = process.env.DODO_ENVIRONMENT?.trim().replace(/['"]/g, "");
+      const isLive = envVal === "live_mode" || apiKey.startsWith("live_");
       const dodoBaseUrl = isLive ? "https://live.dodopayments.com" : "https://test.dodopayments.com";
       const appUrl = process.env.APP_URL?.trim() || "http://localhost:3000";
 
@@ -132,7 +133,8 @@ export const cancelSubscription = createServerFn({ method: "POST" })
     }
 
     try {
-      const isLive = process.env.DODO_ENVIRONMENT === "live_mode" || apiKey.startsWith("live_");
+      const envVal = process.env.DODO_ENVIRONMENT?.trim().replace(/['"]/g, "");
+      const isLive = envVal === "live_mode" || apiKey.startsWith("live_");
       const dodoBaseUrl = isLive ? "https://live.dodopayments.com" : "https://test.dodopayments.com";
 
       // Call Dodo PATCH endpoint to schedule cancellation at next billing date

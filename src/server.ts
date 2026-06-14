@@ -169,6 +169,9 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
   }
 
   let userId = data?.metadata?.user_id || payload.data?.metadata?.user_id;
+  if (userId === "00000000-0000-0000-0000-000000000000") {
+    userId = null;
+  }
   const customerEmail: string = data?.customer?.email || data?.customer_email || payload.data?.customer?.email || "";
 
   if (!userId && customerEmail) {
@@ -366,7 +369,8 @@ function cleanEnvVars() {
     "DODO_PAYMENTS_API_KEY",
     "DODO_API_KEY",
     "DODO_PAYMENTS_PRODUCT_ID",
-    "DODO_PLAN_ID"
+    "DODO_PLAN_ID",
+    "DODO_ENVIRONMENT"
   ];
 
   for (const key of keysToClean) {
