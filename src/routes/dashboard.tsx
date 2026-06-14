@@ -340,6 +340,13 @@ function DashboardPage() {
             </div>
             <p className="text-sm text-muted-foreground">Manage your generated creatives, billing info, and account settings.</p>
           </div>
+
+          <Button
+            onClick={() => fileRef.current?.click()}
+            className="bg-[#3ECFB2] hover:bg-[#3ECFB2]/90 text-slate-950 font-semibold py-2 px-4 rounded-xl cursor-pointer text-xs transition active:scale-[0.98] shadow-sm flex items-center gap-1.5 self-start md:self-auto"
+          >
+            <Plus className="size-4" /> Create New Design
+          </Button>
         </section>
 
         {/* Core Tabbed Layout */}
