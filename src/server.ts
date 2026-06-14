@@ -172,6 +172,22 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
   if (userId === "00000000-0000-0000-0000-000000000000") {
     userId = null;
   }
+
+  // Verify that the userId from metadata actually exists in our profiles table.
+  // This prevents foreign key violations if the ID is obsolete, invalid, or from a mismatching database.
+  if (userId) {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+    
+    if (!profile) {
+      console.warn(`[webhook] User ID ${userId} from metadata not found in profiles. Resetting to null.`);
+      userId = null;
+    }
+  }
+
   const customerEmail: string = data?.customer?.email || data?.customer_email || payload.data?.customer?.email || "";
 
   if (!userId && customerEmail) {
