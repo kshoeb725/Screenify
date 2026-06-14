@@ -99,6 +99,7 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
   }
 
   const rawBody = await request.text();
+  console.log(`[webhook] Raw body length: ${rawBody ? rawBody.length : 0} bytes. Preview: ${rawBody ? rawBody.substring(0, 100) : "none"}`);
   
   // Retrieve Standard Webhook headers
   const webhookId = request.headers.get("webhook-id") || "";
