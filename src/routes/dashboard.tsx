@@ -413,7 +413,84 @@ function DashboardPage() {
                   const bgColor = paletteList[2] || "#0F0F11";
 
                   return (
-                    <Card key={sub.id} className="border border-border/40 bg-card/20 hover:bg-card/50 hover:border-border/80 transition-all duration-300 flex flex-col justify-between overflow-hidden group rounded-2xl shadow-lg hover:shadow-2xl">
+                    <Card 
+                      key={sub.id} 
+                      onClick={() => {
+                        try {
+                          // Reset active layout and customization overrides to avoid carrying over from other designs
+                          localStorage.removeItem("screenmint_template");
+                          localStorage.removeItem("screenmint_stylePreset");
+                          localStorage.removeItem("screenmint_variant");
+                          localStorage.removeItem("screenmint_headline");
+                          localStorage.removeItem("screenmint_subheadline");
+                          localStorage.removeItem("screenmint_features");
+                          localStorage.removeItem("screenmint_colors");
+                          localStorage.removeItem("screenmint_featureTextSize");
+                          localStorage.removeItem("screenmint_featureSpacing");
+                          localStorage.removeItem("screenmint_featureIconSize");
+                          localStorage.removeItem("screenmint_logo");
+
+                          // Set active submission ID
+                          localStorage.setItem("screenmint_active_submission_id", sub.id);
+
+                          // Load customized configs if they exist, otherwise reset to allow rebuild on next mount
+                          const configsKey = `screenmint_slide_configs_${sub.id}`;
+                          const savedConfigs = localStorage.getItem(configsKey);
+                          if (savedConfigs) {
+                            localStorage.setItem("screenmint_slide_configs", savedConfigs);
+                          } else {
+                            localStorage.removeItem("screenmint_slide_configs");
+                          }
+
+                          // Prepare previews array: 6-element array with first element as the screenshot ref
+                          const previewsArr = Array(6).fill(null);
+                          if (sub.screenshot_ref && sub.screenshot_ref.startsWith("data:image/") && sub.screenshot_ref.length > 500) {
+                            previewsArr[0] = sub.screenshot_ref;
+                          }
+                          localStorage.setItem("screenmint_previews", JSON.stringify(previewsArr));
+
+                          // Reconstruct the result object
+                          const resultObj = {
+                            appName: sub.app_name || "",
+                            category: "Optimized",
+                            auditScore: 85,
+                            auditFeedback: "Optimized historical submission",
+                            slides: slidesList,
+                          };
+                          localStorage.setItem("screenmint_result", JSON.stringify(resultObj));
+
+                          // Reconstruct the form object
+                          const formObj = {
+                            email: sub.email || "",
+                            appName: sub.app_name || "",
+                            targetAudience: sub.target_audience || "",
+                            objective: sub.objective || "",
+                          };
+                          localStorage.setItem("screenmint_form", JSON.stringify(formObj));
+
+                          // Reconstruct extracted colors
+                          const extractedColorsObj = {
+                            bg: paletteList[1] ?? "#F5F1E8",
+                            primary: paletteList[0] ?? "#121212",
+                            secondary: paletteList[3] ?? paletteList[1] ?? "#6B7280",
+                            accent: paletteList[2] ?? "#C8E84A",
+                          };
+                          localStorage.setItem("screenmint_extractedColors", JSON.stringify(extractedColorsObj));
+
+                          // Set operational statuses
+                          localStorage.setItem("screenmint_status", "done");
+                          localStorage.setItem("screenmint_paid", String(hasPaid));
+                          localStorage.setItem("screenmint_is_new_session", "true");
+
+                          toast.success("Historical design set loaded successfully!");
+                          navigate({ to: "/" });
+                        } catch (error) {
+                          console.error("Failed to restore design set:", error);
+                          toast.error("Failed to load historical design set.");
+                        }
+                      }}
+                      className="border border-border/40 bg-card/20 hover:bg-card/50 hover:border-border/80 transition-all duration-300 flex flex-col justify-between overflow-hidden group rounded-2xl shadow-lg hover:shadow-2xl cursor-pointer"
+                    >
                       <div className="p-6 space-y-5 text-left">
                         <div className="flex items-center justify-between">
                           <span className="text-[9px] font-mono text-[#3ECFB2] font-semibold bg-[#3ECFB2]/5 px-2.5 py-1 rounded-full border border-[#3ECFB2]/15 capitalize">
@@ -502,77 +579,9 @@ function DashboardPage() {
                       
                       <div className="border-t border-border/40 bg-muted/20 px-6 py-4 flex items-center justify-between">
                         <span className="text-[10px] text-muted-foreground font-mono">{slidesList.length} slide creatives</span>
-                        <Button
-                          variant="ghost"
-                          onClick={() => {
-                            try {
-                              // Reset active layout and customization overrides to avoid carrying over from other designs
-                              localStorage.removeItem("screenmint_template");
-                              localStorage.removeItem("screenmint_stylePreset");
-                              localStorage.removeItem("screenmint_variant");
-                              localStorage.removeItem("screenmint_headline");
-                              localStorage.removeItem("screenmint_subheadline");
-                              localStorage.removeItem("screenmint_features");
-                              localStorage.removeItem("screenmint_colors");
-                              localStorage.removeItem("screenmint_featureTextSize");
-                              localStorage.removeItem("screenmint_featureSpacing");
-                              localStorage.removeItem("screenmint_featureIconSize");
-                              localStorage.removeItem("screenmint_logo");
-
-                              // Prepare previews array: 6-element array with first element as the screenshot ref
-                              const previewsArr = Array(6).fill(null);
-                              if (sub.screenshot_ref && sub.screenshot_ref.startsWith("data:image/") && sub.screenshot_ref.length > 500) {
-                                previewsArr[0] = sub.screenshot_ref;
-                              }
-                              localStorage.setItem("screenmint_previews", JSON.stringify(previewsArr));
-
-                              // Reconstruct the result object
-                              const resultObj = {
-                                appName: sub.app_name || "",
-                                category: "Optimized",
-                                auditScore: 85,
-                                auditFeedback: "Optimized historical submission",
-                                slides: slidesList,
-                              };
-                              localStorage.setItem("screenmint_result", JSON.stringify(resultObj));
-
-                              // Reconstruct the form object
-                              const formObj = {
-                                email: sub.email || "",
-                                appName: sub.app_name || "",
-                                targetAudience: sub.target_audience || "",
-                                objective: sub.objective || "",
-                              };
-                              localStorage.setItem("screenmint_form", JSON.stringify(formObj));
-
-                              // Reconstruct extracted colors
-                              const extractedColorsObj = {
-                                bg: paletteList[1] ?? "#F5F1E8",
-                                primary: paletteList[0] ?? "#121212",
-                                secondary: paletteList[3] ?? paletteList[1] ?? "#6B7280",
-                                accent: paletteList[2] ?? "#C8E84A",
-                              };
-                              localStorage.setItem("screenmint_extractedColors", JSON.stringify(extractedColorsObj));
-
-                              // Set operational statuses
-                              localStorage.setItem("screenmint_status", "done");
-                              localStorage.setItem("screenmint_paid", String(hasPaid));
-                              localStorage.setItem("screenmint_is_new_session", "true");
-
-                              // Rebuild the slide configurations on next mount
-                              localStorage.removeItem("screenmint_slide_configs");
-
-                              toast.success("Historical design set loaded successfully!");
-                              navigate({ to: "/" });
-                            } catch (error) {
-                              console.error("Failed to restore design set:", error);
-                              toast.error("Failed to load historical design set.");
-                            }
-                          }}
-                          className="text-xs font-semibold text-[#3ECFB2] hover:opacity-85 cursor-pointer hover:bg-transparent p-0 flex items-center gap-1"
-                        >
+                        <span className="text-xs font-semibold text-[#3ECFB2] group-hover:opacity-85 flex items-center gap-1 transition-opacity">
                           View set <Download className="size-3" />
-                        </Button>
+                        </span>
                       </div>
                     </Card>
                   );

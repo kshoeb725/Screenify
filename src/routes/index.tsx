@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, useEffect, cloneElement } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { generatePromos } from "@/lib/generate.functions";
+import JSZip from "jszip";
 import { useTheme } from "@/hooks/use-theme";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { Footer } from "@/components/Footer";
@@ -179,6 +180,196 @@ async function compressImage(dataUrl: string, maxDim = 2560): Promise<string> {
     img.onerror = () => reject(new Error("Failed to load image for compression"));
     img.src = dataUrl;
   });
+}
+
+function getSimpleLuminance(hex: string): number {
+  if (!hex || typeof hex !== "string") return 255;
+  const cleanHex = hex.replace("#", "").trim();
+  if (cleanHex.length !== 3 && cleanHex.length !== 6) return 255;
+  
+  let r = 255, g = 255, b = 255;
+  if (cleanHex.length === 3) {
+    r = parseInt(cleanHex[0] + cleanHex[0], 16);
+    g = parseInt(cleanHex[1] + cleanHex[1], 16);
+    b = parseInt(cleanHex[2] + cleanHex[2], 16);
+  } else {
+    r = parseInt(cleanHex.substring(0, 2), 16);
+    g = parseInt(cleanHex.substring(2, 4), 16);
+    b = parseInt(cleanHex.substring(4, 6), 16);
+  }
+  
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function getRelativeLuminance(hex: string): number {
+  if (!hex || typeof hex !== "string") return 1;
+  const cleanHex = hex.replace("#", "").trim();
+  if (cleanHex.length !== 3 && cleanHex.length !== 6) return 1;
+  
+  let r = 255, g = 255, b = 255;
+  if (cleanHex.length === 3) {
+    r = parseInt(cleanHex[0] + cleanHex[0], 16);
+    g = parseInt(cleanHex[1] + cleanHex[1], 16);
+    b = parseInt(cleanHex[2] + cleanHex[2], 16);
+  } else {
+    r = parseInt(cleanHex.substring(0, 2), 16);
+    g = parseInt(cleanHex.substring(2, 4), 16);
+    b = parseInt(cleanHex.substring(4, 6), 16);
+  }
+  
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return 1;
+  
+  const rS = r / 255;
+  const gS = g / 255;
+  const bS = b / 255;
+  
+  const rR = rS <= 0.04045 ? rS / 12.92 : Math.pow((rS + 0.055) / 1.055, 2.4);
+  const gR = gS <= 0.04045 ? gS / 12.92 : Math.pow((gS + 0.055) / 1.055, 2.4);
+  const bR = bS <= 0.04045 ? bS / 12.92 : Math.pow((bS + 0.055) / 1.055, 2.4);
+  
+  return 0.2126 * rR + 0.7152 * gR + 0.0722 * bR;
+}
+
+function getContrastRatio(color1: string, color2: string): number {
+  const l1 = getRelativeLuminance(color1);
+  const l2 = getRelativeLuminance(color2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function getBgLuminance(bgString: string): number {
+  if (!bgString) return 255;
+  const hexRegex = /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/g;
+  const matches = bgString.match(hexRegex);
+  if (matches && matches.length > 0) {
+    let totalLuminance = 0;
+    for (const hex of matches) {
+      totalLuminance += getSimpleLuminance(hex);
+    }
+    return totalLuminance / matches.length;
+  }
+  if (bgString.startsWith("#")) {
+    return getSimpleLuminance(bgString);
+  }
+  return 255;
+}
+
+function getRepresentativeBgColor(bgString: string): string {
+  if (!bgString) return "#FFFFFF";
+  const hexRegex = /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/g;
+  const matches = bgString.match(hexRegex);
+  if (matches && matches.length > 0) {
+    return matches[0];
+  }
+  if (bgString.startsWith("#")) {
+    return bgString;
+  }
+  return "#FFFFFF";
+}
+
+const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+  const cleanHex = hex.replace("#", "").trim();
+  if (cleanHex.length !== 3 && cleanHex.length !== 6) return null;
+  let r = 0, g = 0, b = 0;
+  if (cleanHex.length === 3) {
+    r = parseInt(cleanHex[0] + cleanHex[0], 16);
+    g = parseInt(cleanHex[1] + cleanHex[1], 16);
+    b = parseInt(cleanHex[2] + cleanHex[2], 16);
+  } else {
+    r = parseInt(cleanHex.substring(0, 2), 16);
+    g = parseInt(cleanHex.substring(2, 4), 16);
+    b = parseInt(cleanHex.substring(4, 6), 16);
+  }
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+  return { r, g, b };
+};
+
+const rgbToHex = (r: number, g: number, b: number): string => {
+  return "#" + [r, g, b].map((v) => Math.min(255, Math.max(0, Math.round(v))).toString(16).padStart(2, "0")).join("");
+};
+
+const adjustContrast = (bgColor: string, fgColor: string, minRatio: number): string => {
+  let current = fgColor;
+  let ratio = getContrastRatio(bgColor, current);
+  if (ratio >= minRatio) return current;
+
+  const bgLum = getBgLuminance(bgColor);
+  const isBgLight = bgLum > 128;
+
+  const rgb = hexToRgb(fgColor);
+  if (!rgb) return isBgLight ? "#121212" : "#FFFFFF";
+
+  let { r, g, b } = rgb;
+  
+  // Iteratively adjust R, G, B
+  for (let step = 0; step < 20; step++) {
+    if (isBgLight) {
+      // Darken
+      r = Math.max(0, Math.floor(r * 0.8));
+      g = Math.max(0, Math.floor(g * 0.8));
+      b = Math.max(0, Math.floor(b * 0.8));
+    } else {
+      // Lighten
+      r = Math.min(255, Math.ceil(r + (255 - r) * 0.2));
+      g = Math.min(255, Math.ceil(g + (255 - g) * 0.2));
+      b = Math.min(255, Math.ceil(b + (255 - b) * 0.2));
+    }
+    current = rgbToHex(r, g, b);
+    ratio = getContrastRatio(bgColor, current);
+    if (ratio >= minRatio) return current;
+  }
+
+  return isBgLight ? "#121212" : "#FFFFFF";
+};
+
+function refineExtractedColors(palette: string[]): { bg: string; primary: string; secondary: string; accent: string } {
+  if (!palette || palette.length === 0) {
+    return { bg: "#FAF9F5", primary: "#1F2937", secondary: "#4B5563", accent: "#3B82F6" };
+  }
+
+  const bg = palette[1] ?? palette[0] ?? "#FAF9F5";
+  const bgLum = getSimpleLuminance(bg);
+  const isBgDark = bgLum < 140;
+
+  // Select primary text color (needs contrast >= 4.5)
+  let primary = "";
+  for (const color of palette) {
+    if (getContrastRatio(bg, color) >= 4.5) {
+      primary = color;
+      break;
+    }
+  }
+  if (!primary) {
+    primary = isBgDark ? "#FFFFFF" : "#121212";
+  }
+
+  // Select secondary text color (needs contrast >= 3.0)
+  let secondary = "";
+  for (const color of palette) {
+    if (color !== primary && getContrastRatio(bg, color) >= 3.0) {
+      secondary = color;
+      break;
+    }
+  }
+  if (!secondary) {
+    secondary = isBgDark ? "#D1D5DB" : "#4B5563";
+  }
+
+  // Select accent color (needs contrast >= 3.0)
+  let accent = "";
+  for (const color of palette) {
+    if (color !== primary && color !== secondary && getContrastRatio(bg, color) >= 3.0) {
+      accent = color;
+      break;
+    }
+  }
+  if (!accent) {
+    accent = isBgDark ? "#C8E84A" : "#4F46E5";
+  }
+
+  return { bg, primary, secondary, accent };
 }
 
 function Index() {
@@ -432,11 +623,8 @@ function Index() {
     setStatus("loading");
     try {
       const { palette, backgroundStyle } = await extractFromDataUrl(activeScreens[0], 5);
-      const bg = palette[1] ?? "#F5F1E8";
-      const primary = palette[0] ?? "#121212";
-      const secondary = palette[3] ?? palette[1] ?? "#6B7280";
-      const accent = palette[2] ?? "#C8E84A";
-      setExtractedColors({ bg, primary, secondary, accent });
+      const refined = refineExtractedColors(palette);
+      setExtractedColors(refined);
 
       const res = await generate({
         data: {
@@ -452,6 +640,7 @@ function Index() {
 
       if (typeof window !== "undefined") {
         localStorage.setItem("screenmint_is_new_session", "true");
+        localStorage.removeItem("screenmint_active_submission_id");
       }
 
       setResult(res);
@@ -480,6 +669,7 @@ function Index() {
       localStorage.removeItem("screenmint_paid");
       localStorage.removeItem("screenmint_logo");
       localStorage.removeItem("screenmint_is_new_session");
+      localStorage.removeItem("screenmint_active_submission_id");
       
       localStorage.removeItem("screenmint_slide_configs");
       localStorage.removeItem("screenmint_template");
@@ -549,6 +739,17 @@ function Index() {
             }
           }}
           onDrop={handleUpload}
+          onUpgradePro={() => {
+            if (!user) {
+              toast.error("Please sign in to upgrade.");
+              navigate({ to: "/login" });
+            } else if (paid) {
+              navigate({ to: "/dashboard" });
+            } else {
+              setPayOpen(true);
+            }
+          }}
+          isPro={paid}
         />
       ) : (
         <section className="mx-auto max-w-6xl px-6 pt-16 pb-24">
@@ -647,7 +848,8 @@ function Nav({
             )
           )}
           
-          <div 
+          <Link 
+            to="/"
             onClick={() => {
               if (showBack) {
                 onReset();
@@ -655,7 +857,7 @@ function Nav({
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }
             }}
-            className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition"
+            className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition text-foreground decoration-none"
             title={showBack ? "Back to Landing Page" : "Scroll to Top"}
           >
             <img
@@ -666,7 +868,7 @@ function Nav({
             <span className="font-display text-xl font-bold tracking-tight text-foreground">
               Screen<span className="text-[#3ECFB2]">ify</span>
             </span>
-          </div>
+          </Link>
         </div>
 
         {/* Middle: Navigation Links (Desktop only) */}
@@ -1471,101 +1673,12 @@ function TemplateCanvas({
     });
   };
 
-  const getSimpleLuminance = (hex: string): number => {
-    if (!hex || typeof hex !== "string") return 255;
-    const cleanHex = hex.replace("#", "").trim();
-    if (cleanHex.length !== 3 && cleanHex.length !== 6) return 255;
-    
-    let r = 255, g = 255, b = 255;
-    if (cleanHex.length === 3) {
-      r = parseInt(cleanHex[0] + cleanHex[0], 16);
-      g = parseInt(cleanHex[1] + cleanHex[1], 16);
-      b = parseInt(cleanHex[2] + cleanHex[2], 16);
-    } else {
-      r = parseInt(cleanHex.substring(0, 2), 16);
-      g = parseInt(cleanHex.substring(2, 4), 16);
-      b = parseInt(cleanHex.substring(4, 6), 16);
-    }
-    
-    if (isNaN(r) || isNaN(g) || isNaN(b)) return 255;
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  };
-
-  const getRelativeLuminance = (hex: string): number => {
-    if (!hex || typeof hex !== "string") return 1;
-    const cleanHex = hex.replace("#", "").trim();
-    if (cleanHex.length !== 3 && cleanHex.length !== 6) return 1;
-    
-    let r = 255, g = 255, b = 255;
-    if (cleanHex.length === 3) {
-      r = parseInt(cleanHex[0] + cleanHex[0], 16);
-      g = parseInt(cleanHex[1] + cleanHex[1], 16);
-      b = parseInt(cleanHex[2] + cleanHex[2], 16);
-    } else {
-      r = parseInt(cleanHex.substring(0, 2), 16);
-      g = parseInt(cleanHex.substring(2, 4), 16);
-      b = parseInt(cleanHex.substring(4, 6), 16);
-    }
-    
-    if (isNaN(r) || isNaN(g) || isNaN(b)) return 1;
-    
-    const rS = r / 255;
-    const gS = g / 255;
-    const bS = b / 255;
-    
-    const rR = rS <= 0.04045 ? rS / 12.92 : Math.pow((rS + 0.055) / 1.055, 2.4);
-    const gR = gS <= 0.04045 ? gS / 12.92 : Math.pow((gS + 0.055) / 1.055, 2.4);
-    const bR = bS <= 0.04045 ? bS / 12.92 : Math.pow((bS + 0.055) / 1.055, 2.4);
-    
-    return 0.2126 * rR + 0.7152 * gR + 0.0722 * bR;
-  };
-
-  const getContrastRatio = (color1: string, color2: string): number => {
-    const l1 = getRelativeLuminance(color1);
-    const l2 = getRelativeLuminance(color2);
-    const lighter = Math.max(l1, l2);
-    const darker = Math.min(l1, l2);
-    return (lighter + 0.05) / (darker + 0.05);
-  };
-
-  const getBgLuminance = (bgString: string): number => {
-    if (!bgString) return 255;
-    const hexRegex = /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/g;
-    const matches = bgString.match(hexRegex);
-    if (matches && matches.length > 0) {
-      let totalLuminance = 0;
-      for (const hex of matches) {
-        totalLuminance += getSimpleLuminance(hex);
-      }
-      return totalLuminance / matches.length;
-    }
-    if (bgString.startsWith("#")) {
-      return getSimpleLuminance(bgString);
-    }
-    return 255;
-  };
-
-  const getRepresentativeBgColor = (bgString: string): string => {
-    if (!bgString) return "#FFFFFF";
-    const hexRegex = /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/g;
-    const matches = bgString.match(hexRegex);
-    if (matches && matches.length > 0) {
-      return matches[0];
-    }
-    if (bgString.startsWith("#")) {
-      return bgString;
-    }
-    return "#FFFFFF";
-  };
-
   const getReadableColor = (bgColor: string, desiredColor: string, isSecondary: boolean, minRatio: number): string => {
-    // Return the user-selected color directly to ensure every color change is respected
-    return desiredColor;
+    return adjustContrast(bgColor, desiredColor, minRatio);
   };
 
   const getReadableAccentColor = (bgColor: string, desiredAccent: string, minRatio: number): string => {
-    // Return the user-selected accent color directly to ensure every color change is respected
-    return desiredAccent;
+    return adjustContrast(bgColor, desiredAccent, minRatio);
   };
 
   const resolveBgAndText = () => {
@@ -3660,6 +3773,11 @@ function Results({
   useEffect(() => {
     if (slideConfigs.length === 6) {
       localStorage.setItem("screenmint_slide_configs", JSON.stringify(slideConfigs));
+      
+      const activeSubId = localStorage.getItem("screenmint_active_submission_id");
+      if (activeSubId) {
+        localStorage.setItem(`screenmint_slide_configs_${activeSubId}`, JSON.stringify(slideConfigs));
+      }
     }
   }, [slideConfigs]);
 
@@ -3768,24 +3886,48 @@ function Results({
 
   const handleDownloadAll = async () => {
     setDownloading(true);
-    toast.info(`Preparing sequence export... downloading ${uploadedCount} images.`);
+    toast.info(`Preparing zip sequence export... rendering ${uploadedCount} screenshots.`);
     try {
+      const zip = new JSZip();
+      
       for (let i = 0; i < uploadedCount; i++) {
         const node = document.getElementById(`export-node-${i}`);
         if (node) {
+          // Wait a short moment to ensure full rendering and styles calculation
+          await new Promise(r => setTimeout(r, 100));
+          
           const dataUrl = await htmlToImage.toPng(node, {
             width: 1600,
             height: 900,
-            pixelRatio: 2.5,
+            pixelRatio: 2.5, // High resolution crisp image
+            style: {
+              transform: "scale(1)",
+              transformOrigin: "top left"
+            }
           });
-          const a = document.createElement("a");
-          a.href = dataUrl;
-          a.download = `${result?.appName?.toLowerCase() || "screenmint"}-slide-${i + 1}.png`;
-          a.click();
-          await new Promise(r => setTimeout(r, 450));
+          
+          const base64Data = dataUrl.split(",")[1];
+          const filename = `${result?.appName?.toLowerCase() || "screenmint"}-slide-${i + 1}.png`;
+          zip.file(filename, base64Data, { base64: true });
         }
       }
-      toast.success(`Successfully exported all ${uploadedCount} screenshots!`);
+      
+      toast.info("Compressing high-quality screenshots into ZIP archive...");
+      const content = await zip.generateAsync({ type: "blob" });
+      const zipFilename = `${result?.appName?.toLowerCase() || "screenmint"}-optimized-screenshots.zip`;
+      const blobUrl = URL.createObjectURL(content);
+      
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = zipFilename;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      
+      toast.success(`Successfully downloaded ZIP archive containing all ${uploadedCount} screenshots!`);
     } catch (err) {
       console.error("Sequence export failed:", err);
       toast.error("Failed to batch export all slides.");
@@ -3974,7 +4116,7 @@ function Results({
         </div>
 
         {/* Hidden Export Node (Active slide) */}
-        <div style={{ width: 0, height: 0, overflow: "hidden", position: "absolute", pointerEvents: "none" }}>
+        <div style={{ position: "absolute", left: "-9999px", top: "-9999px", pointerEvents: "none" }}>
           <div id="export-node" style={{ width: 1600, height: 900, position: "relative" }}>
             <TemplateCanvas
               template={activeConfig.template}
@@ -3995,7 +4137,7 @@ function Results({
         </div>
 
         {/* Hidden Export Nodes (All slides) */}
-        <div style={{ width: 0, height: 0, overflow: "hidden", position: "absolute", pointerEvents: "none" }}>
+        <div style={{ position: "absolute", left: "-9999px", top: "-9999px", pointerEvents: "none" }}>
           {Array.from({ length: uploadedCount }).map((_, i) => {
             const cfg = slideConfigs[i];
             if (!cfg) return null;
@@ -4398,11 +4540,11 @@ function Results({
 const FAQ_ITEMS = [
   {
     q: "What exactly does Screenify do?",
-    a: "You upload one screenshot of your Shopify app, and Screenify automatically extracts your app's brand colors and uses GPT-4o vision to generate high-converting headlines and subheadlines. It then renders a pixel-perfect, browser-ready promo screenshot using predefined layouts (1600×900).",
+    a: "You upload screenshots of your Shopify app, and Screenify automatically extracts your app's brand colors and uses GPT-4o vision to generate high-converting headlines and subheadlines. It then renders a pixel-perfect, browser-ready promo screenshot using predefined layouts (1600×900).",
   },
   {
     q: "Do I need any design experience?",
-    a: "None at all. Just drop your screenshot, and Screenify handles composition, copy, colors, and visual alignment. You can customize the results directly using the built-in editor.",
+    a: "None at all. Just drop your screenshots, and Screenify handles composition, copy, colors, and visual alignment. You can customize the results directly using the built-in editor.",
   },
   {
     q: "Are the screenshots modified?",

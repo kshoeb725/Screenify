@@ -24,17 +24,32 @@ import { Button } from "@/components/ui/button";
 interface LandingPageProps {
   onPick: () => void;
   onDrop: (files: FileList) => void;
+  onUpgradePro?: () => void;
+  isPro?: boolean;
 }
 
-export function LandingPage({ onPick, onDrop }: LandingPageProps) {
+export function LandingPage({ onPick, onDrop, onUpgradePro, isPro }: LandingPageProps) {
   const [dragging, setDragging] = useState(false);
 
   // Before vs After Slider State
   const [sliderPos, setSliderPos] = useState(50);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(800);
   const isSliding = useRef(false);
   const [userInteracted, setUserInteracted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (!sliderRef.current) return;
+    const updateWidth = () => {
+      if (sliderRef.current) {
+        setContainerWidth(sliderRef.current.getBoundingClientRect().width);
+      }
+    };
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   useEffect(() => {
     if (userInteracted || isHovered) return;
@@ -153,8 +168,8 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const faqs = [
     {
-      q: "How does Screenify turn one screenshot into a complete sequence?",
-      a: "Screenify uses intelligent layout algorithms and AI copywriting. Once you upload your app screenshot, it analyzes the interface, extracts your primary brand colors, and generates customized marketing copy (like Hooks, Problem statements, and Feature callouts). It then places your screenshot inside clean, modern desktop or mobile mockup shells across a coordinated 5-slide sequence."
+      q: "How does Screenify turn screenshots into a complete sequence?",
+      a: "Screenify uses intelligent layout algorithms and AI copywriting. Once you upload your app screenshots, it analyzes the interface, extracts your primary brand colors, and generates customized marketing copy (like Hooks, Problem statements, and Feature callouts). It then places your screenshots inside clean, modern desktop or mobile mockup shells across a coordinated 5-slide sequence."
     },
     {
       q: "Does it modify or distort my app screenshots?",
@@ -286,7 +301,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
             onMouseLeave={() => setIsHovered(false)}
           >
             {/* Background Image / "AFTER" SIDE (Visible on right) */}
-            <div className="absolute inset-0 bg-[#0E1510] flex items-center justify-center">
+            <div className="absolute inset-0 bg-[#0E1510] flex items-center justify-center z-10">
               <img 
                 src="/screenify-ready-to-publish.png" 
                 alt="After Screenify: Ready to Publish" 
@@ -300,11 +315,11 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
 
             {/* Overlay Div / "BEFORE" SIDE (Visible on left, size controlled by sliderPos) */}
             <div
-              className="absolute inset-y-0 left-0 overflow-hidden bg-[#1A1A1A]"
+              className="absolute inset-y-0 left-0 overflow-hidden bg-[#1A1A1A] z-20"
               style={{ width: `${sliderPos}%` }}
             >
               {/* Mirror of the complete inner layout, fixed at full container width */}
-              <div className="absolute inset-0 h-full flex items-center justify-center bg-[#F6F6F7]" style={{ width: sliderRef.current?.getBoundingClientRect().width }}>
+              <div className="absolute inset-0 h-full flex items-center justify-center bg-[#F6F6F7]" style={{ width: containerWidth }}>
                 <img 
                   src="/shopify-raw-screenshot.jpg" 
                   alt="Before: Raw Shopify Screenshot" 
@@ -350,8 +365,8 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
           {[
             {
               step: "01",
-              title: "Upload Screenshot",
-              desc: "Drop a single screenshot of your Shopify admin app dashboard or merchant panel into the uploader.",
+              title: "Upload Screenshots",
+              desc: "Drop screenshots of your Shopify admin app dashboard or merchant panel into the uploader.",
               icon: Upload,
               color: "text-[#3ECFB2] bg-[#3ECFB2]/10 border-[#3ECFB2]/20"
             },
@@ -585,15 +600,15 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
         {/* Bento Grid */}
         <div className="grid md:grid-cols-3 gap-6">
 
-          {/* Card 1: One Screenshot */}
+          {/* Card 1: AI Sequence Storytelling */}
           <div className="md:col-span-2 bg-card/45 border border-border/80 rounded-2xl p-6 md:p-8 flex flex-col justify-between hover:bg-card/75 transition-colors group">
             <div className="space-y-4">
               <div className="size-10 rounded-xl bg-[#3ECFB2]/10 flex items-center justify-center text-[#3ECFB2] border border-[#3ECFB2]/20">
                 <Smartphone className="size-5" />
               </div>
-              <h3 className="font-display text-xl font-bold text-foreground">Single Input Storytelling</h3>
+              <h3 className="font-display text-xl font-bold text-foreground">AI Sequence Storytelling</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Upload one screenshot. Screenify automatically duplicates, structures, and creates distinct copy overlays across your slides to form a complete narrative sequence.
+                Upload your screenshots. Screenify automatically analyzes, structures, and creates distinct copy overlays across your slides to form a complete narrative sequence.
               </p>
             </div>
             <div className="mt-6 h-28 bg-muted/40 dark:bg-[#121415] rounded-xl border border-border/60 p-4 overflow-hidden relative">
@@ -783,8 +798,8 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
               </div>
             </div>
 
-            <Button onClick={onPick} className="w-full bg-[#3ECFB2] hover:bg-[#059669] text-ink font-semibold py-5 rounded-xl cursor-pointer shadow-lg shadow-emerald-500/10">
-              Upgrade to Pro
+            <Button onClick={onUpgradePro || onPick} className="w-full bg-[#3ECFB2] hover:bg-[#059669] text-ink font-semibold py-5 rounded-xl cursor-pointer shadow-lg shadow-emerald-500/10">
+              {isPro ? "Go to Dashboard" : "Upgrade to Pro"}
             </Button>
           </div>
 
@@ -843,7 +858,7 @@ export function LandingPage({ onPick, onDrop }: LandingPageProps) {
           </h2>
 
           <p className="max-w-lg mx-auto text-base text-muted-foreground z-10">
-            Stop spending hours manually resizing templates. Upload one screenshot and let Screenify build your marketing sequence in seconds.
+            Stop spending hours manually resizing templates. Upload your screenshots and let Screenify build your marketing sequence in seconds.
           </p>
 
           <div className="pt-4 z-10">

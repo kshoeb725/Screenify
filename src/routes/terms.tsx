@@ -12,7 +12,7 @@ function TermsPage() {
     {
       title: "1. Definitions",
       content: `In these Terms and Conditions:
-      - "Screenify" ("we", "our", "us") refers to the SaaS platform and service operated by individual developer Adil Jakir Husen Shaikh, located in Mumbai, Maharashtra, India.
+      - "Screenify" ("we", "our", "us") refers to the SaaS platform and service operated by individual developer Aadil Jakir Husen Shaikh, located in Mumbai, Maharashtra, India.
       - "Service" refers to the website located at screenify.dev, the application, and any associated features, content, products, or services.
       - "User" ("you", "your") refers to any individual or entity registering for, accessing, or using the Service.
       - "User Content" refers to any files, raw screenshots, logos, text, or other assets uploaded or input by the User into the Service.
@@ -110,7 +110,7 @@ function TermsPage() {
     {
       title: "21. Contact Information",
       content: `If you have any questions, concerns, or legal notices regarding these Terms, please contact us at:
-      - **Developer**: Adil Jakir Husen Shaikh
+      - **Developer**: Aadil Jakir Husen Shaikh
       - **Location**: Mumbai, Maharashtra, India
       - **Email**: support@screenify.cloud`
     }

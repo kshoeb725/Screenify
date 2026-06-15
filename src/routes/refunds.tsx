@@ -11,7 +11,7 @@ function RefundsPage() {
   const sections = [
     {
       title: "1. Overview & Merchant of Record",
-      content: `This Refund Policy explains the terms, conditions, and processes for requesting refunds on digital packages and software subscriptions purchased through Screenify, operated by individual developer Adil Jakir Husen Shaikh, located in Mumbai, Maharashtra, India.
+      content: `This Refund Policy explains the terms, conditions, and processes for requesting refunds on digital packages and software subscriptions purchased through Screenify, operated by individual developer Aadil Jakir Husen Shaikh, located in Mumbai, Maharashtra, India.
       
       All transactions, billing cycles, checkouts, and customer invoices are handled securely by **Dodo Payments**, our primary Merchant of Record and payment gateway. As such, billing and refund executions are processed in alignment with Dodo Payments' customer compliance policies and terms.`
     },

@@ -17,7 +17,7 @@ function AboutPage() {
       - **Manual Formatting**: Manually resizing screenshots, centering mockups, and aligning text elements inside tools like Figma or Canva takes hours.
       - **Design & Copy Obstacles**: Choosing professional, brand-matched color palettes and writing high-converting marketing copywriting (Hooks, Problem statements, CTAs) requires specialized marketing skills.
       
-      We built Screenify to solve these issues. By uploading a single raw screenshot, Screenify automatically detects your brand colors, wraps the UI in accurate device mockup frames, and generates compelling copywriting templates to build a cohesive 5-slide visual marketing sequence in minutes.`
+      We built Screenify to solve these issues. By uploading your raw screenshots, Screenify automatically detects your brand colors, wraps the UI in accurate device mockup frames, and generates compelling copywriting templates to build a cohesive 5-slide visual marketing sequence in minutes.`
     },
     {
       title: "Our Product Goals",
@@ -28,7 +28,7 @@ function AboutPage() {
     {
       title: "Business & Legal Information",
       content: `To ensure complete transparency with our users and payment compliance partners, here are our registered credentials:
-      - **Legal Name**: Adil Jakir Husen Shaikh
+      - **Legal Name**: Aadil Jakir Husen Shaikh
       - **Business Trade Name**: Screenify
       - **Operating Entity**: Individual Developer
       - **Registered Location**: Mumbai, Maharashtra, India
