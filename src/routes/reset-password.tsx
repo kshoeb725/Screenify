@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Lock, ArrowLeft, Loader2, Sparkles, CheckCircle2, Check, X } from "lucide-react";
+import { Lock, ArrowLeft, Loader2, Sparkles, CheckCircle2, Check, X, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,9 @@ function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   // Password rules validation states
   const isMinLength = password.length >= 8;
@@ -24,17 +27,35 @@ function ResetPasswordPage() {
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
   const passwordsMatch = password && password === confirmPassword;
 
-  // Verify that a recovery session exists (from URL hashes/cookies)
+  // Verify that a recovery session exists (from URL hashes/cookies) or catch error redirects
   useEffect(() => {
     async function checkSession() {
+      // 1. Check if Supabase sent error params in the URL (invalid/expired links)
+      if (typeof window !== "undefined") {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        
+        const errorDesc = hashParams.get("error_description") || queryParams.get("error_description");
+        const errorCode = hashParams.get("error_code") || queryParams.get("error_code");
+
+        if (errorDesc) {
+          setErrorText(decodeURIComponent(errorDesc).replace(/\+/g, " "));
+          return;
+        }
+        if (errorCode) {
+          setErrorText(`Error Code: ${errorCode}`);
+          return;
+        }
+      }
+
+      // 2. Check if a valid auth session exists
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error("Session expired or invalid reset link. Please request a new link.");
-        navigate({ to: "/forgot-password" });
+        setErrorText("Session expired or invalid reset link. Please request a new link.");
       }
     }
     checkSession();
-  }, [navigate]);
+  }, []);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +82,9 @@ function ResetPasswordPage() {
       });
 
       if (error) throw error;
+
+      // Force sign out to clear recovery session and prevent token reuse
+      await supabase.auth.signOut();
 
       setSuccess(true);
       toast.success("Password updated successfully!");
@@ -93,7 +117,25 @@ function ResetPasswordPage() {
           </div>
         </div>
 
-        {success ? (
+        {errorText ? (
+          <div className="space-y-6 text-center py-4">
+            <div className="flex justify-center">
+              <X className="size-16 text-red-500 bg-red-500/10 p-3.5 rounded-full" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-white">Invalid Reset Link</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {errorText}
+              </p>
+            </div>
+            <Link
+              to="/forgot-password"
+              className="inline-flex items-center justify-center gap-2 text-xs text-[#3ECFB2] hover:underline pt-4 font-semibold"
+            >
+              <ArrowLeft className="size-3.5" /> Request a New Link
+            </Link>
+          </div>
+        ) : success ? (
           <div className="space-y-6 text-center py-4">
             <div className="flex justify-center">
               <CheckCircle2 className="size-16 text-[#3ECFB2] animate-bounce" />
@@ -101,14 +143,14 @@ function ResetPasswordPage() {
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-white">Password Updated</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Your password has been changed successfully. You can now access your dashboard.
+                Your password has been changed successfully. You can now log in with your new password.
               </p>
             </div>
             <Button
-              onClick={() => navigate({ to: "/dashboard" })}
-              className="w-full py-5 rounded-xl bg-[#3ECFB2] text-ink font-semibold text-xs hover:opacity-95 shadow-md"
+              onClick={() => navigate({ to: "/login" })}
+              className="w-full py-5 rounded-xl bg-[#3ECFB2] text-ink font-semibold text-xs hover:opacity-95 shadow-md cursor-pointer"
             >
-              Go to Dashboard
+              Go to Log In
             </Button>
           </div>
         ) : (
@@ -126,14 +168,21 @@ function ResetPasswordPage() {
                 <div className="relative">
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 py-5 rounded-xl border-border bg-[#101012]/50 text-sm focus:border-[#3ECFB2]"
+                    className="pl-10 pr-10 py-5 rounded-xl border-border bg-[#101012]/50 text-sm focus:border-[#3ECFB2]"
                     required
                   />
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -142,14 +191,21 @@ function ResetPasswordPage() {
                 <div className="relative">
                   <Input
                     id="confirmPassword"
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 py-5 rounded-xl border-border bg-[#101012]/50 text-sm focus:border-[#3ECFB2]"
+                    className="pl-10 pr-10 py-5 rounded-xl border-border bg-[#101012]/50 text-sm focus:border-[#3ECFB2]"
                     required
                   />
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
               </div>
 
