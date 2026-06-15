@@ -108,7 +108,7 @@ function ResetPasswordPage() {
         <div className="flex flex-col items-center text-center space-y-4">
           <Link to="/" className="flex items-center gap-2 hover:opacity-85 transition">
             <img src="/screenmint-icon.png" alt="Screenify Logo" className="h-9 w-9 rounded-lg" />
-            <span className="font-display text-xl font-bold text-white">
+            <span className="font-display text-xl font-bold text-foreground">
               Screen<span className="text-[#3ECFB2]">ify</span>
             </span>
           </Link>
@@ -123,7 +123,7 @@ function ResetPasswordPage() {
               <X className="size-16 text-red-500 bg-red-500/10 p-3.5 rounded-full" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-white">Invalid Reset Link</h2>
+              <h2 className="text-2xl font-bold text-foreground">Invalid Reset Link</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {errorText}
               </p>
@@ -141,7 +141,7 @@ function ResetPasswordPage() {
               <CheckCircle2 className="size-16 text-[#3ECFB2] animate-bounce" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-white">Password Updated</h2>
+              <h2 className="text-2xl font-bold text-foreground">Password Updated</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Your password has been changed successfully. You can now log in with your new password.
               </p>
@@ -156,7 +156,7 @@ function ResetPasswordPage() {
         ) : (
           <div className="space-y-6">
             <div className="space-y-2 text-center">
-              <h2 className="text-2xl font-bold text-white">Configure new password</h2>
+              <h2 className="text-2xl font-bold text-foreground">Configure new password</h2>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Enter your new secure password below to complete account recovery.
               </p>
@@ -179,7 +179,7 @@ function ResetPasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
@@ -202,7 +202,7 @@ function ResetPasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition cursor-pointer"
                   >
                     {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
@@ -212,23 +212,23 @@ function ResetPasswordPage() {
               {/* Password complexity details */}
               {password && (
                 <div className="rounded-xl border border-border bg-[#101012]/30 p-3.5 space-y-2 text-xs font-sans">
-                  <p className="font-semibold text-white/80">New Password Requirements:</p>
+                  <p className="font-semibold text-foreground/80">New Password Requirements:</p>
                   <div className="space-y-1.5 font-mono text-[10px]">
                     <div className="flex items-center gap-1.5">
                       {isMinLength ? <Check className="size-3.5 text-[#3ECFB2]" /> : <X className="size-3.5 text-red-500" />}
-                      <span className={isMinLength ? "text-white" : "text-muted-foreground"}>At least 8 characters</span>
+                      <span className={isMinLength ? "text-foreground" : "text-muted-foreground"}>At least 8 characters</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {hasNumber ? <Check className="size-3.5 text-[#3ECFB2]" /> : <X className="size-3.5 text-red-500" />}
-                      <span className={hasNumber ? "text-white" : "text-muted-foreground"}>Contains a number</span>
+                      <span className={hasNumber ? "text-foreground" : "text-muted-foreground"}>Contains a number</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {hasSpecialChar ? <Check className="size-3.5 text-[#3ECFB2]" /> : <X className="size-3.5 text-red-500" />}
-                      <span className={hasSpecialChar ? "text-white" : "text-muted-foreground"}>Contains a special symbol</span>
+                      <span className={hasSpecialChar ? "text-foreground" : "text-muted-foreground"}>Contains a special symbol</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {passwordsMatch ? <Check className="size-3.5 text-[#3ECFB2]" /> : <X className="size-3.5 text-red-500" />}
-                      <span className={passwordsMatch ? "text-white" : "text-muted-foreground"}>Passwords match</span>
+                      <span className={passwordsMatch ? "text-foreground" : "text-muted-foreground"}>Passwords match</span>
                     </div>
                   </div>
                 </div>
@@ -252,7 +252,7 @@ function ResetPasswordPage() {
             <div className="text-center">
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-white transition"
+                className="inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
               >
                 <ArrowLeft className="size-3" /> Cancel and Log In
               </Link>

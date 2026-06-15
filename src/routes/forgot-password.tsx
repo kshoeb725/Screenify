@@ -17,10 +17,13 @@ function ForgotPasswordPage() {
   const [success, setSuccess] = useState(false);
 
   const getAppUrl = () => {
+    let url = "";
     if (typeof window !== "undefined") {
-      return window.location.origin;
+      url = window.location.origin;
+    } else {
+      url = import.meta.env.VITE_APP_URL || import.meta.env.VITE_SITE_URL || "http://localhost:8080";
     }
-    return import.meta.env.VITE_APP_URL || "http://localhost:8080";
+    return url.replace(/\/$/, "");
   };
 
   const handleResetRequest = async (e: React.FormEvent) => {
@@ -72,7 +75,7 @@ function ForgotPasswordPage() {
         <div className="flex flex-col items-center text-center space-y-4">
           <Link to="/" className="flex items-center gap-2 hover:opacity-85 transition">
             <img src="/screenmint-icon.png" alt="Screenify Logo" className="h-9 w-9 rounded-lg" />
-            <span className="font-display text-xl font-bold text-white">
+            <span className="font-display text-xl font-bold text-foreground">
               Screen<span className="text-[#3ECFB2]">ify</span>
             </span>
           </Link>
@@ -87,7 +90,7 @@ function ForgotPasswordPage() {
               <CheckCircle2 className="size-16 text-[#3ECFB2] animate-bounce" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-white">Email Sent</h2>
+              <h2 className="text-2xl font-bold text-foreground">Email Sent</h2>
               <p className="text-sm text-muted-foreground leading-relaxed text-balance">
                 If an account exists with this email address, a password reset link has been sent.
               </p>
@@ -102,7 +105,7 @@ function ForgotPasswordPage() {
         ) : (
           <div className="space-y-6">
             <div className="space-y-2 text-center">
-              <h2 className="text-2xl font-bold text-white">Reset password</h2>
+              <h2 className="text-2xl font-bold text-foreground">Reset password</h2>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Enter your registered email address and we'll send you a secure link to reset your password.
               </p>
@@ -143,7 +146,7 @@ function ForgotPasswordPage() {
             <div className="text-center">
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-white transition"
+                className="inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
               >
                 <ArrowLeft className="size-3" /> Cancel and Log In
               </Link>
