@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Mail, Lock, User, Sparkles, ArrowLeft, Check, X, Loader2 } from "lucide-react";
+import { Mail, Lock, User, Sparkles, ArrowLeft, Check, X, Loader2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,8 @@ function SignUpPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Password rules validation states
   const isMinLength = password.length >= 8;
@@ -212,14 +214,22 @@ function SignUpPage() {
               <div className="relative">
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9 py-4 rounded-xl border-border bg-[#101012]/50 text-xs focus:border-[#3ECFB2]"
+                  className="pl-9 pr-9 py-4 rounded-xl border-border bg-[#101012]/50 text-xs focus:border-[#3ECFB2]"
                   required
                 />
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                </button>
               </div>
             </div>
 
@@ -228,14 +238,22 @@ function SignUpPage() {
               <div className="relative">
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-9 py-4 rounded-xl border-border bg-[#101012]/50 text-xs focus:border-[#3ECFB2]"
+                  className="pl-9 pr-9 py-4 rounded-xl border-border bg-[#101012]/50 text-xs focus:border-[#3ECFB2]"
                   required
                 />
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                </button>
               </div>
             </div>
 
