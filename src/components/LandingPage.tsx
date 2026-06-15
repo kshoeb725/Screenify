@@ -25,10 +25,11 @@ interface LandingPageProps {
   onPick: () => void;
   onDrop: (files: FileList) => void;
   onUpgradePro?: () => void;
+  onGetStartedFree?: () => void;
   isPro?: boolean;
 }
 
-export function LandingPage({ onPick, onDrop, onUpgradePro, isPro }: LandingPageProps) {
+export function LandingPage({ onPick, onDrop, onUpgradePro, onGetStartedFree, isPro }: LandingPageProps) {
   const [dragging, setDragging] = useState(false);
 
   // Before vs After Slider State
@@ -186,6 +187,10 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, isPro }: LandingPage
     {
       q: "Is Screenify really built specifically for Shopify developers?",
       a: "Yes. Traditional banner makers or Figma templates are generic. Screenify is designed around the exact structure of a Shopify App Store listing. It matches Shopify's recommended 5-slot sequence (Hook, Feature 1, Feature 2, Integration, CTA) and allows you to preview your screens inside a live mock Shopify App Store listing simulator before publishing."
+    },
+    {
+      q: "How are payments handled, and what is your refund/delivery policy?",
+      a: "All checkouts, subscriptions, and billing transactions are securely processed by Dodo Payments, our authorized Merchant of Record. Upon successful purchase or upgrade, your Pro features are activated instantly. We offer a clear refunds policy: if you are unsatisfied with our service or have been charged in error, please contact our support team within 14 days of transaction for a prompt refund, in accordance with our refunds terms."
     }
   ];
 
@@ -246,11 +251,11 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, isPro }: LandingPage
           </div>
 
           <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] text-balance animate-float-3d">
-            From Raw Screenshots to <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-[#3ECFB2] to-emerald-500 dark:from-[#3ECFB2] dark:via-[#5EEAD4] dark:to-[#C8E84A]">Premium App Store Assets</span>
+            Create High-Converting <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-[#3ECFB2] to-emerald-500 dark:from-[#3ECFB2] dark:via-[#5EEAD4] dark:to-[#C8E84A]">Shopify App Store Screenshots</span> in Minutes
           </h1>
 
           <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed text-balance animate-float-sub">
-            Upload your screenshots and let Screenify create professional Shopify App Store graphics with smart copy, beautiful layouts, and brand-matched designs—all in minutes.
+            Upload a screenshot or Shopify app URL and let AI generate a complete screenshot story with compelling headlines, professional layouts, and App Store-ready assets.
           </p>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 w-full sm:w-auto pt-2">
@@ -412,17 +417,12 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, isPro }: LandingPage
           ))}
 
         </div>
-      </section>
-
-      {/* WHY SCREENIFY (COMPARISON MATRIX) */}
+      </section>      {/* WHY SCREENIFY (COMPARISON MATRIX) */}
       <section className="py-20 border-t border-border/40 bg-card/10">
         <div className="max-w-4xl mx-auto px-6">
 
           <div className="text-center space-y-4 mb-16">
-            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Stop Wasting Hours in Canva</h2>
-            <p className="max-w-xl mx-auto text-base text-muted-foreground">
-              Figma or Canva templates require manual resizing, custom color matching, and design skills. Screenify does it instantly.
-            </p>
+            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Why Shopify Developers Choose Screenify</h2>
           </div>
 
           {/* Table Container with 3D Perspective */}
@@ -430,19 +430,11 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, isPro }: LandingPage
             <div 
               className="w-full border border-border/85 rounded-2xl bg-card/30 backdrop-blur-md shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] [transform:none] md:[transform:rotateX(4deg)_rotateY(-2deg)_rotateZ(0.2deg)] hover:[transform:none] transition-all duration-500 ease-out p-3 sm:p-5 md:p-8 overflow-visible"
             >
-              <div className="grid grid-cols-4 gap-y-1.5 md:gap-y-2 gap-x-2 md:gap-x-4 items-center text-[10px] sm:text-xs md:text-sm">
+              <div className="grid grid-cols-2 gap-y-1.5 md:gap-y-2 gap-x-4 md:gap-x-8 items-center text-xs sm:text-sm md:text-base">
                 
                 {/* Headers */}
-                <div className="font-mono text-[9px] md:text-xs uppercase tracking-wider text-muted-foreground/80 p-2 md:p-4 font-semibold text-left">Feature</div>
-                <div className="font-mono text-[9px] md:text-xs uppercase tracking-wider text-muted-foreground/80 p-2 md:p-4 text-center font-semibold">
-                  <span className="hidden sm:inline">Canva / Figma</span>
-                  <span className="inline sm:hidden">Canva</span>
-                </div>
-                <div className="font-mono text-[9px] md:text-xs uppercase tracking-wider text-muted-foreground/80 p-2 md:p-4 text-center font-semibold">
-                  <span className="hidden sm:inline">Freelance Designer</span>
-                  <span className="inline sm:hidden">Freelancer</span>
-                </div>
-                <div className="relative font-mono text-[9px] md:text-xs uppercase tracking-wider text-[#3ECFB2] font-extrabold p-2 md:p-4 text-center bg-gradient-to-b from-[#3ECFB2]/12 to-[#3ECFB2]/6 rounded-t-xl border-t border-x border-[#3ECFB2]/20 shadow-md shadow-[#3ECFB2]/5">
+                <div className="font-mono text-[10px] md:text-xs uppercase tracking-wider text-muted-foreground/80 p-2 md:p-4 font-semibold text-left">Challenge</div>
+                <div className="relative font-mono text-[10px] md:text-xs uppercase tracking-wider text-[#3ECFB2] font-extrabold p-2 md:p-4 text-center bg-gradient-to-b from-[#3ECFB2]/12 to-[#3ECFB2]/6 rounded-t-xl border-t border-x border-[#3ECFB2]/20 shadow-md shadow-[#3ECFB2]/5">
                   Screenify
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-500 to-[#3ECFB2] text-slate-950 font-sans text-[7px] md:text-[9px] font-extrabold px-2 md:px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-md whitespace-nowrap">
                     Winner
@@ -451,125 +443,37 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, isPro }: LandingPage
 
                 {/* Rows */}
                 {[
-                  { f: <>
-                      <span className="hidden sm:inline">Generation Speed</span>
-                      <span className="inline sm:hidden">Speed</span>
-                    </>,
-                    c: <>
-                      <span className="hidden sm:inline">1 - 2 Hours</span>
-                      <span className="inline sm:hidden">1-2 hrs</span>
-                    </>,
-                    d: <>
-                      <span className="hidden sm:inline">3 - 5 Days</span>
-                      <span className="inline sm:hidden">3-5 days</span>
-                    </>,
-                    s: <>
-                      <span className="hidden sm:inline">Under 30 Seconds</span>
-                      <span className="inline sm:hidden">&lt; 30s</span>
-                    </>
+                  {
+                    c: "Don't know what screenshots to create",
+                    s: "AI generates complete screenshot sequence"
                   },
-                  { f: <>
-                      <span className="hidden sm:inline">Project Pricing</span>
-                      <span className="inline sm:hidden">Price</span>
-                    </>,
-                    c: <>
-                      <span className="hidden sm:inline">$15 - $20 / mo</span>
-                      <span className="inline sm:hidden">$15-$20/mo</span>
-                    </>,
-                    d: <>
-                      <span className="hidden sm:inline">$150 - $400 / project</span>
-                      <span className="inline sm:hidden">$150-$400</span>
-                    </>,
-                    s: <>
-                      <span className="hidden sm:inline">Free / Starter plan</span>
-                      <span className="inline sm:hidden">Free / Pro</span>
-                    </>
+                  {
+                    c: "No designer available",
+                    s: "Professional layouts automatically"
                   },
-                  { f: <>
-                      <span className="hidden sm:inline">Shopify Dimension Fitting</span>
-                      <span className="inline sm:hidden">Shopify Fit</span>
-                    </>,
-                    c: <>
-                      <span className="hidden sm:inline">Manual adjust</span>
-                      <span className="inline sm:hidden">Manual</span>
-                    </>,
-                    d: <>
-                      <span className="hidden sm:inline">Needs correction</span>
-                      <span className="inline sm:hidden">Needs edit</span>
-                    </>,
-                    s: <>
-                      <span className="hidden sm:inline">Exact 1600x900 default</span>
-                      <span className="inline sm:hidden">1600x900</span>
-                    </>
+                  {
+                    c: "Writing marketing copy is difficult",
+                    s: "AI-generated headlines"
                   },
-                  { f: <>
-                      <span className="hidden sm:inline">Brand Color Extraction</span>
-                      <span className="inline sm:hidden">Color Match</span>
-                    </>,
-                    c: <>
-                      <span className="hidden sm:inline">Manual eye-drop</span>
-                      <span className="inline sm:hidden">Manual</span>
-                    </>,
-                    d: <>
-                      <span className="hidden sm:inline">Required guidelines</span>
-                      <span className="inline sm:hidden">Manual</span>
-                    </>,
-                    s: <>
-                      <span className="hidden sm:inline">Automatic (1-Click)</span>
-                      <span className="inline sm:hidden">Auto</span>
-                    </>
+                  {
+                    c: "Shopify dimensions are confusing",
+                    s: "Export-ready assets"
                   },
-                  { f: <>
-                      <span className="hidden sm:inline">Contextual Copywriting</span>
-                      <span className="inline sm:hidden">AI Copy</span>
-                    </>,
-                    c: <>
-                      <span className="hidden sm:inline">Manual brainstorm</span>
-                      <span className="inline sm:hidden">Manual</span>
-                    </>,
-                    d: <>
-                      <span className="hidden sm:inline">Requires copywriter</span>
-                      <span className="inline sm:hidden">Manual</span>
-                    </>,
-                    s: <>
-                      <span className="hidden sm:inline">Built-in AI Generation</span>
-                      <span className="inline sm:hidden">AI Built-in</span>
-                    </>
-                  },
-                  { f: <>
-                      <span className="hidden sm:inline">Batch Style Sync</span>
-                      <span className="inline sm:hidden">Style Sync</span>
-                    </>,
-                    c: <>
-                      <span className="hidden sm:inline">Duplicate & adjust</span>
-                      <span className="inline sm:hidden">Manual</span>
-                    </>,
-                    d: <>
-                      <span className="hidden sm:inline">N/A</span>
-                      <span className="inline sm:hidden">N/A</span>
-                    </>,
-                    s: <>
-                      <span className="hidden sm:inline">Apply to All (1-Click)</span>
-                      <span className="inline sm:hidden">1-Click Sync</span>
-                    </>
+                  {
+                    c: "Creating multiple screenshots takes hours",
+                    s: "Generate entire set in minutes"
                   }
                 ].map((row, idx, arr) => (
-                  <div key={idx} className="col-span-4 grid grid-cols-4 items-center gap-x-2 md:gap-x-4 hover:bg-white/5 dark:hover:bg-white/2.5 -mx-2 md:-mx-4 px-2 md:px-4 rounded-lg transition-colors group">
-                    {/* Feature Cell */}
-                    <div className="py-2.5 md:py-4 font-semibold text-foreground/90 border-b border-border/20 text-left">{row.f}</div>
-                    
-                    {/* Canva Cell */}
-                    <div className="py-2.5 md:py-4 text-muted-foreground text-center border-b border-border/20 font-medium">{row.c}</div>
-                    
-                    {/* Designer Cell */}
-                    <div className="py-2.5 md:py-4 text-muted-foreground text-center border-b border-border/20 font-medium">{row.d}</div>
+                  <div key={idx} className="col-span-2 grid grid-cols-2 items-center gap-x-4 md:gap-x-8 hover:bg-white/5 dark:hover:bg-white/2.5 -mx-2 md:-mx-4 px-2 md:px-4 rounded-lg transition-colors group">
+                    {/* Challenge Cell */}
+                    <div className="py-3.5 md:py-5 font-semibold text-foreground/90 border-b border-border/20 text-left">{row.c}</div>
                     
                     {/* Screenify Cell - Highlighted 3D Pop-out */}
-                    <div className={`py-2.5 md:py-4 font-bold text-center bg-[#3ECFB2]/4 border-x border-[#3ECFB2]/15 relative group-hover:bg-[#3ECFB2]/8 transition-colors ${
+                    <div className={`py-3.5 md:py-5 font-bold text-center bg-[#3ECFB2]/4 border-x border-[#3ECFB2]/15 relative group-hover:bg-[#3ECFB2]/8 transition-colors ${
                       idx === arr.length - 1 ? "rounded-b-xl border-b border-[#3ECFB2]/25 shadow-lg shadow-[#3ECFB2]/3" : "border-b border-border/20"
                     }`}>
-                      <span className="flex items-center justify-center gap-1 text-emerald-400 dark:text-[#3ECFB2]">
-                        <Check className="size-3 md:size-3.5 shrink-0 text-emerald-500 dark:text-[#3ECFB2]" />
+                      <span className="flex items-center justify-center gap-2 text-emerald-400 dark:text-[#3ECFB2]">
+                        <Check className="size-3.5 md:size-4 shrink-0 text-emerald-500 dark:text-[#3ECFB2]" />
                         <span>{row.s}</span>
                       </span>
                     </div>
@@ -767,7 +671,7 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, isPro }: LandingPage
                 <div className="flex items-center gap-2 text-muted-foreground"><X className="size-4 text-red-500 shrink-0" /> Watermarked Exports</div>
               </div>
             </div>
-            <Button onClick={onPick} variant="outline" className="w-full py-5 rounded-xl border-border cursor-pointer hover:bg-card">
+            <Button onClick={onGetStartedFree || onPick} variant="outline" className="w-full py-5 rounded-xl border-border cursor-pointer hover:bg-card">
               Get Started Free
             </Button>
           </div>

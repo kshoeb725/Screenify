@@ -9,13 +9,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { verifyLoginCredentials } from "@/lib/auth.functions";
 
+import { z } from "zod";
+
+const loginSearchSchema = z.object({
+  tab: z.string().optional().catch(""),
+});
+
 export const Route = createFileRoute("/login")({
+  validateSearch: (search) => loginSearchSchema.parse(search),
   component: LoginPage,
 });
 
 function LoginPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const search = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -23,9 +31,9 @@ function LoginPage() {
   // If user is already logged in, redirect to dashboard
   useEffect(() => {
     if (!loading && user) {
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/dashboard", search: { tab: search.tab || undefined } });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, search.tab]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +118,7 @@ function LoginPage() {
             Generate Premium App Store Assets <span className="italic font-serif text-emerald-400">Instantly</span>
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Upload your screenshots and let Screenify create professional Shopify App Store graphics with smart copy, beautiful layouts, and brand-matched designs—all in minutes.
+            Screenify analyzes your app and generates a complete screenshot sequence designed to communicate value, build trust, and help more merchants understand your product.
           </p>
 
           {/* Clean Glassmorphic Mockup Preview Card */}

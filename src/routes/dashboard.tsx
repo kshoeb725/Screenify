@@ -33,8 +33,14 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { z } from "zod";
+
+const dashboardSearchSchema = z.object({
+  tab: z.string().optional().catch(""),
+});
 
 export const Route = createFileRoute("/dashboard")({
+  validateSearch: (search) => dashboardSearchSchema.parse(search),
   component: DashboardPage,
 });
 
@@ -43,7 +49,14 @@ function DashboardPage() {
   const { user, profile, loading, logout } = useAuth();
   const { theme, toggle } = useTheme();
   
-  const [activeTab, setActiveTab] = useState("screenshots");
+  const search = Route.useSearch();
+  const [activeTab, setActiveTab] = useState(search.tab || "screenshots");
+
+  useEffect(() => {
+    if (search.tab) {
+      setActiveTab(search.tab);
+    }
+  }, [search.tab]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [subscription, setSubscription] = useState<any | null>(null);
@@ -185,6 +198,7 @@ function DashboardPage() {
         const { data: subData, error: subError } = await supabase
           .from("submissions")
           .select("*")
+          .eq("email", user.email)
           .order("created_at", { ascending: false });
 
         if (!subError && subData) {
@@ -195,6 +209,7 @@ function DashboardPage() {
         const { data: payData, error: payError } = await supabase
           .from("payments")
           .select("*")
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
         if (!payError && payData) {
@@ -205,6 +220,7 @@ function DashboardPage() {
         const { data: subscriptionData, error: subscriptionError } = await supabase
           .from("subscriptions")
           .select("*")
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
         if (!subscriptionError && subscriptionData && subscriptionData.length > 0) {
@@ -350,7 +366,14 @@ function DashboardPage() {
         </section>
 
         {/* Core Tabbed Layout */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
+        <Tabs 
+          value={activeTab} 
+          onValueChange={(val) => {
+            setActiveTab(val);
+            navigate({ to: "/dashboard", search: { tab: val } });
+          }} 
+          className="w-full space-y-8"
+        >
           <TabsList className="flex items-center gap-6 border-b border-border/40 bg-transparent rounded-none p-0 w-full justify-start h-auto">
             <TabsTrigger 
               value="screenshots" 

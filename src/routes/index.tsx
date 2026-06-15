@@ -739,14 +739,20 @@ function Index() {
             }
           }}
           onDrop={handleUpload}
+          onGetStartedFree={() => {
+            if (!user) {
+              toast.error("Please sign in to view your dashboard.");
+              navigate({ to: "/login", search: { tab: "screenshots" } });
+            } else {
+              navigate({ to: "/dashboard", search: { tab: "screenshots" } });
+            }
+          }}
           onUpgradePro={() => {
             if (!user) {
               toast.error("Please sign in to upgrade.");
-              navigate({ to: "/login" });
-            } else if (paid) {
-              navigate({ to: "/dashboard" });
+              navigate({ to: "/login", search: { tab: "billing" } });
             } else {
-              setPayOpen(true);
+              navigate({ to: "/dashboard", search: { tab: "billing" } });
             }
           }}
           isPro={paid}
