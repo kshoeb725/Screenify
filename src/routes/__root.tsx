@@ -111,6 +111,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     scripts: [
       { type: "text/javascript", children: themeScript },
       { src: "https://app.lemonsqueezy.com/js/lemon.js", defer: true },
+      { src: "https://www.googletagmanager.com/gtag/js?id=G-MYZD5ZSM7C", async: true },
+      {
+        type: "text/javascript",
+        children: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-MYZD5ZSM7C');
+        `
+      }
     ],
   }),
   shellComponent: RootShell,
