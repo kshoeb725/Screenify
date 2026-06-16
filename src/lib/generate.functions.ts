@@ -416,7 +416,7 @@ async function verifyEmailOwnership(email: string): Promise<boolean> {
 export const generatePromos = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
-    // Access Control: Free tier is limited to 3 generations
+    // Access Control: Free tier is limited to 1 generation
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("is_pro")
@@ -441,7 +441,7 @@ export const generatePromos = createServerFn({ method: "POST" })
         console.error("[generate] Error counting submissions for limit check:", countError);
       }
 
-      if (count !== null && count >= 3) {
+      if (count !== null && count >= 1) {
         throw new Error("Free tier generation limit reached. Please upgrade to Pro to unlock unlimited generations.");
       }
     }
