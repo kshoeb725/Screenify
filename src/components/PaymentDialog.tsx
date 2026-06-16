@@ -35,12 +35,6 @@ export function PaymentDialog({
       } else if (res.checkoutUrl) {
         window.location.href = res.checkoutUrl;
         return;
-      } else if (res.demo) {
-        toast.info("Demo Mode: Simulating successful checkout...");
-        await new Promise((r) => setTimeout(r, 1000));
-        toast.success("Subscribed to Screenify Pro successfully!");
-        onSuccess();
-        onOpenChange(false);
       } else {
         toast.error("Failed to initialize checkout session.");
       }

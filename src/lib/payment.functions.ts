@@ -24,10 +24,11 @@ export const initPaymentSession = createServerFn({ method: "POST" })
     const apiKey = (process.env.DODO_API_KEY || process.env.DODO_PAYMENTS_API_KEY)?.trim();
     const productId = (process.env.DODO_PLAN_ID || process.env.DODO_PAYMENTS_PRODUCT_ID)?.trim();
 
-    // If API key or product ID is missing, fall back to Demo Mode
-    if (!apiKey || !productId) {
-      console.log("[payments] DODO_API_KEY or PLAN_ID missing. Launching in Demo Mode.");
-      return { sessionId, checkoutUrl: null, demo: true, setupError: null };
+    if (!apiKey) {
+      throw new Error("Dodo Payments API Key is not configured. Please set DODO_API_KEY.");
+    }
+    if (!productId) {
+      throw new Error("Dodo Payments Product ID is not configured. Please set DODO_PLAN_ID.");
     }
 
     try {
@@ -67,13 +68,12 @@ export const initPaymentSession = createServerFn({ method: "POST" })
       }
 
       const resBody = await response.json();
-      return { sessionId, checkoutUrl: resBody.checkout_url, demo: false, setupError: null };
+      return { sessionId, checkoutUrl: resBody.checkout_url, setupError: null };
     } catch (e: any) {
       console.error("[payments] Error initiating Dodo Payments session:", e);
       return {
         sessionId,
         checkoutUrl: null,
-        demo: false,
         setupError: e instanceof Error ? e.message : "Failed to initiate Dodo Payments checkout session.",
       };
     }
@@ -117,19 +117,7 @@ export const cancelSubscription = createServerFn({ method: "POST" })
 
     const apiKey = (process.env.DODO_API_KEY || process.env.DODO_PAYMENTS_API_KEY)?.trim();
     if (!apiKey) {
-      // Demo Mode fallback for cancellation
-      console.log("[payments] DODO_API_KEY missing. Simulating cancellation in Demo Mode.");
-      
-      // Update local subscription to cancelled
-      await supabaseAdmin
-        .from("subscriptions")
-        .update({
-          status: "cancelled",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("dodo_subscription_id", subscriptionId);
-
-      return { success: true, demo: true };
+      throw new Error("Dodo Payments API Key is not configured. Please set DODO_API_KEY.");
     }
 
     try {
@@ -164,7 +152,7 @@ export const cancelSubscription = createServerFn({ method: "POST" })
         })
         .eq("dodo_subscription_id", subscriptionId);
 
-      return { success: true, demo: false };
+      return { success: true };
     } catch (e: any) {
       console.error("[payments] Error cancelling Dodo subscription:", e);
       return { success: false, error: e.message || "Failed to cancel subscription." };

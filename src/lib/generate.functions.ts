@@ -419,11 +419,33 @@ export const generatePromos = createServerFn({ method: "POST" })
     // Access Control: Free tier is limited to 1 generation
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("is_pro")
+      .select("id, is_pro")
       .eq("email", data.email)
       .maybeSingle();
 
-    const isPro = profile?.is_pro ?? false;
+    let isPro = profile?.is_pro ?? false;
+
+    if (isPro && profile?.id) {
+      const { data: sub } = await supabaseAdmin
+        .from("subscriptions")
+        .select("status, current_period_end")
+        .eq("user_id", profile.id)
+        .order("current_period_end", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (sub) {
+        const isExpired = sub.status === "expired" || (sub.current_period_end && new Date(sub.current_period_end) < new Date());
+        if (isExpired) {
+          console.log(`[generate] Subscription expired for user ${profile.id}. Revoking Pro status.`);
+          await supabaseAdmin
+            .from("profiles")
+            .update({ is_pro: false })
+            .eq("id", profile.id);
+          isPro = false;
+        }
+      }
+    }
 
     if (isPro) {
       // If the account has Pro status, verify the user is logged in as the owner of this email
