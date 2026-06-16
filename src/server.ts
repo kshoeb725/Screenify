@@ -324,11 +324,14 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
       // Try updating via session_id, or insert new if session_id not found
       let payError = true;
       if (sessionId) {
-        const { error } = await supabaseAdmin
+        const { data: updatedRows, error } = await supabaseAdmin
           .from("payments")
           .update(dbPaymentUpdate)
-          .eq("session_id", sessionId);
-        if (!error) payError = false;
+          .eq("session_id", sessionId)
+          .select("id");
+        if (!error && updatedRows && updatedRows.length > 0) {
+          payError = false;
+        }
       }
 
       if (payError) {
