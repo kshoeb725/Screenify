@@ -173,32 +173,68 @@ async function handleDodoWebhook(request: Request): Promise<Response> {
     userId = null;
   }
 
-  // Verify that the userId from metadata actually exists in our profiles table.
-  // This prevents foreign key violations if the ID is obsolete, invalid, or from a mismatching database.
+  const customerEmail: string = data?.customer?.email || data?.customer_email || payload.data?.customer?.email || "";
+
+  // Verify that the userId exists in Auth, and automatically create the profiles record if missing.
   if (userId) {
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("id", userId)
-      .maybeSingle();
-    
-    if (!profile) {
-      console.warn(`[webhook] User ID ${userId} from metadata not found in profiles. Resetting to null.`);
+    try {
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (authError || !authUser?.user) {
+        console.warn(`[webhook] User ID ${userId} from metadata not found in auth.users:`, authError?.message);
+        userId = null;
+      } else {
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (!profile) {
+          console.log(`[webhook] Profile row missing for user ${userId}. Creating it.`);
+          await supabaseAdmin.from("profiles").insert({
+            id: userId,
+            email: authUser.user.email || customerEmail,
+            full_name: authUser.user.user_metadata?.full_name || authUser.user.user_metadata?.name || null,
+            avatar_url: authUser.user.user_metadata?.avatar_url || null,
+            provider: authUser.user.app_metadata?.provider || 'email'
+          });
+        }
+      }
+    } catch (err) {
+      console.error("[webhook] Error checking auth user:", err);
       userId = null;
     }
   }
 
-  const customerEmail: string = data?.customer?.email || data?.customer_email || payload.data?.customer?.email || "";
-
+  // If userId is still missing, fallback to email match in Auth
   if (!userId && customerEmail) {
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("email", customerEmail)
-      .maybeSingle();
-    
-    if (profile) {
-      userId = profile.id;
+    try {
+      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (!listError && users) {
+        const authUser = users.find(u => u.email?.toLowerCase() === customerEmail.toLowerCase());
+        if (authUser) {
+          userId = authUser.id;
+          
+          const { data: profile } = await supabaseAdmin
+            .from("profiles")
+            .select("id")
+            .eq("id", userId)
+            .maybeSingle();
+
+          if (!profile) {
+            console.log(`[webhook] Profile row missing for user ${userId} matched by email. Creating it.`);
+            await supabaseAdmin.from("profiles").insert({
+              id: userId,
+              email: customerEmail,
+              full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || null,
+              avatar_url: authUser.user_metadata?.avatar_url || null,
+              provider: authUser.app_metadata?.provider || 'email'
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[webhook] Error in email fallback auth check:", err);
     }
   }
 
