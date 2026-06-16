@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -376,6 +378,41 @@ Return ONLY valid JSON with this exact schema:
   return parsed;
 }
 
+async function verifyEmailOwnership(email: string): Promise<boolean> {
+  const request = getRequest();
+  const authHeader = request?.headers?.get("authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return false;
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  if (!token) {
+    return false;
+  }
+
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    return false;
+  }
+
+  const client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  const { data, error } = await client.auth.getClaims(token);
+  if (error || !data?.claims) {
+    return false;
+  }
+
+  const tokenEmail = data.claims.email;
+  return tokenEmail?.toLowerCase() === email.toLowerCase();
+}
+
 export const generatePromos = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
@@ -388,7 +425,13 @@ export const generatePromos = createServerFn({ method: "POST" })
 
     const isPro = profile?.is_pro ?? false;
 
-    if (!isPro) {
+    if (isPro) {
+      // If the account has Pro status, verify the user is logged in as the owner of this email
+      const isOwner = await verifyEmailOwnership(data.email);
+      if (!isOwner) {
+        throw new Error("Access denied: You must be logged in to this account to use Pro features.");
+      }
+    } else {
       const { count, error: countError } = await supabaseAdmin
         .from("submissions")
         .select("*", { count: "exact", head: true })

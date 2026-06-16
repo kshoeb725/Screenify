@@ -38,50 +38,7 @@ export const adminSignUpUser = createServerFn({ method: "POST" })
     }
   });
 
-// Server function to reset a user's password directly without email validation.
-export const adminResetPassword = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({
-      email: z.string().email(),
-      password: z.string().min(8),
-    }).parse(input),
-  )
-  .handler(async ({ data }) => {
-    const { email, password } = data;
 
-    try {
-      // 1. Find the user by email
-      const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-      if (listError) {
-        console.error("Error listing users:", listError);
-        return { success: false, error: listError.message || "Failed to fetch user list." };
-      }
-
-      const user = listData.users.find(
-        (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
-      );
-
-      if (!user) {
-        return { success: false, error: "No user found with this email address." };
-      }
-
-      // 2. Update their password directly using admin API
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        user.id,
-        { password }
-      );
-
-      if (updateError) {
-        console.error("Error updating user password:", updateError);
-        return { success: false, error: updateError.message || "Failed to reset password." };
-      }
-
-      return { success: true };
-    } catch (err: any) {
-      console.error("Unexpected adminResetPassword error:", err);
-      return { success: false, error: err.message || "Failed to reset password." };
-    }
-  });
 
 // Server function to verify login credentials and return precise error messages.
 export const verifyLoginCredentials = createServerFn({ method: "POST" })
