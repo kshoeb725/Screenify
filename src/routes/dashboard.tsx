@@ -24,7 +24,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { useServerFn } from "@tanstack/react-start";
-import { cancelSubscription } from "@/lib/payment.functions";
+
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -63,35 +63,7 @@ function DashboardPage() {
   const [loadingData, setLoadingData] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [hasPaid, setHasPaid] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
 
-  const cancelSession = useServerFn(cancelSubscription);
-
-  const handleCancelSubscription = async () => {
-    if (!subscription?.dodo_subscription_id) return;
-    
-    if (!confirm("Are you sure you want to cancel your subscription? You will lose Pro features at the end of your billing cycle.")) {
-      return;
-    }
-
-    setCancelling(true);
-    try {
-      const res = await cancelSession({
-        data: { subscriptionId: subscription.dodo_subscription_id },
-      });
-      if (res.success) {
-        toast.success("Subscription scheduled for cancellation successfully!");
-        setSubscription((prev: any) => prev ? { ...prev, status: "cancelled" } : null);
-      } else {
-        toast.error(res.error || "Failed to cancel subscription.");
-      }
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to cancel subscription.");
-    } finally {
-      setCancelling(false);
-    }
-  };
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -692,24 +664,7 @@ function DashboardPage() {
                     </div>
                   )}
 
-                  {hasPaid && subscription && subscription.status !== "cancelled" && (
-                    <div className="border-t border-border/20 pt-3 flex justify-end">
-                      <Button
-                        variant="destructive"
-                        disabled={cancelling}
-                        onClick={handleCancelSubscription}
-                        className="rounded-xl px-4 py-1.5 text-xs font-semibold h-auto cursor-pointer text-white"
-                      >
-                        {cancelling ? (
-                          <>
-                            <Loader2 className="size-3 animate-spin mr-1.5" /> Cancelling...
-                          </>
-                        ) : (
-                          "Cancel Subscription"
-                        )}
-                      </Button>
-                    </div>
-                  )}
+
 
                   {hasPaid && subscription && subscription.status === "cancelled" && (
                     <div className="border-t border-border/20 pt-3 text-[11px] text-amber-500 font-mono">
