@@ -195,7 +195,8 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, onGetStartedFree, is
   ];
 
   const Custom3DStyles = () => (
-    <style dangerouslySetInnerHTML={{ __html: `
+    <style dangerouslySetInnerHTML={{
+      __html: `
       @keyframes float3D {
         0%, 100% {
           transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0);
@@ -255,7 +256,7 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, onGetStartedFree, is
           </h1>
 
           <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed text-balance animate-float-sub">
-            Upload a screenshot or Shopify app URL and let AI generate a complete screenshot story with compelling headlines, professional layouts, and App Store-ready assets.
+            Upload a screenshot and let AI generate a complete screenshot story with compelling headlines, professional layouts, and App Store-ready assets.
           </p>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 w-full sm:w-auto pt-2">
@@ -291,25 +292,25 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, onGetStartedFree, is
           <div
             ref={sliderRef}
             className="relative w-full aspect-[16/9] rounded-2xl border border-border overflow-hidden select-none cursor-ew-resize shadow-2xl group"
-            onMouseDown={(e) => { 
-              e.preventDefault(); 
-              isSliding.current = true; 
-              setUserInteracted(true); 
-              handleSliderMove(e.clientX); 
+            onMouseDown={(e) => {
+              e.preventDefault();
+              isSliding.current = true;
+              setUserInteracted(true);
+              handleSliderMove(e.clientX);
             }}
-            onTouchStart={(e) => { 
-              isSliding.current = true; 
-              setUserInteracted(true); 
-              if (e.touches[0]) handleSliderMove(e.touches[0].clientX); 
+            onTouchStart={(e) => {
+              isSliding.current = true;
+              setUserInteracted(true);
+              if (e.touches[0]) handleSliderMove(e.touches[0].clientX);
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
             {/* Background Image / "AFTER" SIDE (Visible on right) */}
             <div className="absolute inset-0 bg-[#0E1510] flex items-center justify-center z-10">
-              <img 
-                src="/screenify-ready-to-publish.png" 
-                alt="After Screenify: Ready to Publish" 
+              <img
+                src="/screenify-ready-to-publish.png"
+                alt="After Screenify: Ready to Publish"
                 className="w-full h-full object-contain select-none pointer-events-none"
               />
               {/* After badge */}
@@ -325,9 +326,9 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, onGetStartedFree, is
             >
               {/* Mirror of the complete inner layout, fixed at full container width */}
               <div className="absolute inset-0 h-full flex items-center justify-center bg-[#F6F6F7]" style={{ width: containerWidth }}>
-                <img 
-                  src="/shopify-raw-screenshot.jpg" 
-                  alt="Before: Raw Shopify Screenshot" 
+                <img
+                  src="/shopify-raw-screenshot.jpg"
+                  alt="Before: Raw Shopify Screenshot"
                   className="w-full h-full object-contain select-none pointer-events-none"
                 />
                 {/* Before badge */}
@@ -427,11 +428,11 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, onGetStartedFree, is
 
           {/* Table Container with 3D Perspective */}
           <div className="w-full [perspective:1200px] py-4 overflow-visible">
-            <div 
+            <div
               className="w-full border border-border/85 rounded-2xl bg-card/30 backdrop-blur-md shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] [transform:none] md:[transform:rotateX(4deg)_rotateY(-2deg)_rotateZ(0.2deg)] hover:[transform:none] transition-all duration-500 ease-out p-3 sm:p-5 md:p-8 overflow-visible"
             >
               <div className="grid grid-cols-2 gap-y-1.5 md:gap-y-2 gap-x-4 md:gap-x-8 items-center text-xs sm:text-sm md:text-base">
-                
+
                 {/* Headers */}
                 <div className="font-mono text-[10px] md:text-xs uppercase tracking-wider text-muted-foreground/80 p-2 md:p-4 font-semibold text-left">Challenge</div>
                 <div className="relative font-mono text-[10px] md:text-xs uppercase tracking-wider text-[#3ECFB2] font-extrabold p-2 md:p-4 text-center bg-gradient-to-b from-[#3ECFB2]/12 to-[#3ECFB2]/6 rounded-t-xl border-t border-x border-[#3ECFB2]/20 shadow-md shadow-[#3ECFB2]/5">
@@ -467,11 +468,10 @@ export function LandingPage({ onPick, onDrop, onUpgradePro, onGetStartedFree, is
                   <div key={idx} className="col-span-2 grid grid-cols-2 items-center gap-x-4 md:gap-x-8 hover:bg-white/5 dark:hover:bg-white/2.5 -mx-2 md:-mx-4 px-2 md:px-4 rounded-lg transition-colors group">
                     {/* Challenge Cell */}
                     <div className="py-3.5 md:py-5 font-semibold text-foreground/90 border-b border-border/20 text-left">{row.c}</div>
-                    
+
                     {/* Screenify Cell - Highlighted 3D Pop-out */}
-                    <div className={`py-3.5 md:py-5 font-bold text-center bg-[#3ECFB2]/4 border-x border-[#3ECFB2]/15 relative group-hover:bg-[#3ECFB2]/8 transition-colors ${
-                      idx === arr.length - 1 ? "rounded-b-xl border-b border-[#3ECFB2]/25 shadow-lg shadow-[#3ECFB2]/3" : "border-b border-border/20"
-                    }`}>
+                    <div className={`py-3.5 md:py-5 font-bold text-center bg-[#3ECFB2]/4 border-x border-[#3ECFB2]/15 relative group-hover:bg-[#3ECFB2]/8 transition-colors ${idx === arr.length - 1 ? "rounded-b-xl border-b border-[#3ECFB2]/25 shadow-lg shadow-[#3ECFB2]/3" : "border-b border-border/20"
+                      }`}>
                       <span className="flex items-center justify-center gap-2 text-emerald-400 dark:text-[#3ECFB2]">
                         <Check className="size-3.5 md:size-4 shrink-0 text-emerald-500 dark:text-[#3ECFB2]" />
                         <span>{row.s}</span>
