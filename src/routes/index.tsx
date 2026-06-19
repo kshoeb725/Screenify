@@ -637,7 +637,7 @@ function Index() {
       });
 
       setResult(null);
-      setPaid(false); // default mock checkout state
+      setPaid(!!profile?.is_pro); // default to pro status if user is Pro, else mock checkout state
       setStatus("preview");
       toast.dismiss(toastId);
       toast.success("Screenshots loaded successfully!");
@@ -646,7 +646,7 @@ function Index() {
       toast.error("Failed to process image files.");
       console.error(err);
     }
-  }, [user, navigate]);
+  }, [user, navigate, profile]);
 
   const handleGenerate = useCallback(async () => {
     const activeScreens = previews.filter((p): p is string => p !== null);
@@ -687,19 +687,20 @@ function Index() {
       }
 
       setResult(res);
-      setPaid(false); // require mock checkout for unwatermarked export
+      setPaid(!!profile?.is_pro); // require mock checkout for unwatermarked export if not Pro
       setStatus("done");
       toast.success("Optimized screenshot sequence generated! Open the Design Studio below.");
     } catch (e) {
       setStatus("preview");
       toast.error(e instanceof Error ? e.message : "Optimization failed. Please try again.");
     }
-  }, [generate, previews, form]);
+  }, [generate, previews, form, profile]);
 
   const onReset = useCallback(() => {
     setPreviews(Array(6).fill(null));
     setResult(null);
-    setPaid(false);
+    const isPro = !!profile?.is_pro;
+    setPaid(isPro);
     setLogo(null);
     setStatus("idle");
     if (typeof window !== "undefined") {
@@ -709,7 +710,11 @@ function Index() {
       localStorage.removeItem("screenmint_result");
       localStorage.removeItem("screenmint_form");
       localStorage.removeItem("screenmint_extractedColors");
-      localStorage.removeItem("screenmint_paid");
+      if (isPro) {
+        localStorage.setItem("screenmint_paid", "true");
+      } else {
+        localStorage.removeItem("screenmint_paid");
+      }
       localStorage.removeItem("screenmint_logo");
       localStorage.removeItem("screenmint_is_new_session");
       localStorage.removeItem("screenmint_active_submission_id");
@@ -726,7 +731,7 @@ function Index() {
       localStorage.removeItem("screenmint_featureSpacing");
       localStorage.removeItem("screenmint_featureIconSize");
     }
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     if (search.new === "true" || search.upload === "true") {
