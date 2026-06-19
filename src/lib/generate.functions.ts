@@ -789,7 +789,7 @@ export const generatePromos = createServerFn({ method: "POST" })
         app_name: data.appName,
         target_audience: data.targetAudience,
         objective: data.objective,
-        screenshot_ref: data.imageDataUrls[0],
+        screenshot_ref: JSON.stringify(data.imageDataUrls),
         generated_images: JSON.stringify(plan.slides),
         palette: data.palette,
         background_style: data.backgroundStyle,

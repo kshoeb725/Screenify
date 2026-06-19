@@ -172,4 +172,12 @@
       0 4px 0 oklch(0.88 0.22 128 / 0.1),
       0 8px 16px oklch(0 0 0 / 0.4);
   }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite linear;
+  }
+  @keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
 }

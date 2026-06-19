@@ -321,8 +321,9 @@ function DashboardPage() {
             <div className="flex items-center gap-2.5">
               <h1 className="text-3xl font-bold tracking-tight text-foreground">Hello, {displayName}</h1>
               {hasPaid && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3ECFB2]/15 text-[#3ECFB2] text-[10px] font-mono font-bold tracking-wide uppercase border border-[#3ECFB2]/20">
-                  <Sparkles className="size-3" /> Pro Monthly
+                <span className="relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-bold tracking-wider uppercase border border-emerald-500/25 shadow-[0_0_12px_rgba(16,185,129,0.12)] overflow-hidden group select-none hover:border-emerald-500/40 hover:shadow-[0_0_16px_rgba(16,185,129,0.22)] transition-all duration-300">
+                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                  <Sparkles className="size-3 text-emerald-400 animate-pulse" /> Pro Monthly
                 </span>
               )}
             </div>
@@ -393,6 +394,20 @@ function DashboardPage() {
                     console.error("Failed to parse generated slides:", e);
                   }
 
+                  let thumbnailSrc = "";
+                  if (sub.screenshot_ref) {
+                    if (sub.screenshot_ref.startsWith("[")) {
+                      try {
+                        const parsed = JSON.parse(sub.screenshot_ref);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                          thumbnailSrc = parsed[0] || "";
+                        }
+                      } catch (e) {}
+                    } else if (sub.screenshot_ref.startsWith("data:image/")) {
+                      thumbnailSrc = sub.screenshot_ref;
+                    }
+                  }
+
                   // Parse color palette
                   let paletteList: string[] = [];
                   try {
@@ -437,10 +452,23 @@ function DashboardPage() {
                             localStorage.removeItem("screenmint_slide_configs");
                           }
 
-                          // Prepare previews array: 6-element array with first element as the screenshot ref
+                          // Prepare previews array: 6-element array
                           const previewsArr = Array(6).fill(null);
-                          if (sub.screenshot_ref && sub.screenshot_ref.startsWith("data:image/") && sub.screenshot_ref.length > 500) {
-                            previewsArr[0] = sub.screenshot_ref;
+                          if (sub.screenshot_ref) {
+                            if (sub.screenshot_ref.startsWith("[")) {
+                              try {
+                                const parsed = JSON.parse(sub.screenshot_ref);
+                                if (Array.isArray(parsed)) {
+                                  for (let i = 0; i < Math.min(6, parsed.length); i++) {
+                                    previewsArr[i] = parsed[i];
+                                  }
+                                }
+                              } catch (e) {
+                                console.error("Failed to parse previews array:", e);
+                              }
+                            } else if (sub.screenshot_ref.startsWith("data:image/") && sub.screenshot_ref.length > 500) {
+                              previewsArr[0] = sub.screenshot_ref;
+                            }
                           }
                           localStorage.setItem("screenmint_previews", JSON.stringify(previewsArr));
 
@@ -549,9 +577,9 @@ function DashboardPage() {
                                       <div className="size-0.5 rounded-full bg-white/20" />
                                     </div>
                                     <div className="w-full h-full bg-black/40 rounded flex flex-col items-center justify-center p-0.5 gap-0.5 overflow-hidden">
-                                      {sub.screenshot_ref && sub.screenshot_ref.startsWith("data:image/") && sub.screenshot_ref.length > 500 ? (
+                                      {thumbnailSrc && thumbnailSrc.startsWith("data:image/") && thumbnailSrc.length > 500 ? (
                                         <img 
-                                          src={sub.screenshot_ref} 
+                                          src={thumbnailSrc} 
                                           alt="Screenshot Preview" 
                                           className="w-full h-full object-cover object-top rounded-sm"
                                         />
@@ -619,27 +647,34 @@ function DashboardPage() {
               <CardContent className="pt-6 space-y-6">
                 
                 {/* Active Plan Detail Box */}
-                <div className="rounded-xl border border-border/40 bg-muted/20 p-5 flex flex-col space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Current Plan</p>
-                      <p className="text-lg font-bold text-foreground">
-                        {hasPaid ? (subscription?.plan_name || "Pro Monthly Plan") : "Free Tier Plan"}
-                      </p>
-                    </div>
-                    {!hasPaid ? (
-                      <Button
-                        onClick={() => setPayOpen(true)}
-                        className="bg-[#3ECFB2] hover:bg-[#059669] text-slate-950 font-bold rounded-xl px-5 py-2 cursor-pointer text-xs transition active:scale-[0.98]"
-                      >
-                        Upgrade to Pro
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full capitalize">
-                        <CheckCircle2 className="size-3.5" /> {subscription?.status || "Active"}
-                      </div>
-                    )}
-                  </div>
+                <div className={`rounded-xl border p-5 flex flex-col space-y-4 relative overflow-hidden ${
+                   hasPaid 
+                     ? "border-emerald-500/25 bg-gradient-to-br from-emerald-500/5 via-card/15 to-transparent shadow-[0_4px_20px_rgba(16,185,129,0.05)]" 
+                     : "border-border/40 bg-muted/20"
+                 }`}>
+                   {hasPaid && (
+                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                   )}
+                   <div className="flex items-center justify-between relative z-10">
+                     <div className="space-y-1">
+                       <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Current Plan</p>
+                       <p className={`text-lg font-extrabold tracking-tight ${hasPaid ? "text-emerald-400" : "text-foreground"}`}>
+                         {hasPaid ? (subscription?.plan_name || "Pro Monthly Plan") : "Free Tier Plan"}
+                       </p>
+                     </div>
+                     {!hasPaid ? (
+                       <Button
+                         onClick={() => setPayOpen(true)}
+                         className="bg-[#3ECFB2] hover:bg-[#059669] text-slate-950 font-bold rounded-xl px-5 py-2 cursor-pointer text-xs transition active:scale-[0.98]"
+                       >
+                         Upgrade to Pro
+                       </Button>
+                     ) : (
+                       <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-mono font-bold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full uppercase tracking-wider">
+                         <CheckCircle2 className="size-3.5 text-emerald-400 animate-pulse" /> {subscription?.status || "Active"}
+                       </div>
+                     )}
+                   </div>
 
                   {hasPaid && subscription && (
                     <div className="border-t border-border/20 pt-4 grid grid-cols-2 gap-4 text-xs font-mono">
