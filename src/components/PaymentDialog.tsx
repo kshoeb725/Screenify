@@ -56,7 +56,7 @@ export function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-background border-border max-w-md p-6 rounded-2xl overflow-hidden relative shadow-2xl">
+      <DialogContent className="bg-background border-border max-w-md p-6 rounded-2xl overflow-hidden shadow-2xl">
         {/* Ambient Top Glow */}
         <div className="absolute -right-20 -top-20 w-48 h-48 bg-[#3ECFB2]/10 rounded-full blur-3xl pointer-events-none" />
         
