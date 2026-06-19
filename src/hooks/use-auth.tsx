@@ -91,6 +91,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (mounted && !error && data) {
+          // Sync Google metadata if different or missing in database
+          const provider = user.app_metadata?.provider || user.identities?.[0]?.provider || data.provider;
+          const fullName = data.full_name || user.user_metadata?.full_name || user.user_metadata?.name || null;
+          const avatarUrl = data.avatar_url || user.user_metadata?.avatar_url || null;
+
+          if (data.provider !== provider || data.full_name !== fullName || data.avatar_url !== avatarUrl) {
+            const { data: updatedProfile, error: updateError } = await supabase
+              .from("profiles")
+              .update({
+                provider,
+                full_name: fullName,
+                avatar_url: avatarUrl,
+              })
+              .eq("id", user.id)
+              .select()
+              .single();
+
+            if (!updateError && updatedProfile) {
+              setProfile(updatedProfile);
+              return;
+            }
+          }
           setProfile(data);
         }
       } catch (err) {
