@@ -324,6 +324,49 @@ const adjustContrast = (bgColor: string, fgColor: string, minRatio: number): str
   return isBgLight ? "#121212" : "#FFFFFF";
 };
 
+const blendColors = (baseHex: string, overlayColor: string): string => {
+  if (!baseHex) baseHex = "#FFFFFF";
+  if (!overlayColor) return baseHex;
+  
+  const baseRgb = hexToRgb(baseHex) || { r: 255, g: 255, b: 255 };
+  
+  // Try to parse rgba
+  const rgbaMatch = overlayColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (rgbaMatch) {
+    const oR = parseInt(rgbaMatch[1], 10);
+    const oG = parseInt(rgbaMatch[2], 10);
+    const oB = parseInt(rgbaMatch[3], 10);
+    const oA = rgbaMatch[4] !== undefined ? parseFloat(rgbaMatch[4]) : 1.0;
+    
+    return rgbToHex(
+      Math.round((1 - oA) * baseRgb.r + oA * oR),
+      Math.round((1 - oA) * baseRgb.g + oA * oG),
+      Math.round((1 - oA) * baseRgb.b + oA * oB)
+    );
+  }
+  
+  // Try to parse hex with alpha channel (like #RRGGBBAA)
+  if (overlayColor.startsWith("#")) {
+    const clean = overlayColor.replace("#", "").trim();
+    if (clean.length === 8) {
+      const oR = parseInt(clean.substring(0, 2), 16);
+      const oG = parseInt(clean.substring(2, 4), 16);
+      const oB = parseInt(clean.substring(4, 6), 16);
+      const oA = parseInt(clean.substring(6, 8), 16) / 255;
+      
+      return rgbToHex(
+        Math.round((1 - oA) * baseRgb.r + oA * oR),
+        Math.round((1 - oA) * baseRgb.g + oA * oG),
+        Math.round((1 - oA) * baseRgb.b + oA * oB)
+      );
+    } else if (clean.length === 6 || clean.length === 3) {
+      return overlayColor;
+    }
+  }
+  
+  return baseHex;
+};
+
 function refineExtractedColors(palette: string[]): { bg: string; primary: string; secondary: string; accent: string } {
   if (!palette || palette.length === 0) {
     return { bg: "#FAF9F5", primary: "#1F2937", secondary: "#4B5563", accent: "#3B82F6" };
@@ -1923,10 +1966,16 @@ function TemplateCanvas({
       className: "shrink-0",
     });
     
+    const repBgColor = getRepresentativeBgColor(stylePreset === "gradient" ? colors.bg : (bgStyle || colors.bg));
+
     if (styleType === "glass") {
       const glassBg = isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(15, 23, 42, 0.12)";
       const glassBorder = isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(15, 23, 42, 0.15)";
-      const glassText = isDark ? "#FFFFFF" : "#0F172A";
+      
+      const blendedBg = blendColors(repBgColor, glassBg);
+      const glassText = adjustContrast(blendedBg, isDark ? "#FFFFFF" : "#0F172A", 4.5);
+      const iconColor = adjustContrast(blendedBg, accentColor, 3.0);
+
       return (
         <div key={index} className="flex items-center gap-3.5 px-6 py-3 rounded-2xl shadow-lg font-sans-outfit font-black transition hover:scale-[1.01]"
              style={{ 
@@ -1935,46 +1984,61 @@ function TemplateCanvas({
                color: glassText,
                fontSize: `${18 * featureTextSize}px`
              }}>
-          <span style={{ color: accentColor }}>{icon}</span>
+          <span style={{ color: iconColor }}>{icon}</span>
           <span>{feat}</span>
         </div>
       );
     } else if (styleType === "solid") {
+      const solidBg = isDark ? "rgba(255, 255, 255, 0.05)" : `${accentColor}12`;
+      const solidBorder = isDark ? "rgba(255, 255, 255, 0.15)" : `${accentColor}30`;
+      
+      const blendedBg = blendColors(repBgColor, solidBg);
+      const solidTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+      const iconColor = adjustContrast(blendedBg, accentColor, 3.0);
+
       return (
         <div key={index} className="flex items-center gap-3.5 px-6 py-3.5 rounded-2xl border shadow-lg font-sans-jakarta font-black transition-all hover:scale-[1.01]"
              style={{ 
-               backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : `${accentColor}12`, 
-               borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : `${accentColor}30`, 
-               color: bodyTextColor,
+               backgroundColor: solidBg, 
+               borderColor: solidBorder, 
+               color: solidTextColor,
                fontSize: `${18 * featureTextSize}px`
              }}>
-          <span style={{ color: accentColor }}>{icon}</span>
+          <span style={{ color: iconColor }}>{icon}</span>
           <span>{feat}</span>
         </div>
       );
     } else if (styleType === "serif") {
+      const iconColor = adjustContrast(repBgColor, accentColor || bodyTextColor, 3.0);
       return (
         <div key={index} className="flex items-center gap-3.5 font-serif-elegant font-black" style={{ color: bodyTextColor, fontSize: `${20 * featureTextSize}px` }}>
           <div className="rounded-full shrink-0" 
                style={{ 
                  width: `${10 * featureIconSize}px`, 
                  height: `${10 * featureIconSize}px`, 
-                 backgroundColor: accentColor || bodyTextColor, 
-                 boxShadow: `0 0 10px ${accentColor}` 
+                 backgroundColor: iconColor, 
+                 boxShadow: `0 0 10px ${iconColor}` 
                }} />
           <span>{replaceAmpersand(feat)}</span>
         </div>
       );
     } else {
+      const fallbackBg = isDark ? "rgba(255, 255, 255, 0.03)" : "rgba(255, 255, 255, 0.7)";
+      const fallbackBorder = isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.06)";
+      
+      const blendedBg = blendColors(repBgColor, fallbackBg);
+      const fallbackTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+      const iconColor = adjustContrast(blendedBg, accentColor, 3.0);
+
       return (
         <div key={index} className="flex items-center gap-3.5 px-6 py-3 rounded-2xl border shadow-lg font-black"
              style={{ 
-               color: bodyTextColor, 
-               borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)", 
-               background: isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.7)",
+               color: fallbackTextColor, 
+               borderColor: fallbackBorder, 
+               background: fallbackBg,
                fontSize: `${18 * featureTextSize}px`
              }}>
-          <span style={{ color: accentColor }}>{icon}</span>
+          <span style={{ color: iconColor }}>{icon}</span>
           <span>{feat}</span>
         </div>
       );
@@ -2376,13 +2440,18 @@ function TemplateCanvas({
           </div>
  
           <div className="grid grid-cols-3 mb-0 z-10" style={{ gap: featureSpacing }}>
-            {features.filter(Boolean).slice(0, 3).map((feat, i) => (
-              <div key={i} className="flex gap-3.5 items-center px-6 py-4 rounded-2xl border shadow-md font-bold text-sm"
-                   style={{ backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.85)", borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)" }}>
-                <CheckCircleIcon size={Math.round(22 * featureIconSize)} />
-                <span className="font-black" style={{ color: bodyTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
-              </div>
-            ))}
+            {features.filter(Boolean).slice(0, 3).map((feat, i) => {
+              const itemBg = isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.85)";
+              const blendedBg = blendColors(repBg, itemBg);
+              const itemTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+              return (
+                <div key={i} className="flex gap-3.5 items-center px-6 py-4 rounded-2xl border shadow-md font-bold text-sm"
+                     style={{ backgroundColor: itemBg, borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)" }}>
+                  <CheckCircleIcon size={Math.round(22 * featureIconSize)} />
+                  <span className="font-black" style={{ color: itemTextColor, fontSize: `${17 * featureTextSize}px` }}>{feat}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -2407,26 +2476,32 @@ function TemplateCanvas({
           </div>
  
           <div className="flex justify-center mb-2 z-10" style={{ gap: featureSpacing }}>
-            {features.filter(Boolean).map((feat, i) => (
-              <div
-                key={i}
-                className="px-6 py-3 rounded-xl font-black tracking-wide border shadow-sm flex items-center gap-2.5"
-                style={{
-                  borderColor: isDark ? "rgba(255,255,255,0.12)" : `${accentColor}40`,
-                  background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
-                  color: textColor,
-                  fontSize: `${16 * featureTextSize}px`
-                }}
-              >
-                <div className="rounded-full animate-pulse shadow-sm" 
-                     style={{ 
-                       width: `${10 * featureIconSize}px`, 
-                       height: `${10 * featureIconSize}px`, 
-                       backgroundColor: accentColor 
-                     }} />
-                <span>{feat}</span>
-              </div>
-            ))}
+            {features.filter(Boolean).map((feat, i) => {
+              const itemBg = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
+              const blendedBg = blendColors(repBg, itemBg);
+              const itemTextColor = adjustContrast(blendedBg, textColor, 4.5);
+              const itemIconColor = adjustContrast(blendedBg, accentColor, 3.0);
+              return (
+                <div
+                  key={i}
+                  className="px-6 py-3 rounded-xl font-black tracking-wide border shadow-sm flex items-center gap-2.5"
+                  style={{
+                    borderColor: isDark ? "rgba(255,255,255,0.12)" : `${itemIconColor}40`,
+                    background: itemBg,
+                    color: itemTextColor,
+                    fontSize: `${16 * featureTextSize}px`
+                  }}
+                >
+                  <div className="rounded-full animate-pulse shadow-sm" 
+                       style={{ 
+                         width: `${10 * featureIconSize}px`, 
+                         height: `${10 * featureIconSize}px`, 
+                         backgroundColor: itemIconColor 
+                       }} />
+                  <span>{feat}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -2451,34 +2526,40 @@ function TemplateCanvas({
             </div>
  
             <div className="col-span-5 flex flex-col" style={{ gap: featureSpacing }}>
-              {features.filter(Boolean).map((feat, i) => (
-                <div
-                  key={i}
-                  className="p-5 rounded-2xl border flex items-start gap-4.5 shadow-md"
-                  style={{
-                    borderLeft: `4px solid ${accentColor}`,
-                    background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
-                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
-                  }}
-                >
+              {features.filter(Boolean).map((feat, i) => {
+                const itemBg = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
+                const blendedBg = blendColors(repBg, itemBg);
+                const itemTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+                const itemIconColor = adjustContrast(blendedBg, accentColor, 3.0);
+                return (
                   <div
-                    className="rounded-full font-mono font-black flex items-center justify-center shrink-0 shadow-sm"
-                    style={{ 
-                      width: `${44 * featureIconSize}px`, 
-                      height: `${44 * featureIconSize}px`, 
-                      fontSize: `${16 * featureIconSize}px`, 
-                      background: accentColor, 
-                      color: isDark ? "#0F172A" : "#FFFFFF" 
+                    key={i}
+                    className="p-5 rounded-2xl border flex items-start gap-4.5 shadow-md"
+                    style={{
+                      borderLeft: `4px solid ${itemIconColor}`,
+                      background: itemBg,
+                      borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
                     }}
                   >
-                    {i+1}
+                    <div
+                      className="rounded-full font-mono font-black flex items-center justify-center shrink-0 shadow-sm"
+                      style={{ 
+                        width: `${44 * featureIconSize}px`, 
+                        height: `${44 * featureIconSize}px`, 
+                        fontSize: `${16 * featureIconSize}px`, 
+                        background: itemIconColor, 
+                        color: getContrastRatio(itemIconColor, "#FFFFFF") >= 4.5 ? "#FFFFFF" : "#0F172A" 
+                      }}
+                    >
+                      {i+1}
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold mb-1" style={{ color: itemTextColor, fontSize: `${19 * featureTextSize}px` }}>{feat}</h3>
+                      <p className="opacity-70 leading-relaxed" style={{ color: itemTextColor, fontSize: `${13 * featureTextSize}px` }}>Designed for maximum storefront conversion.</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-extrabold mb-1" style={{ color: bodyTextColor, fontSize: `${19 * featureTextSize}px` }}>{feat}</h3>
-                    <p className="opacity-70 leading-relaxed" style={{ color: bodyTextColor, fontSize: `${13 * featureTextSize}px` }}>Designed for maximum storefront conversion.</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -2499,28 +2580,34 @@ function TemplateCanvas({
           </div>
  
           <div className="grid grid-cols-3 w-full my-4 z-10" style={{ gap: featureSpacing }}>
-            {features.filter(Boolean).map((feat, i) => (
-              <div
-                key={i}
-                className="p-5.5 rounded-2xl border text-center flex flex-col justify-center items-center shadow-md"
-                style={{
-                  background: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
-                  borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
-                }}
-              >
-                <div className="mb-2.5 rounded-full flex items-center justify-center font-mono font-black shadow-sm"
-                     style={{ 
-                       width: `${44 * featureIconSize}px`, 
-                       height: `${44 * featureIconSize}px`, 
-                       fontSize: `${16 * featureIconSize}px`, 
-                       background: isDark ? "rgba(255,255,255,0.06)" : `${accentColor}15`, 
-                       color: accentColor 
-                     }}>
-                  0{i+1}
+            {features.filter(Boolean).map((feat, i) => {
+              const itemBg = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
+              const blendedBg = blendColors(repBg, itemBg);
+              const itemTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+              const itemIconColor = adjustContrast(blendedBg, accentColor, 3.0);
+              return (
+                <div
+                  key={i}
+                  className="p-5.5 rounded-2xl border text-center flex flex-col justify-center items-center shadow-md"
+                  style={{
+                    background: itemBg,
+                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
+                  }}
+                >
+                  <div className="mb-2.5 rounded-full flex items-center justify-center font-mono font-black shadow-sm"
+                       style={{ 
+                         width: `${44 * featureIconSize}px`, 
+                         height: `${44 * featureIconSize}px`, 
+                         fontSize: `${16 * featureIconSize}px`, 
+                         background: isDark ? "rgba(255,255,255,0.06)" : `${itemIconColor}15`, 
+                         color: itemIconColor 
+                       }}>
+                    0{i+1}
+                  </div>
+                  <h3 className="font-extrabold" style={{ color: itemTextColor, fontSize: `${19 * featureTextSize}px` }}>{feat}</h3>
                 </div>
-                <h3 className="font-extrabold" style={{ color: bodyTextColor, fontSize: `${19 * featureTextSize}px` }}>{feat}</h3>
-              </div>
-            ))}
+              );
+            })}
           </div>
  
           <div className="w-[700px] overflow-hidden rounded-t-2xl border-t border-x border-white/10 mt-auto z-10 scale-[0.98]">
@@ -2547,60 +2634,76 @@ function TemplateCanvas({
             <ScreenshotMockup maxHeight="450px" />
  
             {/* Left float badge */}
-            <div
-              className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 w-72 transition-all duration-300 hover:scale-[1.03]"
-              style={{
-                left: "-260px",
-                top: "80px",
-                background: isDark ? "rgba(20, 21, 30, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"
-              }}
-            >
-              <div className="rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm" 
-                   style={{ 
-                     width: `${48 * featureIconSize}px`, 
-                     height: `${48 * featureIconSize}px`, 
-                     background: isDark ? "rgba(255,255,255,0.06)" : `${accentColor}20` 
-                   }}>
-                <svg style={{ width: `${22 * featureIconSize}px`, height: `${22 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
-                </svg>
-              </div>
-              <div>
-                <p className="opacity-60 uppercase font-mono tracking-widest text-[10px] font-black" style={{ color: bodyTextColor }}>Conversion Stats</p>
-                <h4 className="font-extrabold tracking-tight mt-0.5" style={{ color: bodyTextColor, fontSize: `${16 * featureTextSize}px` }}>
-                  {features[0] || "Multichannel Order Management"}
-                </h4>
-              </div>
-            </div>
+            {(() => {
+              const badgeBg = isDark ? "rgba(20, 21, 30, 0.9)" : "rgba(255, 255, 255, 0.95)";
+              const blendedBg = blendColors(repBg, badgeBg);
+              const badgeTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+              const badgeIconColor = adjustContrast(blendedBg, accentColor, 3.0);
+              return (
+                <div
+                  className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 w-72 transition-all duration-300 hover:scale-[1.03]"
+                  style={{
+                    left: "-260px",
+                    top: "80px",
+                    background: badgeBg,
+                    borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0, 0, 0, 0.08)"
+                  }}
+                >
+                  <div className="rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm" 
+                       style={{ 
+                         width: `${48 * featureIconSize}px`, 
+                         height: `${48 * featureIconSize}px`, 
+                         background: isDark ? "rgba(255,255,255,0.06)" : `${badgeIconColor}20` 
+                       }}>
+                    <svg style={{ width: `${22 * featureIconSize}px`, height: `${22 * featureIconSize}px`, color: badgeIconColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="opacity-60 uppercase font-mono tracking-widest text-[10px] font-black" style={{ color: badgeTextColor }}>Conversion Stats</p>
+                    <h4 className="font-extrabold tracking-tight mt-0.5" style={{ color: badgeTextColor, fontSize: `${16 * featureTextSize}px` }}>
+                      {features[0] || "Multichannel Order Management"}
+                    </h4>
+                  </div>
+                </div>
+              );
+            })()}
  
             {/* Right float badge */}
-            <div
-              className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 w-72 transition-all duration-300 hover:scale-[1.03]"
-              style={{
-                right: "-260px",
-                bottom: "80px",
-                background: isDark ? "rgba(20, 21, 30, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"
-              }}
-            >
-              <div className="rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm" 
-                   style={{ 
-                     width: `${48 * featureIconSize}px`, 
-                     height: `${48 * featureIconSize}px`, 
-                     background: isDark ? "rgba(255,255,255,0.06)" : `${accentColor}20` 
-                   }}>
-                <svg style={{ width: `${22 * featureIconSize}px`, height: `${22 * featureIconSize}px`, color: accentColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.63 3.06" />
-                </svg>
-              </div>
-              <div>
-                <p className="opacity-60 uppercase font-mono tracking-widest text-[10px] font-black" style={{ color: bodyTextColor }}>Verified Design</p>
-                <h4 className="font-extrabold tracking-tight mt-0.5" style={{ color: bodyTextColor, fontSize: `${16 * featureTextSize}px` }}>
-                  {features[1] || "Automated Order Allocation"}
-                </h4>
-              </div>
-            </div>
+            {(() => {
+              const badgeBg = isDark ? "rgba(20, 21, 30, 0.9)" : "rgba(255, 255, 255, 0.95)";
+              const blendedBg = blendColors(repBg, badgeBg);
+              const badgeTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+              const badgeIconColor = adjustContrast(blendedBg, accentColor, 3.0);
+              return (
+                <div
+                  className="absolute p-5 rounded-2xl border shadow-2xl flex items-center gap-4 z-20 w-72 transition-all duration-300 hover:scale-[1.03]"
+                  style={{
+                    right: "-260px",
+                    bottom: "80px",
+                    background: badgeBg,
+                    borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0, 0, 0, 0.08)"
+                  }}
+                >
+                  <div className="rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm" 
+                       style={{ 
+                         width: `${48 * featureIconSize}px`, 
+                         height: `${48 * featureIconSize}px`, 
+                         background: isDark ? "rgba(255,255,255,0.06)" : `${badgeIconColor}20` 
+                       }}>
+                    <svg style={{ width: `${22 * featureIconSize}px`, height: `${22 * featureIconSize}px`, color: badgeIconColor }} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.63 3.06" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="opacity-60 uppercase font-mono tracking-widest text-[10px] font-black" style={{ color: badgeTextColor }}>Verified Design</p>
+                    <h4 className="font-extrabold tracking-tight mt-0.5" style={{ color: badgeTextColor, fontSize: `${16 * featureTextSize}px` }}>
+                      {features[1] || "Automated Order Allocation"}
+                    </h4>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -2695,25 +2798,31 @@ function TemplateCanvas({
             </div>
 
             <div className="grid grid-cols-2 mt-8" style={{ gap: featureSpacing }}>
-              {features.filter(Boolean).slice(0, 4).map((feat, i) => (
-                <div key={i} className="flex items-center gap-3.5 p-4 rounded-xl border shadow-sm"
-                     style={{
-                       backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.85)",
-                       borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : `${accentColor}25`
-                     }}>
-                  <div className="rounded-full flex items-center justify-center shrink-0 font-extrabold"
-                       style={{ 
-                         width: `${28 * featureIconSize}px`, 
-                         height: `${28 * featureIconSize}px`, 
-                         fontSize: `${14 * featureIconSize}px`,
-                         backgroundColor: `${accentColor}15`,
-                         color: accentColor
+              {features.filter(Boolean).slice(0, 4).map((feat, i) => {
+                const itemBg = isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.85)";
+                const blendedBg = blendColors(repBg, itemBg);
+                const itemTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+                const itemIconColor = adjustContrast(blendedBg, accentColor, 3.0);
+                return (
+                  <div key={i} className="flex items-center gap-3.5 p-4 rounded-xl border shadow-sm"
+                       style={{
+                         backgroundColor: itemBg,
+                         borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : `${accentColor}25`
                        }}>
-                    ✓
+                    <div className="rounded-full flex items-center justify-center shrink-0 font-extrabold"
+                         style={{ 
+                           width: `${28 * featureIconSize}px`, 
+                           height: `${28 * featureIconSize}px`, 
+                           fontSize: `${14 * featureIconSize}px`,
+                           backgroundColor: `${itemIconColor}15`,
+                           color: itemIconColor
+                         }}>
+                      ✓
+                    </div>
+                    <span className="font-extrabold leading-tight" style={{ color: itemTextColor, fontSize: `${15 * featureTextSize}px` }}>{feat}</span>
                   </div>
-                  <span className="font-extrabold leading-tight" style={{ color: bodyTextColor, fontSize: `${15 * featureTextSize}px` }}>{feat}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -2845,118 +2954,161 @@ function TemplateCanvas({
             {/* Left Column (col-span-3) - Stats & Insights 1 */}
             <div className="col-span-3 flex flex-col gap-6 h-full justify-center">
               {/* Metric Card 1 */}
-              <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
-                   style={{
-                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)",
-                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
-                   }}>
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-60" style={{ color: bodyTextColor }}>Conversion Rate</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold flex items-center gap-0.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                    <svg className="size-3" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
-                    </svg>
-                    <span>+12.4%</span>
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black tracking-tight" style={{ color: textColor }}>4.82%</h3>
-                  <p className="text-xs opacity-75 font-medium mt-1" style={{ color: secondaryColor }}>Industry leading benchmark</p>
-                </div>
-              </div>
+              {(() => {
+                const cardBg = isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)";
+                const blendedBg = blendColors(repBg, cardBg);
+                const titleColor = adjustContrast(blendedBg, textColor, 4.5);
+                const bodyCol = adjustContrast(blendedBg, bodyTextColor, 4.5);
+                const secCol = adjustContrast(blendedBg, secondaryColor, 4.5);
+                return (
+                  <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
+                       style={{
+                         backgroundColor: cardBg,
+                         borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
+                       }}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-60" style={{ color: bodyCol }}>Conversion Rate</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold flex items-center gap-0.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        <svg className="size-3" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                        </svg>
+                        <span>+12.4%</span>
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-3xl font-black tracking-tight" style={{ color: titleColor }}>4.82%</h3>
+                      <p className="text-xs opacity-75 font-medium mt-1" style={{ color: secCol }}>Industry leading benchmark</p>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Feature Card 2 */}
-              <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
-                   style={{
-                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)",
-                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
-                   }}>
-                <div className="rounded-xl flex items-center justify-center shrink-0 size-9 shadow-sm"
-                     style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
-                  <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="font-extrabold tracking-tight" style={{ color: bodyTextColor, fontSize: `${15 * featureTextSize}px` }}>
-                    {features[0] || "Advanced Analytics"}
-                  </h4>
-                  <p className="text-xs opacity-75 font-medium mt-1 leading-normal" style={{ color: secondaryColor }}>
-                    Interactive reports & filters
-                  </p>
-                </div>
-              </div>
+              {(() => {
+                const cardBg = isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)";
+                const blendedBg = blendColors(repBg, cardBg);
+                const bodyCol = adjustContrast(blendedBg, bodyTextColor, 4.5);
+                const secCol = adjustContrast(blendedBg, secondaryColor, 4.5);
+                const itemIconColor = adjustContrast(blendedBg, accentColor, 3.0);
+                return (
+                  <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
+                       style={{
+                         backgroundColor: cardBg,
+                         borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
+                       }}>
+                    <div className="rounded-xl flex items-center justify-center shrink-0 size-9 shadow-sm"
+                         style={{ backgroundColor: `${itemIconColor}15`, color: itemIconColor }}>
+                      <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold tracking-tight" style={{ color: bodyCol, fontSize: `${15 * featureTextSize}px` }}>
+                        {features[0] || "Advanced Analytics"}
+                      </h4>
+                      <p className="text-xs opacity-75 font-medium mt-1 leading-normal" style={{ color: secCol }}>
+                        Interactive reports & filters
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Center Column (col-span-6) - Mockup Viewport */}
             <div className="col-span-6 flex justify-center items-center">
-              <div className="w-full rounded-2xl border shadow-2xl overflow-hidden p-2.5"
-                   style={{
-                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.6)" : "rgba(255, 255, 255, 0.95)",
-                     borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.06)"
-                   }}>
-                {/* Browser bar */}
-                <div className="flex items-center justify-between px-3.5 pb-2.5 pt-1 border-b mb-2.5"
-                     style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)" }}>
-                  <div className="flex gap-1.5">
-                    <div className="size-2 rounded-full bg-red-400" />
-                    <div className="size-2 rounded-full bg-yellow-400" />
-                    <div className="size-2 rounded-full bg-green-400" />
+              {(() => {
+                const cardBg = isDark ? "rgba(15, 23, 42, 0.6)" : "rgba(255, 255, 255, 0.95)";
+                const blendedBg = blendColors(repBg, cardBg);
+                const secCol = adjustContrast(blendedBg, secondaryColor, 4.5);
+                return (
+                  <div className="w-full rounded-2xl border shadow-2xl overflow-hidden p-2.5"
+                       style={{
+                         backgroundColor: cardBg,
+                         borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.06)"
+                       }}>
+                    {/* Browser bar */}
+                    <div className="flex items-center justify-between px-3.5 pb-2.5 pt-1 border-b mb-2.5"
+                         style={{ borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)" }}>
+                      <div className="flex gap-1.5">
+                        <div className="size-2 rounded-full bg-red-400" />
+                        <div className="size-2 rounded-full bg-yellow-400" />
+                        <div className="size-2 rounded-full bg-green-400" />
+                      </div>
+                      <span className="text-[9px] font-mono opacity-40 font-bold" style={{ color: secCol }}>reports.analytics.dashboard</span>
+                      <div className="w-8" />
+                    </div>
+                    {/* Image */}
+                    <div className="relative overflow-hidden rounded-xl">
+                      <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[380px]" />
+                    </div>
                   </div>
-                  <span className="text-[9px] font-mono opacity-40 font-bold" style={{ color: secondaryColor }}>reports.analytics.dashboard</span>
-                  <div className="w-8" />
-                </div>
-                {/* Image */}
-                <div className="relative overflow-hidden rounded-xl">
-                  <img src={screenshot} alt="Screenshot" className="w-full object-contain block max-h-[380px]" />
-                </div>
-              </div>
+                );
+              })()}
             </div>
 
             {/* Right Column (col-span-3) - Stats & Insights 2 */}
             <div className="col-span-3 flex flex-col gap-6 h-full justify-center">
               {/* Metric Card 3 */}
-              <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
-                   style={{
-                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)",
-                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
-                   }}>
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-60" style={{ color: bodyTextColor }}>AOV Growth</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold flex items-center gap-0.5 bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
-                    <svg className="size-3" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
-                    </svg>
-                    <span>+24.8%</span>
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black tracking-tight" style={{ color: textColor }}>$84.50</h3>
-                  <p className="text-xs opacity-75 font-medium mt-1" style={{ color: secondaryColor }}>Average Order Value boost</p>
-                </div>
-              </div>
+              {(() => {
+                const cardBg = isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)";
+                const blendedBg = blendColors(repBg, cardBg);
+                const titleColor = adjustContrast(blendedBg, textColor, 4.5);
+                const bodyCol = adjustContrast(blendedBg, bodyTextColor, 4.5);
+                const secCol = adjustContrast(blendedBg, secondaryColor, 4.5);
+                return (
+                  <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-3"
+                       style={{
+                         backgroundColor: cardBg,
+                         borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
+                       }}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-60" style={{ color: bodyCol }}>AOV Growth</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold flex items-center gap-0.5 bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                        <svg className="size-3" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                        </svg>
+                        <span>+24.8%</span>
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-3xl font-black tracking-tight" style={{ color: titleColor }}>$84.50</h3>
+                      <p className="text-xs opacity-75 font-medium mt-1" style={{ color: secCol }}>Average Order Value boost</p>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Feature Card 4 */}
-              <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
-                   style={{
-                     backgroundColor: isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)",
-                     borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
-                   }}>
-                <div className="rounded-xl flex items-center justify-center shrink-0 size-9 shadow-sm"
-                     style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
-                  <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-11.61 3.415 5.25 5.25 0 0110.28 2.051zm8.96 2L20 18m0 0l-1.04-1M20 18l1.04-1M20 18l-1.04 1" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="font-extrabold tracking-tight" style={{ color: bodyTextColor, fontSize: `${15 * featureTextSize}px` }}>
-                    {features[1] || "Automated Delivery"}
-                  </h4>
-                  <p className="text-xs opacity-75 font-medium mt-1 leading-normal" style={{ color: secondaryColor }}>
-                    Synchronized growth engine
-                  </p>
-                </div>
-              </div>
+              {(() => {
+                const cardBg = isDark ? "rgba(15, 23, 42, 0.93)" : "rgba(255, 255, 255, 0.95)";
+                const blendedBg = blendColors(repBg, cardBg);
+                const bodyCol = adjustContrast(blendedBg, bodyTextColor, 4.5);
+                const secCol = adjustContrast(blendedBg, secondaryColor, 4.5);
+                const itemIconColor = adjustContrast(blendedBg, accentColor, 3.0);
+                return (
+                  <div className="p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:scale-[1.03] flex flex-col gap-2.5"
+                       style={{
+                         backgroundColor: cardBg,
+                         borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
+                       }}>
+                    <div className="rounded-xl flex items-center justify-center shrink-0 size-9 shadow-sm"
+                         style={{ backgroundColor: `${itemIconColor}15`, color: itemIconColor }}>
+                      <svg className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-11.61 3.415 5.25 5.25 0 0110.28 2.051zm8.96 2L20 18m0 0l-1.04-1M20 18l1.04-1M20 18l-1.04 1" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold tracking-tight" style={{ color: bodyCol, fontSize: `${15 * featureTextSize}px` }}>
+                        {features[1] || "Automated Delivery"}
+                      </h4>
+                      <p className="text-xs opacity-75 font-medium mt-1 leading-normal" style={{ color: secCol }}>
+                        Synchronized growth engine
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
           </div>
@@ -2989,32 +3141,38 @@ function TemplateCanvas({
             </div>
 
             <div className="flex flex-col gap-4 w-full">
-              {features.filter(Boolean).map((feat, i) => (
-                <div 
-                  key={i} 
-                  className="flex items-center gap-4.5 p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.02] shadow-sm"
-                  style={{
-                    backgroundColor: isDark ? "rgba(255, 255, 255, 0.03)" : "rgba(255, 255, 255, 0.75)",
-                    borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)",
-                    color: bodyTextColor
-                  }}
-                >
+              {features.filter(Boolean).map((feat, i) => {
+                const itemBg = isDark ? "rgba(255, 255, 255, 0.03)" : "rgba(255, 255, 255, 0.75)";
+                const blendedBg = blendColors(repBg, itemBg);
+                const itemTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+                const itemIconColor = adjustContrast(blendedBg, accentColor, 3.0);
+                return (
                   <div 
-                    className="rounded-xl flex items-center justify-center shrink-0 size-10 border"
-                    style={{ 
-                      backgroundColor: `${accentColor}15`,
-                      color: accentColor,
-                      borderColor: `${accentColor}30`,
-                      boxShadow: `0 0 10px ${accentColor}1A`
+                    key={i} 
+                    className="flex items-center gap-4.5 p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.02] shadow-sm"
+                    style={{
+                      backgroundColor: itemBg,
+                      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)",
+                      color: itemTextColor
                     }}
                   >
-                    <svg style={{ width: `${20 * featureIconSize}px`, height: `${20 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
+                    <div 
+                      className="rounded-xl flex items-center justify-center shrink-0 size-10 border"
+                      style={{ 
+                        backgroundColor: `${itemIconColor}15`,
+                        color: itemIconColor,
+                        borderColor: `${itemIconColor}30`,
+                        boxShadow: `0 0 10px ${itemIconColor}1A`
+                      }}
+                    >
+                      <svg style={{ width: `${20 * featureIconSize}px`, height: `${20 * featureIconSize}px` }} fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    </div>
+                    <span className="font-extrabold text-[16.5px]" style={{ fontSize: `${16.5 * featureTextSize}px` }}>{feat}</span>
                   </div>
-                  <span className="font-extrabold text-[16.5px]" style={{ fontSize: `${16.5 * featureTextSize}px` }}>{feat}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -3243,24 +3401,29 @@ function TemplateCanvas({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 12.481c-.131.224-.312.405-.536.536m0-5.801c.224.131.405.312.536.536m0-5.801c-.131-.224-.312-.405-.536-.536" />
                   </svg>
                 ];
+                const itemBg = isDark ? "rgba(15, 23, 42, 0.9)" : "rgba(255, 255, 255, 0.95)";
+                const blendedBg = blendColors(repBg, itemBg);
+                const itemTextColor = adjustContrast(blendedBg, bodyTextColor, 4.5);
+                const itemSecColor = adjustContrast(blendedBg, secondaryColor, 4.5);
+                const itemIconColor = adjustContrast(blendedBg, accentColor, 3.0);
                 return (
                   <div key={i} className="flex items-center gap-4.5 p-4.5 rounded-2xl border transition-all duration-300 hover:scale-[1.02]"
                        style={{
-                         backgroundColor: isDark ? "rgba(15, 23, 42, 0.9)" : "rgba(255, 255, 255, 0.95)",
+                         backgroundColor: itemBg,
                          borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)"
                        }}>
                     <div className="rounded-xl flex items-center justify-center shrink-0 size-10.5 border"
                          style={{ 
-                           backgroundColor: isDark ? "rgba(255,255,255,0.02)" : `${accentColor}10`,
-                           color: accentColor,
-                           borderColor: isDark ? "rgba(255,255,255,0.12)" : `${accentColor}30`,
-                           boxShadow: `0 0 10px ${accentColor}1A`
+                           backgroundColor: isDark ? "rgba(255,255,255,0.02)" : `${itemIconColor}10`,
+                           color: itemIconColor,
+                           borderColor: isDark ? "rgba(255,255,255,0.12)" : `${itemIconColor}30`,
+                           boxShadow: `0 0 10px ${itemIconColor}1A`
                          }}>
                       {icons[i % icons.length]}
                     </div>
                     <div>
-                      <h4 className="font-extrabold tracking-tight text-[15.5px]" style={{ color: bodyTextColor, fontSize: `${16.5 * featureTextSize}px` }}>{feat}</h4>
-                      <p className="text-xs opacity-65 font-medium mt-0.5 leading-normal" style={{ color: secondaryColor }}>{subtexts[i % subtexts.length]}</p>
+                      <h4 className="font-extrabold tracking-tight text-[15.5px]" style={{ color: itemTextColor, fontSize: `${16.5 * featureTextSize}px` }}>{feat}</h4>
+                      <p className="text-xs opacity-65 font-medium mt-0.5 leading-normal" style={{ color: itemSecColor }}>{subtexts[i % subtexts.length]}</p>
                     </div>
                   </div>
                 );
@@ -3352,18 +3515,23 @@ function TemplateCanvas({
             </div>
 
             <div className="flex mt-auto flex-wrap" style={{ gap: featureSpacing }}>
-              {features.filter(Boolean).slice(0, 3).map((feat, i) => (
-                <span key={i} className="px-4 py-2 rounded-xl border-2 border-dashed font-extrabold"
-                      style={{ 
-                        backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : `${accentColor}10`, 
-                        borderColor: `${accentColor}40`, 
-                        color: isDark ? "#FFFFFF" : accentColor,
-                        fontSize: `${15 * featureTextSize}px` 
-                      }}>
-                  <span style={{ display: "inline-block", transform: `scale(${featureIconSize})`, transformOrigin: "center left" }} className="mr-1.5">✨</span>
-                  {feat}
-                </span>
-              ))}
+              {features.filter(Boolean).slice(0, 3).map((feat, i) => {
+                const itemBg = isDark ? "rgba(255, 255, 255, 0.05)" : `${accentColor}10`;
+                const blendedBg = blendColors(repBg, itemBg);
+                const itemTextColor = adjustContrast(blendedBg, isDark ? "#FFFFFF" : accentColor, 4.5);
+                return (
+                  <span key={i} className="px-4 py-2 rounded-xl border-2 border-dashed font-extrabold"
+                        style={{ 
+                          backgroundColor: itemBg, 
+                          borderColor: `${accentColor}40`, 
+                          color: itemTextColor,
+                          fontSize: `${15 * featureTextSize}px` 
+                        }}>
+                    <span style={{ display: "inline-block", transform: `scale(${featureIconSize})`, transformOrigin: "center left" }} className="mr-1.5">✨</span>
+                    {feat}
+                  </span>
+                );
+              })}
             </div>
           </div>
 
