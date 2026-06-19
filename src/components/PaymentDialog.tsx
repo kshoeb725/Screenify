@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
+import { Check, Lock, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,67 +56,101 @@ export function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-background border-border max-w-md p-4 rounded-2xl">
-        <DialogHeader className="space-y-0.5">
-          <DialogTitle className="font-display text-lg font-bold tracking-tight text-foreground">
+      <DialogContent className="bg-background border-border max-w-md p-6 rounded-2xl overflow-hidden relative shadow-2xl">
+        {/* Ambient Top Glow */}
+        <div className="absolute -right-20 -top-20 w-48 h-48 bg-[#3ECFB2]/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <DialogHeader className="space-y-2 relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-[#3ECFB2] text-[10px] font-mono uppercase tracking-wider">
+              <Sparkles className="w-3 h-3 animate-pulse" />
+              <span>Premium Upgrade</span>
+            </div>
+          </div>
+          <DialogTitle className="font-sans text-xl font-extrabold tracking-tight text-foreground mt-1">
             Upgrade to Screenify Pro
           </DialogTitle>
-          <DialogDescription className="text-[11px] text-muted-foreground leading-normal">
+          <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
             Unlock premium storefront screenshot generation, clean exports, and seamless 1-click custom templates.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubscribe} className="space-y-3 mt-2">
+        <form onSubmit={handleSubscribe} className="space-y-4 mt-4 relative z-10">
           {/* Screenify Pro Card */}
-          <div className="relative rounded-xl border border-border/80 bg-card/45 p-3 shadow-sm overflow-hidden flex flex-col justify-between space-y-3">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#3ECFB2]/20 to-transparent" />
+          <div className="relative rounded-xl border border-border/80 bg-card/45 backdrop-blur-sm p-4 shadow-sm overflow-hidden flex flex-col justify-between space-y-4">
+            {/* Top gradient edge */}
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#3ECFB2]/30 to-transparent" />
             
-            <div className="space-y-2">
+            <div className="space-y-3.5">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-display text-base font-bold text-foreground">Screenify Pro</h3>
+                  <h3 className="font-sans text-base font-bold text-foreground">Screenify Pro</h3>
                   <p className="font-mono text-[9px] text-muted-foreground tracking-wider uppercase mt-0.5">Solo Shopify Developers</p>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="font-display text-xl font-extrabold text-foreground">$9</span>
-                  <span className="text-[9px] text-muted-foreground font-mono">/ month</span>
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="font-sans text-3xl font-extrabold text-foreground tracking-tight">$9</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">/ mo</span>
+                  </div>
+                  <span className="text-[8px] text-[#C8E84A] font-semibold bg-[#C8E84A]/10 px-1.5 py-0.5 rounded uppercase tracking-wider mt-1">
+                    Cancel Anytime
+                  </span>
                 </div>
               </div>
               
-              <ul className="text-xs text-muted-foreground space-y-1 pt-0.5">
+              <ul className="text-xs text-muted-foreground space-y-2.5 pt-1.5">
                 {features.map((feat, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <Check className="size-3 text-[#3ECFB2] shrink-0 mt-0.5" />
-                    <span className="leading-tight text-[10.5px]">{feat}</span>
+                  <li key={idx} className="flex items-start gap-2.5">
+                    <div className="rounded-full bg-[#3ECFB2]/10 dark:bg-[#3ECFB2]/20 p-0.5 mt-0.5 shrink-0">
+                      <Check className="size-3 text-[#3ECFB2]" />
+                    </div>
+                    <span className="leading-tight text-[11px] text-muted-foreground font-medium">{feat}</span>
                   </li>
                 ))}
               </ul>
             </div>
             
-            <div className="border-t border-border/40 pt-2 flex justify-between items-center text-[10px] font-mono">
-              <span className="text-muted-foreground">Access Type:</span>
-              <span className="text-foreground font-semibold">Monthly Subscription</span>
+            <div className="border-t border-border/40 pt-3 flex justify-between items-center text-[10px] font-mono">
+              <span className="text-muted-foreground">Access Duration:</span>
+              <span className="text-foreground font-semibold">Unlimited Monthly Access</span>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-[11px] font-mono border-t border-border pt-2">
-              <span className="text-muted-foreground">Account:</span>
-              <span className="text-foreground truncate max-w-[240px] font-semibold">{email || "you@company.com"}</span>
+          <div className="space-y-3.5">
+            {/* Account Details Box */}
+            <div className="bg-muted/15 border border-border/40 rounded-xl p-3 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Account Email:</span>
+              <span className="text-foreground font-semibold truncate max-w-[200px]">{email || "you@company.com"}</span>
             </div>
 
+            {/* Subscribe Button */}
             <button
               type="submit"
               disabled={processing}
-              className="w-full rounded-xl bg-[#3ECFB2] text-slate-950 font-bold py-2 text-xs hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 cursor-pointer text-center shadow-sm"
+              className="w-full rounded-xl bg-[#3ECFB2] hover:bg-[#3ECFB2]/95 active:scale-[0.98] text-slate-950 font-bold py-3 text-xs shadow-md shadow-emerald-500/10 transition-all duration-200 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 tracking-wide uppercase"
             >
-              {processing
-                ? "Redirecting to checkout..."
-                : "Subscribe to Screenify Pro ($9/mo)"}
+              {processing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Redirecting to Checkout...</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Subscribe & Upgrade • $9 / month</span>
+                </>
+              )}
             </button>
+
+            {/* Secure Payment Note */}
+            <div className="flex items-center justify-center gap-1.5 text-[9px] text-muted-foreground/60 font-mono mt-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground/45" />
+              <span>Secured by Stripe • 256-bit SSL encryption</span>
+            </div>
           </div>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
+
