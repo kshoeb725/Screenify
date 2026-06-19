@@ -1764,11 +1764,12 @@ function TemplateCanvas({
       bodyText: finalBodyColor,
       secondary: finalSecondaryColor, 
       accent: finalAccentColor, 
-      isDark: isBgDark 
+      isDark: isBgDark,
+      repBg
     };
   };
 
-  const { bg: bgStyle, text: textColor, bodyText: bodyTextColor, secondary: secondaryColor, accent: accentColor, isDark } = resolveBgAndText();
+  const { bg: bgStyle, text: textColor, bodyText: bodyTextColor, secondary: secondaryColor, accent: accentColor, isDark, repBg } = resolveBgAndText();
 
   // Helper to parse double asterisks and format them specifically for each layout type
   const renderHeadline = (text: string, templateId: string) => {
